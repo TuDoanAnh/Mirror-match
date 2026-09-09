@@ -105,9 +105,10 @@ export default class EnemyBot extends Player {
       this.moveTimer = Phaser.Math.Between(500, 1500);
     }
 
-    if (dist < 200) {
-      this.setVelocity(-this.moveDirection.x * this.speed, -this.moveDirection.y * this.speed);
-    } else if (dist > 400) {
+    if (dist < 250) {
+      const runAwayAngle = Phaser.Math.Angle.Between(this.target.x, this.target.y, this.x, this.y);
+      this.setVelocity(Math.cos(runAwayAngle) * this.speed, Math.sin(runAwayAngle) * this.speed);
+    } else if (dist > 450) {
       const runAngle = Phaser.Math.Angle.Between(this.x, this.y, this.target.x, this.target.y);
       this.setVelocity(Math.cos(runAngle) * this.speed, Math.sin(runAngle) * this.speed);
     } else {

@@ -69,19 +69,34 @@ export default class Player extends BaseCharacter {
     const dist = Phaser.Math.Distance.Between(this.x, this.y, targetX, targetY);
     const actualDist = Math.min(dist, this.skills.E.dashDistance);
     
-    const flash = this.scene.add.sprite(this.x, this.y, this.texture.key);
-    flash.setRotation(this.rotation);
-    flash.setTint(0x00ffff);
-    this.scene.tweens.add({
-      targets: flash,
-      alpha: 0,
-      scale: 1.5,
-      duration: 300,
-      onComplete: () => flash.destroy()
-    });
-
+    const startX = this.x;
+    const startY = this.y;
+    
     this.x += Math.cos(fireAngle) * actualDist;
     this.y += Math.sin(fireAngle) * actualDist;
+
+    const endX = this.x;
+    const endY = this.y;
+
+    // Create 4 ghost afterimages along the dash path
+    for (let i = 0; i <= 4; i++) {
+      const ghostX = Phaser.Math.Linear(startX, endX, i / 4);
+      const ghostY = Phaser.Math.Linear(startY, endY, i / 4);
+      
+      const ghost = this.scene.add.sprite(ghostX, ghostY, this.texture.key);
+      ghost.setRotation(this.rotation);
+      ghost.setTint(0x00ffff);
+      ghost.setBlendMode('ADD');
+      ghost.alpha = 0.6;
+      
+      this.scene.tweens.add({
+        targets: ghost,
+        alpha: 0,
+        scale: 1.3,
+        duration: 200 + (i * 50),
+        onComplete: () => ghost.destroy()
+      });
+    }
   }
 
   executeSpace(targetX, targetY, fireAngle) {

@@ -28,13 +28,21 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     const texKey = isBot ? 'bot_tex' : `player_tex_${color}`;
     if (!scene.textures.exists(texKey)) {
       const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
+      // Draw a sleek sci-fi ship pointing right
       graphics.fillStyle(isBot ? 0xff0000 : color, 1);
-      graphics.fillCircle(16, 16, 16);
       graphics.lineStyle(2, 0xffffff, 1);
       graphics.beginPath();
-      graphics.moveTo(16, 16);
-      graphics.lineTo(32, 16);
+      graphics.moveTo(32, 16); // Nose
+      graphics.lineTo(0, 32);  // Bottom wing
+      graphics.lineTo(8, 16);  // Back engine indent
+      graphics.lineTo(0, 0);   // Top wing
+      graphics.closePath();
+      graphics.fillPath();
       graphics.strokePath();
+      
+      // Engine glow
+      graphics.fillStyle(0x00ffff, 1);
+      graphics.fillCircle(6, 16, 4);
       
       graphics.generateTexture(texKey, 32, 32);
       graphics.destroy();
@@ -132,12 +140,25 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     this.hpBar.destroy();
     this.disableBody(true, true);
     
+    // Shockwave ring
+    const ring = this.scene.add.circle(this.x, this.y, 16);
+    ring.setStrokeStyle(4, this.isBot ? 0xff0000 : 0x0088ff);
+    this.scene.tweens.add({
+      targets: ring,
+      scale: 6,
+      alpha: 0,
+      duration: 500,
+      ease: 'Quad.easeOut',
+      onComplete: () => ring.destroy()
+    });
+
     const particles = this.scene.add.particles(this.x, this.y, this.texture.key, {
-      speed: 100,
+      speed: { min: 100, max: 300 },
       scale: { start: 1, end: 0 },
       blendMode: 'ADD',
-      lifespan: 500
+      lifespan: 500,
+      alpha: { start: 1, end: 0 }
     });
-    particles.explode(10);
+    particles.explode(15);
   }
 }

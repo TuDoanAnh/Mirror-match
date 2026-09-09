@@ -40,8 +40,10 @@ export default class GameScene extends Phaser.Scene {
     // Obstacle Collisions
     this.physics.add.collider(this.player, this.obstacles);
     this.physics.add.collider(this.bot, this.obstacles);
-    this.physics.add.collider(this.playerProjectiles, this.obstacles, this.handleProjectileObstacleHit, null, this);
-    this.physics.add.collider(this.enemyProjectiles, this.obstacles, this.handleProjectileObstacleHit, null, this);
+    
+    // Use overlap instead of collider for projectiles so they don't get physically blocked!
+    this.physics.add.overlap(this.playerProjectiles, this.obstacles, this.handleProjectileObstacleHit, null, this);
+    this.physics.add.overlap(this.enemyProjectiles, this.obstacles, this.handleProjectileObstacleHit, null, this);
 
     // Ensure player/bot collide with bounds
     this.physics.world.setBounds(0, 0, 1024, 768);
@@ -53,20 +55,31 @@ export default class GameScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-Q', () => this.tryUsePlayerSkill('Q', this.time.now));
     this.input.keyboard.on('keydown-E', () => this.tryUsePlayerSkill('E', this.time.now));
     this.input.keyboard.on('keydown-SPACE', () => this.tryUsePlayerSkill('SPACE', this.time.now));
+
+    // Fade In
+    this.cameras.main.fadeIn(500, 0, 0, 0);
   }
 
   update(time, delta) {
-    if (this.player.hp > 0) this.player.update(time, delta);
-    if (this.bot.hp > 0) this.bot.update(time, delta);
+    if (this.player.hp > 0) {
+      this.player.update(time, delta);
+    }
+    if (this.bot.hp > 0 && this.player.hp > 0) {
+      this.bot.update(time, delta);
+    }
     
     this.updateUI(time);
     
     // Check Game Over
-    if (this.player.hp <= 0 || this.bot.hp <= 0) {
-      this.physics.pause();
+    if (!this.isGameOver && (this.player.hp <= 0 || this.bot.hp <= 0)) {
+      this.isGameOver = true;
+      // Removed this.physics.pause() to prevent internal physics loop freezes
       this.time.delayedCall(500, () => {
         const result = this.player.hp > 0 ? 'win' : 'lose';
-        this.scene.start('GameOverScene', { result, level: this.level });
+        this.cameras.main.fadeOut(500, 0, 0, 0);
+        this.cameras.main.once('camerafadeoutcomplete', () => {
+          this.scene.start('GameOverScene', { result, level: this.level });
+        });
       });
     }
   }

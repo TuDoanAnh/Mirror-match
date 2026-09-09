@@ -20,11 +20,25 @@ export default class PreparationScene extends Phaser.Scene {
 
     this.add.rectangle(0, 0, 1024, 768, 0x111111).setOrigin(0);
 
+    // Ambient BG Grid
+    const grid = this.add.grid(512, 384, 1024, 768, 64, 64, 0x000000, 0, 0x222222, 0.5);
+    this.tweens.add({
+      targets: grid,
+      y: 384 + 64,
+      duration: 3000,
+      repeat: -1,
+      yoyo: true,
+      ease: 'Sine.easeInOut'
+    });
+
     this.selectedItem = null;
 
     this.drawLeftPanel();
     this.drawCenterPanel();
     this.drawRightPanel();
+
+    // Fade In
+    this.cameras.main.fadeIn(500, 0, 0, 0);
   }
 
   drawLeftPanel() {
@@ -103,7 +117,14 @@ export default class PreparationScene extends Phaser.Scene {
       const y = currentY + (row * paddingY);
 
       const box = this.add.rectangle(x, y, 64, 64, item.color).setInteractive({ useHandCursor: true });
-      this.add.text(x, y + 45, `${item.cost}G`, { fontSize: '16px', fill: '#ffff00' }).setOrigin(0.5);
+      const priceText = this.add.text(x, y + 45, `${item.cost}G`, { fontSize: '16px', fill: '#ffff00' }).setOrigin(0.5);
+
+      box.on('pointerover', () => {
+        this.tweens.add({ targets: [box, priceText], scale: 1.15, duration: 150, ease: 'Power2' });
+      });
+      box.on('pointerout', () => {
+        this.tweens.add({ targets: [box, priceText], scale: 1.0, duration: 150, ease: 'Power2' });
+      });
 
       box.on('pointerdown', () => {
         this.selectedItem = item;
@@ -183,17 +204,26 @@ export default class PreparationScene extends Phaser.Scene {
     currentY += 120;
     this.buyBtnBg = this.add.rectangle(centerX, currentY, 150, 40, 0x555555).setInteractive({ useHandCursor: true });
     this.buyBtnText = this.add.text(centerX, currentY, "BUY", { fontSize: '20px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+    
+    this.buyBtnBg.on('pointerover', () => this.tweens.add({ targets: [this.buyBtnBg, this.buyBtnText], scale: 1.1, duration: 150, ease: 'Power2' }));
+    this.buyBtnBg.on('pointerout', () => this.tweens.add({ targets: [this.buyBtnBg, this.buyBtnText], scale: 1.0, duration: 150, ease: 'Power2' }));
     this.buyBtnBg.on('pointerdown', () => this.buyItem());
 
     // READY Button
     currentY += 80;
     const readyBtn = this.add.rectangle(centerX, currentY, 200, 60, 0x00aa00).setInteractive({ useHandCursor: true });
-    this.add.text(centerX, currentY, "READY", { fontSize: '28px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+    const readyTxt = this.add.text(centerX, currentY, "READY", { fontSize: '28px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+
+    readyBtn.on('pointerover', () => this.tweens.add({ targets: [readyBtn, readyTxt], scale: 1.05, duration: 150, ease: 'Power2' }));
+    readyBtn.on('pointerout', () => this.tweens.add({ targets: [readyBtn, readyTxt], scale: 1.0, duration: 150, ease: 'Power2' }));
 
     readyBtn.on('pointerdown', () => {
-      this.scene.start('GameScene', {
-        level: this.registry.get('unlockedLevel'),
-        color: 0x0088ff
+      this.cameras.main.fadeOut(500, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('GameScene', {
+          level: this.registry.get('unlockedLevel'),
+          color: 0x0088ff
+        });
       });
     });
 

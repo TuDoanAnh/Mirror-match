@@ -42,18 +42,30 @@ export default class GameOverScene extends Phaser.Scene {
       align: 'center'
     }).setOrigin(0.5);
 
-    const btn = this.add.text(512, 500, "RETURN TO MENU", {
-      fontSize: '32px',
+    this.cameras.main.fadeIn(500, 0, 0, 0);
+
+    const btnBg = this.add.rectangle(512, 500, 300, 60, 0x333333).setInteractive({ useHandCursor: true });
+    const btnTxt = this.add.text(512, 500, "RETURN TO MENU", {
+      fontSize: '28px',
       fill: '#ffffff',
-      backgroundColor: '#333333',
-      padding: { x: 20, y: 10 }
-    }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
 
-    btn.on('pointerover', () => btn.setBackgroundColor('#555555'));
-    btn.on('pointerout', () => btn.setBackgroundColor('#333333'));
+    btnBg.on('pointerover', () => {
+      this.tweens.add({ targets: [btnBg, btnTxt], scale: 1.1, duration: 150, ease: 'Power2' });
+      btnBg.setFillStyle(0x555555);
+    });
+    
+    btnBg.on('pointerout', () => {
+      this.tweens.add({ targets: [btnBg, btnTxt], scale: 1.0, duration: 150, ease: 'Power2' });
+      btnBg.setFillStyle(0x333333);
+    });
 
-    btn.on('pointerdown', () => {
-      this.scene.start('PreparationScene');
+    btnBg.on('pointerdown', () => {
+      this.cameras.main.fadeOut(500, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('PreparationScene');
+      });
     });
   }
 }
