@@ -1,16 +1,16 @@
 import Phaser from 'phaser';
 import BaseCharacter from './BaseCharacter';
 import Projectile from './Projectile';
+import { GAME_CONFIG } from './gameConfig';
 
 export default class Player extends BaseCharacter {
   constructor(scene, x, y, isBot = false, color = 0x0088ff) {
     super(scene, x, y, isBot, color);
 
-    this.skills = {
-      Q: { cooldown: 2000, lastUsed: 0, config: { damage: 100, speed: 600, isPiercing: false } },
-      E: { cooldown: 8000, lastUsed: 0, dashDistance: 150 },
-      SPACE: { cooldown: 20000, lastUsed: 0, config: { damage: 500, speed: 1000, isPiercing: true } }
-    };
+    this.skills = JSON.parse(JSON.stringify(GAME_CONFIG.SKILLS));
+    Object.keys(this.skills).forEach(k => {
+      this.skills[k].lastUsed = 0;
+    });
 
     if (!isBot && scene.registry.has('playerStats')) {
       const stats = scene.registry.get('playerStats');

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { GAME_CONFIG } from './gameConfig';
 
 export default class GameOverScene extends Phaser.Scene {
   constructor() {
@@ -11,7 +12,7 @@ export default class GameOverScene extends Phaser.Scene {
   }
 
   create() {
-    this.add.rectangle(0, 0, 1024, 768, 0x000000, 0.8).setOrigin(0);
+    this.add.rectangle(0, 0, GAME_CONFIG.CANVAS.WIDTH, GAME_CONFIG.CANVAS.HEIGHT, 0x000000, 0.8).setOrigin(0);
 
     const isWin = this.result === 'win';
     
@@ -19,7 +20,7 @@ export default class GameOverScene extends Phaser.Scene {
     let colorStr = "#ff0000";
     
     if (isWin) {
-      const goldEarned = this.level * 50;
+      const goldEarned = this.level * GAME_CONFIG.ECONOMY.GOLD_PER_LEVEL_WIN;
       let currentGold = this.registry.get('gold');
       this.registry.set('gold', currentGold + goldEarned);
       
@@ -27,7 +28,7 @@ export default class GameOverScene extends Phaser.Scene {
       colorStr = "#00ff00";
       
       let unlocked = this.registry.get('unlockedLevel');
-      if (this.level === unlocked && unlocked < 5) {
+      if (this.level === unlocked && unlocked < GAME_CONFIG.ECONOMY.MAX_LEVEL) {
         this.registry.set('unlockedLevel', unlocked + 1);
         textStr += `\nNEW LEVEL UNLOCKED!`;
       }

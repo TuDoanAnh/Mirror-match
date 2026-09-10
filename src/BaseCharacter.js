@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { GAME_CONFIG } from './gameConfig';
 
 export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, isBot = false, color = 0x0088ff) {
@@ -9,16 +10,16 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
 
     this.isBot = isBot;
     
-    // Default Base Stats
-    this.maxHp = 1000;
+    // Default Base Stats from GAME_CONFIG
+    this.maxHp = GAME_CONFIG.BASE_STATS.HP;
     this.hp = this.maxHp;
-    this.speed = 200;
+    this.speed = GAME_CONFIG.BASE_STATS.SPEED;
     this.aimAngle = 0;
     
-    this.armor = 0;
-    this.lifesteal = 0;
-    this.critChance = 0;
-    this.armorPen = 0;
+    this.armor = GAME_CONFIG.BASE_STATS.ARMOR;
+    this.lifesteal = GAME_CONFIG.BASE_STATS.LIFESTEAL;
+    this.critChance = GAME_CONFIG.BASE_STATS.CRIT_CHANCE;
+    this.armorPen = GAME_CONFIG.BASE_STATS.ARMOR_PEN;
 
     // Skills definition (Q, E, SPACE)
     // To be populated by subclass

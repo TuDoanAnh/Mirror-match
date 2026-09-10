@@ -10,9 +10,12 @@ export default class GameScene extends Phaser.Scene {
   init(data) {
     this.playerColor = data.color || 0x0088ff;
     this.level = data.level || 1;
+    this.isGameOver = false;
   }
 
   create() {
+    this.isGameOver = false;
+
     // Generate texture assets isolated at x=0, y=0 with immediate graphics destruction
     this.createProjectilesTextures();
 
@@ -55,6 +58,7 @@ export default class GameScene extends Phaser.Scene {
     this.createUI();
 
     // Input listeners for skills
+    this.input.keyboard.removeAllListeners();
     this.input.keyboard.on('keydown-Q', () => this.tryUsePlayerSkill('Q', this.time.now));
     this.input.keyboard.on('keydown-E', () => this.tryUsePlayerSkill('E', this.time.now));
     this.input.keyboard.on('keydown-SPACE', () => this.tryUsePlayerSkill('SPACE', this.time.now));

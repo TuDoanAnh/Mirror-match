@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import Player from './Player';
+import { GAME_CONFIG } from './gameConfig';
 
 export default class EnemyBot extends Player {
   constructor(scene, x, y, level = 1) {
@@ -14,65 +15,25 @@ export default class EnemyBot extends Player {
   }
 
   setLevel(level) {
-    // Base level 1 stats
-    this.armor = 0;
-    this.critChance = 0;
-    this.lifesteal = 0;
-    this.armorPen = 0;
+    const scale = GAME_CONFIG.BOT_SCALING[level] || GAME_CONFIG.BOT_SCALING[1];
 
-    if (level === 2) {
-      this.speed *= 1.2;
-      this.maxHp *= 1.2;
-      this.hp = this.maxHp;
-      this.armor = 25;
-      this.skills.Q.config.damage *= 1.2;
-      this.skills.SPACE.config.damage *= 1.2;
-      this.skills.Q.cooldown *= 0.85;
-      this.skills.E.cooldown *= 0.85;
-      this.skills.SPACE.cooldown *= 0.85;
-    } else if (level === 3) {
-      this.speed *= 1.5;
-      this.maxHp *= 1.5;
-      this.hp = this.maxHp;
-      this.armor = 50;
-      this.armorPen = 10;
-      this.skills.Q.config.damage *= 1.5;
-      this.skills.SPACE.config.damage *= 1.5;
-      this.skills.Q.cooldown *= 0.70;
-      this.skills.E.cooldown *= 0.70;
-      this.skills.SPACE.cooldown *= 0.70;
-      this.skills.Q.config.speed *= 1.3;
-      this.skills.SPACE.config.speed *= 1.3;
-    } else if (level === 4) {
-      this.speed *= 1.8;
-      this.maxHp *= 2;
-      this.hp = this.maxHp;
-      this.armor = 75;
-      this.armorPen = 20;
-      this.critChance = 10;
-      this.skills.Q.config.damage *= 2;
-      this.skills.SPACE.config.damage *= 2;
-      this.skills.Q.cooldown *= 0.60;
-      this.skills.E.cooldown *= 0.60;
-      this.skills.SPACE.cooldown *= 0.60;
-      this.skills.Q.config.speed *= 1.5;
-      this.skills.SPACE.config.speed *= 1.5;
-    } else if (level === 5) {
-      this.speed *= 2.5;
-      this.maxHp *= 3.5;
-      this.hp = this.maxHp;
-      this.armor = 100;
-      this.armorPen = 30;
-      this.critChance = 25;
-      this.lifesteal = 10;
-      this.skills.Q.config.damage *= 3;
-      this.skills.SPACE.config.damage *= 3;
-      this.skills.Q.cooldown *= 0.3;
-      this.skills.E.cooldown *= 0.3;
-      this.skills.SPACE.cooldown *= 0.3;
-      this.skills.Q.config.speed *= 2;
-      this.skills.SPACE.config.speed *= 2;
-    }
+    this.speed = GAME_CONFIG.BASE_STATS.SPEED * scale.speedMult;
+    this.maxHp = GAME_CONFIG.BASE_STATS.HP * scale.hpMult;
+    this.hp = this.maxHp;
+    this.armor = scale.armor;
+    this.armorPen = scale.armorPen;
+    this.critChance = scale.critChance;
+    this.lifesteal = scale.lifesteal;
+
+    this.skills.Q.config.damage = GAME_CONFIG.SKILLS.Q.config.damage * scale.dmgMult;
+    this.skills.SPACE.config.damage = GAME_CONFIG.SKILLS.SPACE.config.damage * scale.dmgMult;
+
+    this.skills.Q.cooldown = GAME_CONFIG.SKILLS.Q.cooldown * scale.cdrMult;
+    this.skills.E.cooldown = GAME_CONFIG.SKILLS.E.cooldown * scale.cdrMult;
+    this.skills.SPACE.cooldown = GAME_CONFIG.SKILLS.SPACE.cooldown * scale.cdrMult;
+
+    this.skills.Q.config.speed = GAME_CONFIG.SKILLS.Q.config.speed * scale.projSpeedMult;
+    this.skills.SPACE.config.speed = GAME_CONFIG.SKILLS.SPACE.config.speed * scale.projSpeedMult;
   }
 
   setTarget(target) {

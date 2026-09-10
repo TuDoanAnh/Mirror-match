@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import EnemyBot from './EnemyBot';
+import { GAME_CONFIG } from './gameConfig';
 
 export default class PreparationScene extends Phaser.Scene {
   constructor() {
@@ -10,7 +11,7 @@ export default class PreparationScene extends Phaser.Scene {
     // Registry initialization
     if (!this.registry.has('unlockedLevel')) {
       this.registry.set('unlockedLevel', 1);
-      this.registry.set('gold', 350);
+      this.registry.set('gold', GAME_CONFIG.ECONOMY.STARTING_GOLD);
       this.registry.set('playerStats', { 
         bonusDamage: 0, bonusSpeed: 0, bonusHP: 0, cdr: 0, 
         armor: 0, lifesteal: 0, critChance: 0, armorPen: 0 
@@ -66,32 +67,17 @@ export default class PreparationScene extends Phaser.Scene {
     // Stats (2 Columns)
     currentY += 60;
     
-    // Pure stats calculation based on level (no sprite creation needed)
+    const scale = GAME_CONFIG.BOT_SCALING[level] || GAME_CONFIG.BOT_SCALING[1];
     const enemyStats = {
-      maxHp: 1000,
-      atk: 100,
-      armor: 0,
-      speed: 200,
-      critChance: 0,
-      cdr: 0,
-      lifesteal: 0,
-      armorPen: 0
+      maxHp: GAME_CONFIG.BASE_STATS.HP * scale.hpMult,
+      atk: GAME_CONFIG.SKILLS.Q.config.damage * scale.dmgMult,
+      armor: scale.armor,
+      speed: GAME_CONFIG.BASE_STATS.SPEED * scale.speedMult,
+      critChance: scale.critChance,
+      cdr: Math.round((1 - scale.cdrMult) * 100),
+      lifesteal: scale.lifesteal,
+      armorPen: scale.armorPen
     };
-
-    if (level === 2) {
-      enemyStats.speed *= 1.2; enemyStats.maxHp *= 1.2; enemyStats.armor = 25;
-      enemyStats.atk *= 1.2; enemyStats.cdr = 15;
-    } else if (level === 3) {
-      enemyStats.speed *= 1.5; enemyStats.maxHp *= 1.5; enemyStats.armor = 50;
-      enemyStats.armorPen = 10; enemyStats.atk *= 1.5; enemyStats.cdr = 30;
-    } else if (level === 4) {
-      enemyStats.speed *= 1.8; enemyStats.maxHp *= 2; enemyStats.armor = 75;
-      enemyStats.armorPen = 20; enemyStats.critChance = 10; enemyStats.atk *= 2; enemyStats.cdr = 40;
-    } else if (level === 5) {
-      enemyStats.speed *= 2.5; enemyStats.maxHp *= 3.5; enemyStats.armor = 100;
-      enemyStats.armorPen = 30; enemyStats.critChance = 25; enemyStats.lifesteal = 10;
-      enemyStats.atk *= 3; enemyStats.cdr = 70;
-    }
     
     const col1X = 65;
     const col2X = 175;
@@ -119,13 +105,7 @@ export default class PreparationScene extends Phaser.Scene {
     currentY += 40;
     this.add.text(centerX, currentY, "SHOP", { fontSize: '24px', fill: '#ffcc00', fontStyle: 'bold' }).setOrigin(0.5);
 
-    this.shopItems = [
-      { id: 'bonusDamage', name: 'Long Sword', statStr: '+10 Damage', val: 10, cost: 350, color: 0x8888ff },
-      { id: 'armor', name: 'Cloth Armor', statStr: '+15 Armor', val: 15, cost: 300, color: 0x88ff88 },
-      { id: 'lifesteal', name: 'Vamp Scepter', statStr: '+10% Lifesteal', val: 10, cost: 400, color: 0xff0000 },
-      { id: 'critChance', name: "Brawler Gloves", statStr: '+10% Crit Chance', val: 10, cost: 400, color: 0xffa500 },
-      { id: 'armorPen', name: 'Last Whisper', statStr: '+20% Armor Pen', val: 20, cost: 900, color: 0x00ffff }
-    ];
+    this.shopItems = GAME_CONFIG.SHOP_ITEMS;
 
     // Grid properties
     currentY += 70;
@@ -303,11 +283,11 @@ export default class PreparationScene extends Phaser.Scene {
       const inv = this.registry.get('inventory');
       if (this.selectedInventoryIndex < inv.length) {
         const item = inv[this.selectedInventoryIndex];
-        const sellPrice = Math.floor(item.cost * 0.7);
+        const sellPrice = Math.floor(item.cost * GAME_CONFIG.ECONOMY.SELL_REFUND_RATIO);
 
         this.descName.setText(`${item.name} (Owned)`);
         this.descStat.setText(item.statStr);
-        this.descCost.setText(`Sell: +${sellPrice}G (70%)`);
+        this.descCost.setText(`Sell: +${sellPrice}G (${Math.round(GAME_CONFIG.ECONOMY.SELL_REFUND_RATIO * 100)}%)`);
         this.descCost.setColor('#ffaa00');
 
         this.buyBtnBg.setFillStyle(0x555555);
@@ -376,7 +356,7 @@ export default class PreparationScene extends Phaser.Scene {
     if (this.selectedInventoryIndex < 0 || this.selectedInventoryIndex >= inv.length) return;
 
     const item = inv[this.selectedInventoryIndex];
-    const sellPrice = Math.floor(item.cost * 0.7);
+    const sellPrice = Math.floor(item.cost * GAME_CONFIG.ECONOMY.SELL_REFUND_RATIO);
 
     // Refund gold
     let gold = this.registry.get('gold') + sellPrice;
