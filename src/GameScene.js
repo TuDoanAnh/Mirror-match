@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import Player from './Player';
 import EnemyBot from './EnemyBot';
+import { GAME_CONFIG } from './gameConfig';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -142,7 +143,7 @@ export default class GameScene extends Phaser.Scene {
       attacker.heal(healAmt);
     }
 
-    if (!projectile.passesThrough) {
+    if (!projectile.passesThrough && !projectile.isPiercing) {
       projectile.destroy();
     }
   }
@@ -159,15 +160,15 @@ export default class GameScene extends Phaser.Scene {
 
     const bg = this.add.graphics();
     bg.fillStyle(0x000000, 0.7);
-    bg.fillRect(-200, -30, 400, 60);
+    bg.fillRect(-220, -30, 440, 60);
     this.uiContainer.add(bg);
 
     this.cooldownTexts = {};
     const skills = ['Q', 'E', 'SPACE'];
     skills.forEach((skill, index) => {
-      const x = -100 + (index * 100);
+      const x = -130 + (index * 130);
       const text = this.add.text(x, 0, `${skill}: RDY`, {
-        fontSize: '20px',
+        fontSize: '18px',
         fill: '#ffffff',
         fontFamily: 'monospace'
       }).setOrigin(0.5);
@@ -181,6 +182,7 @@ export default class GameScene extends Phaser.Scene {
 
     ['Q', 'E', 'SPACE'].forEach(skill => {
       const s = this.player.skills[skill];
+      if (!s) return;
       const remaining = s.lastUsed + s.cooldown - time;
       
       if (remaining > 0) {
@@ -194,6 +196,15 @@ export default class GameScene extends Phaser.Scene {
   }
 
   createProjectilesTextures() {
+    // Generate Trail Particle Texture ('proj_particle')
+    if (!this.textures.exists('proj_particle')) {
+      const gPart = this.make.graphics({ x: 0, y: 0, add: false });
+      gPart.fillStyle(0xffffff, 1);
+      gPart.fillCircle(8, 8, 8);
+      gPart.generateTexture('proj_particle', 16, 16);
+      gPart.destroy();
+    }
+
     // Generate Q Projectile Texture ('proj_Q')
     if (!this.textures.exists('proj_Q')) {
       const gQ = this.make.graphics({ x: 0, y: 0, add: false });
@@ -218,15 +229,6 @@ export default class GameScene extends Phaser.Scene {
       gUlt.fillEllipse(40, 60, 40, 100);
       gUlt.generateTexture('proj_SPACE', 80, 120);
       gUlt.destroy();
-    }
-
-    // Generate Trail Particle Texture ('proj_particle')
-    if (!this.textures.exists('proj_particle')) {
-      const gPart = this.make.graphics({ x: 0, y: 0, add: false });
-      gPart.fillStyle(0xffffff, 1);
-      gPart.fillCircle(8, 8, 8);
-      gPart.generateTexture('proj_particle', 16, 16);
-      gPart.destroy();
     }
   }
 }

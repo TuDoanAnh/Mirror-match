@@ -19,6 +19,10 @@ export default class PreparationScene extends Phaser.Scene {
       this.registry.set('inventory', []);
     }
 
+    if (!this.registry.has('selectedHero')) {
+      this.registry.set('selectedHero', 'ezreal');
+    }
+
     this.add.rectangle(0, 0, 1024, 768, 0x111111).setOrigin(0);
 
     // Ambient BG Grid
@@ -52,27 +56,27 @@ export default class PreparationScene extends Phaser.Scene {
     this.add.rectangle(50, 50, 250, 668, 0x1a1a1a).setOrigin(0, 0);
 
     // Title
-    currentY += 40;
-    this.add.text(centerX, currentY, "ENEMY STATUS", { fontSize: '24px', fill: '#ff5555', fontStyle: 'bold' }).setOrigin(0.5);
+    currentY += 30;
+    this.add.text(centerX, currentY, "ENEMY STATUS", { fontSize: '20px', fill: '#ff5555', fontStyle: 'bold' }).setOrigin(0.5);
 
     // Level
-    currentY += 40;
+    currentY += 30;
     const level = this.registry.get('unlockedLevel');
-    this.add.text(centerX, currentY, `LEVEL ${level}`, { fontSize: '20px', fill: '#ffffff' }).setOrigin(0.5);
+    this.add.text(centerX, currentY, `LEVEL ${level} (EZREAL BOT)`, { fontSize: '13px', fill: '#ffffff' }).setOrigin(0.5);
 
     // Graphic
-    currentY += 60;
-    this.add.circle(centerX, currentY, 32, 0xff0000);
+    currentY += 45;
+    this.add.circle(centerX, currentY, 24, 0xff0000);
 
     // Stats (2 Columns)
-    currentY += 60;
+    currentY += 45;
     
     const scale = GAME_CONFIG.BOT_SCALING[level] || GAME_CONFIG.BOT_SCALING[1];
     const enemyStats = {
-      maxHp: GAME_CONFIG.BASE_STATS.HP * scale.hpMult,
-      atk: GAME_CONFIG.SKILLS.Q.config.damage * scale.dmgMult,
+      maxHp: GAME_CONFIG.CHARACTERS.ezreal.baseStats.hp * scale.hpMult,
+      atk: GAME_CONFIG.CHARACTERS.ezreal.skills.Q.config.damage * scale.dmgMult,
       armor: scale.armor,
-      speed: GAME_CONFIG.BASE_STATS.SPEED * scale.speedMult,
+      speed: GAME_CONFIG.CHARACTERS.ezreal.baseStats.speed * scale.speedMult,
       critChance: scale.critChance,
       cdr: Math.round((1 - scale.cdrMult) * 100),
       lifesteal: scale.lifesteal,
@@ -82,15 +86,76 @@ export default class PreparationScene extends Phaser.Scene {
     const col1X = 65;
     const col2X = 175;
 
-    this.add.text(col1X, currentY, `HP: ${Math.round(enemyStats.maxHp)}`, { fontSize: '14px', fill: '#aaaaaa' });
-    this.add.text(col1X, currentY + 25, `ATK: ${Math.round(enemyStats.atk)}`, { fontSize: '14px', fill: '#aaaaaa' });
-    this.add.text(col1X, currentY + 50, `Armor: ${Math.round(enemyStats.armor)}`, { fontSize: '14px', fill: '#aaaaaa' });
-    this.add.text(col1X, currentY + 75, `Speed: ${Math.round(enemyStats.speed)}`, { fontSize: '14px', fill: '#aaaaaa' });
+    this.add.text(col1X, currentY, `HP: ${Math.round(enemyStats.maxHp)}`, { fontSize: '13px', fill: '#aaaaaa' });
+    this.add.text(col1X, currentY + 20, `ATK: ${Math.round(enemyStats.atk)}`, { fontSize: '13px', fill: '#aaaaaa' });
+    this.add.text(col1X, currentY + 40, `Armor: ${Math.round(enemyStats.armor)}`, { fontSize: '13px', fill: '#aaaaaa' });
+    this.add.text(col1X, currentY + 60, `Speed: ${Math.round(enemyStats.speed)}`, { fontSize: '13px', fill: '#aaaaaa' });
 
-    this.add.text(col2X, currentY, `Crit: ${Math.round(enemyStats.critChance)}%`, { fontSize: '14px', fill: '#aaaaaa' });
-    this.add.text(col2X, currentY + 25, `CDR: ${Math.round(enemyStats.cdr)}%`, { fontSize: '14px', fill: '#aaaaaa' });
-    this.add.text(col2X, currentY + 50, `Lifesteal: ${Math.round(enemyStats.lifesteal)}%`, { fontSize: '14px', fill: '#aaaaaa' });
-    this.add.text(col2X, currentY + 75, `Arm Pen: ${Math.round(enemyStats.armorPen)}%`, { fontSize: '14px', fill: '#aaaaaa' });
+    this.add.text(col2X, currentY, `Crit: ${Math.round(enemyStats.critChance)}%`, { fontSize: '13px', fill: '#aaaaaa' });
+    this.add.text(col2X, currentY + 20, `CDR: ${Math.round(enemyStats.cdr)}%`, { fontSize: '13px', fill: '#aaaaaa' });
+    this.add.text(col2X, currentY + 40, `Lifesteal: ${Math.round(enemyStats.lifesteal)}%`, { fontSize: '13px', fill: '#aaaaaa' });
+    this.add.text(col2X, currentY + 60, `Arm Pen: ${Math.round(enemyStats.armorPen)}%`, { fontSize: '13px', fill: '#aaaaaa' });
+
+    // Hero Selection Section
+    this.drawHeroSelection(centerX, currentY + 95);
+  }
+
+  drawHeroSelection(centerX, startY) {
+    let currentY = startY;
+    const unlockedLevel = this.registry.get('unlockedLevel');
+    const isLevel1 = unlockedLevel === 1;
+
+    this.add.text(centerX, currentY, "HERO SELECT", { fontSize: '18px', fill: '#00ffff', fontStyle: 'bold' }).setOrigin(0.5);
+    
+    currentY += 35;
+    const heroes = ['ezreal', 'lux', 'jinx'];
+    const currentHero = this.registry.get('selectedHero') || 'ezreal';
+
+    heroes.forEach((hId, index) => {
+      const heroData = GAME_CONFIG.CHARACTERS[hId];
+      const x = 90 + (index * 85);
+      const isSelected = hId === currentHero;
+
+      const btnColor = isSelected ? heroData.color : 0x333333;
+      const btn = this.add.rectangle(x, currentY, 75, 32, btnColor);
+      if (isSelected) btn.setStrokeStyle(2, 0xffffff);
+
+      const txtColor = isSelected ? '#000000' : '#ffffff';
+      this.add.text(x, currentY, heroData.name, { fontSize: '13px', fill: txtColor, fontStyle: 'bold' }).setOrigin(0.5);
+
+      if (isLevel1) {
+        btn.setInteractive({ useHandCursor: true });
+        btn.on('pointerdown', () => {
+          this.registry.set('selectedHero', hId);
+          this.scene.restart();
+        });
+      }
+    });
+
+    // Hero Description Info
+    currentY += 40;
+    const selectedData = GAME_CONFIG.CHARACTERS[currentHero];
+    this.add.text(centerX, currentY, `${selectedData.name} - ${selectedData.title}`, { fontSize: '13px', fill: '#ffff00', fontStyle: 'bold' }).setOrigin(0.5);
+
+    currentY += 22;
+    this.add.text(centerX, currentY, selectedData.description, { fontSize: '11px', fill: '#aaaaaa', align: 'center', wordWrap: { width: 230 } }).setOrigin(0.5, 0);
+
+    // Reset Campaign Button if locked (> Level 1)
+    if (!isLevel1) {
+      currentY += 120;
+      this.add.text(centerX, currentY - 20, "(Hero Locked During Campaign)", { fontSize: '11px', fill: '#ff5555' }).setOrigin(0.5);
+      
+      const resetBtn = this.add.rectangle(centerX, currentY + 10, 200, 30, 0x880000).setInteractive({ useHandCursor: true });
+      this.add.text(centerX, currentY + 10, "RESET TO LEVEL 1", { fontSize: '13px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+
+      resetBtn.on('pointerdown', () => {
+        this.registry.set('unlockedLevel', 1);
+        this.registry.set('gold', GAME_CONFIG.ECONOMY.STARTING_GOLD);
+        this.registry.set('playerStats', { bonusDamage: 0, bonusSpeed: 0, bonusHP: 0, cdr: 0, armor: 0, lifesteal: 0, critChance: 0, armorPen: 0 });
+        this.registry.set('inventory', []);
+        this.scene.restart();
+      });
+    }
   }
 
   drawCenterPanel() {
@@ -305,14 +370,21 @@ export default class PreparationScene extends Phaser.Scene {
 
   updatePlayerStatsUI() {
     const stats = this.registry.get('playerStats');
-    this.statTexts.hp.setText(`HP: ${1000 + stats.bonusHP}`);
-    this.statTexts.atk.setText(`ATK: ${100 + stats.bonusDamage}`);
-    this.statTexts.armor.setText(`Armor: ${stats.armor}`);
-    this.statTexts.speed.setText(`Speed: ${200 + stats.bonusSpeed}`);
-    this.statTexts.crit.setText(`Crit: ${stats.critChance}%`);
-    this.statTexts.cdr.setText(`CDR: ${stats.cdr * 100}%`);
-    this.statTexts.lifesteal.setText(`Lifesteal: ${stats.lifesteal}%`);
-    this.statTexts.armPen.setText(`Arm Pen: ${stats.armorPen}%`);
+    const heroId = this.registry.get('selectedHero') || 'ezreal';
+    const heroData = GAME_CONFIG.CHARACTERS[heroId] || GAME_CONFIG.CHARACTERS.ezreal;
+
+    const baseHp = heroData.baseStats.hp;
+    const baseAtk = heroData.skills.Q.config.damage;
+    const baseSpeed = heroData.baseStats.speed;
+
+    this.statTexts.hp.setText(`HP: ${baseHp + stats.bonusHP}`);
+    this.statTexts.atk.setText(`ATK: ${baseAtk + stats.bonusDamage}`);
+    this.statTexts.armor.setText(`Armor: ${heroData.baseStats.armor + stats.armor}`);
+    this.statTexts.speed.setText(`Speed: ${baseSpeed + stats.bonusSpeed}`);
+    this.statTexts.crit.setText(`Crit: ${heroData.baseStats.critChance + stats.critChance}%`);
+    this.statTexts.cdr.setText(`CDR: ${Math.round(stats.cdr * 100)}%`);
+    this.statTexts.lifesteal.setText(`Lifesteal: ${heroData.baseStats.lifesteal + stats.lifesteal}%`);
+    this.statTexts.armPen.setText(`Arm Pen: ${heroData.baseStats.armorPen + stats.armorPen}%`);
   }
 
   buyItem() {

@@ -11,18 +11,19 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     this.isBot = isBot;
     
     // Default Base Stats from GAME_CONFIG
-    this.maxHp = GAME_CONFIG.BASE_STATS.HP;
+    const baseStats = GAME_CONFIG.BASE_STATS || { HP: 1000, SPEED: 200, ARMOR: 0, LIFESTEAL: 0, CRIT_CHANCE: 0, ARMOR_PEN: 0 };
+    this.maxHp = baseStats.HP || 1000;
     this.hp = this.maxHp;
-    this.speed = GAME_CONFIG.BASE_STATS.SPEED;
+    this.shieldHp = 0;
+    this.speed = baseStats.SPEED || 200;
     this.aimAngle = 0;
     
-    this.armor = GAME_CONFIG.BASE_STATS.ARMOR;
-    this.lifesteal = GAME_CONFIG.BASE_STATS.LIFESTEAL;
-    this.critChance = GAME_CONFIG.BASE_STATS.CRIT_CHANCE;
-    this.armorPen = GAME_CONFIG.BASE_STATS.ARMOR_PEN;
+    this.armor = baseStats.ARMOR || 0;
+    this.lifesteal = baseStats.LIFESTEAL || 0;
+    this.critChance = baseStats.CRIT_CHANCE || 0;
+    this.armorPen = baseStats.ARMOR_PEN || 0;
 
     // Skills definition (Q, E, SPACE)
-    // To be populated by subclass
     this.skills = {};
 
     // Generate Texture
@@ -42,7 +43,7 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
       graphics.strokePath();
       
       // Engine glow
-      graphics.fillStyle(0x00ffff, 1);
+      graphics.fillStyle(isBot ? 0xff5555 : 0x00ffff, 1);
       graphics.fillCircle(6, 16, 4);
       
       graphics.generateTexture(texKey, 32, 32);
@@ -103,8 +104,43 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
   executeE(targetX, targetY, fireAngle) {}
   executeSpace(targetX, targetY, fireAngle) {}
 
+  addShield(amount, duration = 3000) {
+    this.shieldHp = (this.shieldHp || 0) + amount;
+    this.updateHpBar();
+
+    // Visual Shield Pulse Ring
+    const shieldRing = this.scene.add.circle(this.x, this.y, 24);
+    shieldRing.setStrokeStyle(3, 0xffff00);
+    this.scene.tweens.add({
+      targets: shieldRing,
+      scale: 1.8,
+      alpha: 0,
+      duration: 400,
+      onComplete: () => shieldRing.destroy()
+    });
+
+    if (this.shieldTimer) this.shieldTimer.remove();
+    this.shieldTimer = this.scene.time.delayedCall(duration, () => {
+      this.shieldHp = 0;
+      this.updateHpBar();
+    });
+  }
+
   takeDamage(amount, isCrit = false) {
-    this.hp = Math.max(0, this.hp - amount);
+    let remainingDamage = amount;
+
+    // Absorb into shield first if active
+    if (this.shieldHp > 0) {
+      if (this.shieldHp >= remainingDamage) {
+        this.shieldHp -= remainingDamage;
+        remainingDamage = 0;
+      } else {
+        remainingDamage -= this.shieldHp;
+        this.shieldHp = 0;
+      }
+    }
+
+    this.hp = Math.max(0, this.hp - remainingDamage);
     this.updateHpBar();
 
     this.setTint(isCrit ? 0xffa500 : 0xff0000); 
@@ -129,16 +165,28 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
   }
 
   updateHpBar() {
+    if (!this.hpBar) return;
     this.hpBar.clear();
+
+    // Background bar
     this.hpBar.fillStyle(0x000000, 0.8);
     this.hpBar.fillRect(0, 0, 50, 6);
-    const fillPercent = this.hp / this.maxHp;
+
+    // HP Fill
+    const fillPercent = Math.max(0, this.hp / this.maxHp);
     this.hpBar.fillStyle(this.isBot ? 0xff0000 : 0x00ff00, 1);
     this.hpBar.fillRect(1, 1, 48 * fillPercent, 4);
+
+    // Shield Overlay Fill
+    if (this.shieldHp > 0) {
+      const shieldPercent = Math.min(1, this.shieldHp / this.maxHp);
+      this.hpBar.fillStyle(0xffff00, 0.9);
+      this.hpBar.fillRect(1, 1, 48 * shieldPercent, 4);
+    }
   }
 
   die() {
-    this.hpBar.destroy();
+    if (this.hpBar) this.hpBar.destroy();
     this.disableBody(true, true);
     
     // Shockwave ring
@@ -167,6 +215,10 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     if (this.hpBar) {
       this.hpBar.destroy();
       this.hpBar = null;
+    }
+    if (this.shieldTimer) {
+      this.shieldTimer.remove();
+      this.shieldTimer = null;
     }
     super.destroy(fromScene);
   }

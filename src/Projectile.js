@@ -1,13 +1,15 @@
 import Phaser from 'phaser';
+import { GAME_CONFIG } from './gameConfig';
 
 export default class Projectile extends Phaser.Physics.Arcade.Sprite {
-  constructor(scene, x, y, type, config, attacker = null) {
+  constructor(scene, x, y, type, config, attacker = null, heroId = 'ezreal') {
     super(scene, x, y, ''); // Empty texture key because we will generate it dynamically
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
     this.attacker = attacker;
+    this.heroId = heroId;
 
     this.type = type; // 'Q', 'E', 'SPACE'
     this.damage = config.damage;
@@ -15,14 +17,18 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.passesThrough = config.isPiercing || false;
     this.isPiercing = this.passesThrough;
 
+    const heroData = GAME_CONFIG.CHARACTERS[heroId] || GAME_CONFIG.CHARACTERS.ezreal;
+    const projColor = (type === 'SPACE') ? (heroData.ultColor || 0xffaa00) : (heroData.projColor || 0x00ffff);
+    this.particleColor = projColor;
+
     // Build the dynamic texture if it doesn't exist yet
-    const texKey = `proj_${this.type}`;
+    const texKey = `proj_${heroId}_${this.type}`;
     if (!scene.textures.exists(texKey)) {
       const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
       
       if (this.type === 'Q') {
         // Glowing Arrow/Bolt
-        graphics.fillStyle(0x00ffff, 1);
+        graphics.fillStyle(projColor, 1);
         graphics.beginPath();
         graphics.moveTo(20, 10); // tip
         graphics.lineTo(0, 20);  // bottom tail
@@ -33,7 +39,7 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
         graphics.generateTexture(texKey, 20, 20);
       } else if (this.type === 'SPACE') {
         // Massive Energy Wave/Beam
-        graphics.fillStyle(0xffaa00, 1);
+        graphics.fillStyle(projColor, 1);
         graphics.fillEllipse(40, 60, 80, 120);
         graphics.fillStyle(0xffffff, 1);
         graphics.fillEllipse(40, 60, 40, 100);
@@ -58,7 +64,6 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.scene.physics.velocityFromRotation(angle, this.speed, this.body.velocity);
 
     // Particle Trail Effect
-    const particleColor = this.type === 'Q' ? 0x00ffff : 0xffaa00;
     const trailTex = this.scene.textures.exists('proj_particle') ? 'proj_particle' : this.texture.key;
     const trailScale = this.type === 'SPACE' ? { start: 0.8, end: 0 } : { start: 0.4, end: 0 };
     
@@ -66,7 +71,7 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.trail = this.scene.add.particles(0, 0, trailTex, {
       speed: 0,
       scale: trailScale,
-      tint: particleColor,
+      tint: this.particleColor,
       alpha: { start: 0.8, end: 0 },
       blendMode: 'ADD',
       lifespan: 250

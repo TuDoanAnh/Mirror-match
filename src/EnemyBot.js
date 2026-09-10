@@ -16,24 +16,25 @@ export default class EnemyBot extends Player {
 
   setLevel(level) {
     const scale = GAME_CONFIG.BOT_SCALING[level] || GAME_CONFIG.BOT_SCALING[1];
+    const ezrealData = GAME_CONFIG.CHARACTERS.ezreal;
 
-    this.speed = GAME_CONFIG.BASE_STATS.SPEED * scale.speedMult;
-    this.maxHp = GAME_CONFIG.BASE_STATS.HP * scale.hpMult;
+    this.speed = ezrealData.baseStats.speed * scale.speedMult;
+    this.maxHp = ezrealData.baseStats.hp * scale.hpMult;
     this.hp = this.maxHp;
     this.armor = scale.armor;
     this.armorPen = scale.armorPen;
     this.critChance = scale.critChance;
     this.lifesteal = scale.lifesteal;
 
-    this.skills.Q.config.damage = GAME_CONFIG.SKILLS.Q.config.damage * scale.dmgMult;
-    this.skills.SPACE.config.damage = GAME_CONFIG.SKILLS.SPACE.config.damage * scale.dmgMult;
+    this.skills.Q.config.damage = ezrealData.skills.Q.config.damage * scale.dmgMult;
+    this.skills.SPACE.config.damage = ezrealData.skills.SPACE.config.damage * scale.dmgMult;
 
-    this.skills.Q.cooldown = GAME_CONFIG.SKILLS.Q.cooldown * scale.cdrMult;
-    this.skills.E.cooldown = GAME_CONFIG.SKILLS.E.cooldown * scale.cdrMult;
-    this.skills.SPACE.cooldown = GAME_CONFIG.SKILLS.SPACE.cooldown * scale.cdrMult;
+    this.skills.Q.cooldown = ezrealData.skills.Q.cooldown * scale.cdrMult;
+    this.skills.E.cooldown = ezrealData.skills.E.cooldown * scale.cdrMult;
+    this.skills.SPACE.cooldown = ezrealData.skills.SPACE.cooldown * scale.cdrMult;
 
-    this.skills.Q.config.speed = GAME_CONFIG.SKILLS.Q.config.speed * scale.projSpeedMult;
-    this.skills.SPACE.config.speed = GAME_CONFIG.SKILLS.SPACE.config.speed * scale.projSpeedMult;
+    this.skills.Q.config.speed = ezrealData.skills.Q.config.speed * scale.projSpeedMult;
+    this.skills.SPACE.config.speed = ezrealData.skills.SPACE.config.speed * scale.projSpeedMult;
   }
 
   setTarget(target) {
