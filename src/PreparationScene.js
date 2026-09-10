@@ -32,6 +32,7 @@ export default class PreparationScene extends Phaser.Scene {
     });
 
     this.selectedItem = null;
+    this.selectedInventoryIndex = null;
 
     this.drawLeftPanel();
     this.drawCenterPanel();
@@ -152,7 +153,9 @@ export default class PreparationScene extends Phaser.Scene {
 
       box.on('pointerdown', () => {
         this.selectedItem = item;
+        this.selectedInventoryIndex = null;
         this.updateRightPanel();
+        this.updateInventoryView();
       });
 
       this.itemButtons.push(box);
@@ -190,7 +193,27 @@ export default class PreparationScene extends Phaser.Scene {
       const x = 790 + (col * 60);
       const y = currentY + (row * 60);
       
-      const slotBg = this.add.rectangle(x, y, 50, 50, 0x333333);
+      const slotBg = this.add.rectangle(x, y, 50, 50, 0x333333).setInteractive({ useHandCursor: true });
+      
+      slotBg.on('pointerover', () => {
+        const inv = this.registry.get('inventory');
+        if (i < inv.length) {
+          this.tweens.add({ targets: slotBg, scale: 1.1, duration: 100, ease: 'Power2' });
+        }
+      });
+      slotBg.on('pointerout', () => {
+        this.tweens.add({ targets: slotBg, scale: 1.0, duration: 100, ease: 'Power2' });
+      });
+      slotBg.on('pointerdown', () => {
+        const inv = this.registry.get('inventory');
+        if (i < inv.length) {
+          this.selectedInventoryIndex = i;
+          this.selectedItem = null;
+          this.updateRightPanel();
+          this.updateInventoryView();
+        }
+      });
+
       this.inventorySlots.push(slotBg);
     }
 
@@ -224,14 +247,25 @@ export default class PreparationScene extends Phaser.Scene {
     this.descStat = this.add.text(centerX, currentY + 30, "", { fontSize: '16px', fill: '#00ff00' }).setOrigin(0.5);
     this.descCost = this.add.text(centerX, currentY + 60, "", { fontSize: '18px', fill: '#ffff00' }).setOrigin(0.5);
 
-    // BUY Button
+    // BUY & SELL Buttons
     currentY += 120;
-    this.buyBtnBg = this.add.rectangle(centerX, currentY, 150, 40, 0x555555).setInteractive({ useHandCursor: true });
-    this.buyBtnText = this.add.text(centerX, currentY, "BUY", { fontSize: '20px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+    const btnY = currentY;
+
+    // BUY Button (Left)
+    this.buyBtnBg = this.add.rectangle(785, btnY, 110, 40, 0x555555).setInteractive({ useHandCursor: true });
+    this.buyBtnText = this.add.text(785, btnY, "BUY", { fontSize: '18px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
     
-    this.buyBtnBg.on('pointerover', () => this.tweens.add({ targets: [this.buyBtnBg, this.buyBtnText], scale: 1.1, duration: 150, ease: 'Power2' }));
+    this.buyBtnBg.on('pointerover', () => this.tweens.add({ targets: [this.buyBtnBg, this.buyBtnText], scale: 1.08, duration: 150, ease: 'Power2' }));
     this.buyBtnBg.on('pointerout', () => this.tweens.add({ targets: [this.buyBtnBg, this.buyBtnText], scale: 1.0, duration: 150, ease: 'Power2' }));
     this.buyBtnBg.on('pointerdown', () => this.buyItem());
+
+    // SELL Button (Right)
+    this.sellBtnBg = this.add.rectangle(915, btnY, 110, 40, 0x555555).setInteractive({ useHandCursor: true });
+    this.sellBtnText = this.add.text(915, btnY, "SELL", { fontSize: '18px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+
+    this.sellBtnBg.on('pointerover', () => this.tweens.add({ targets: [this.sellBtnBg, this.sellBtnText], scale: 1.08, duration: 150, ease: 'Power2' }));
+    this.sellBtnBg.on('pointerout', () => this.tweens.add({ targets: [this.sellBtnBg, this.sellBtnText], scale: 1.0, duration: 150, ease: 'Power2' }));
+    this.sellBtnBg.on('pointerdown', () => this.sellItem());
 
     // READY Button
     currentY += 80;
@@ -255,13 +289,38 @@ export default class PreparationScene extends Phaser.Scene {
   }
 
   updateRightPanel() {
-    if (!this.selectedItem) return;
+    if (this.selectedItem) {
+      // Shop item selected
+      this.descName.setText(this.selectedItem.name);
+      this.descStat.setText(this.selectedItem.statStr);
+      this.descCost.setText(`Buy: ${this.selectedItem.cost}G`);
+      this.descCost.setColor('#ffff00');
 
-    this.descName.setText(this.selectedItem.name);
-    this.descStat.setText(this.selectedItem.statStr);
-    this.descCost.setText(`${this.selectedItem.cost}G`);
+      this.buyBtnBg.setFillStyle(0x0055ff);
+      this.sellBtnBg.setFillStyle(0x555555);
+    } else if (this.selectedInventoryIndex !== null) {
+      // Inventory item selected
+      const inv = this.registry.get('inventory');
+      if (this.selectedInventoryIndex < inv.length) {
+        const item = inv[this.selectedInventoryIndex];
+        const sellPrice = Math.floor(item.cost * 0.7);
 
-    this.buyBtnBg.setFillStyle(0x0055ff);
+        this.descName.setText(`${item.name} (Owned)`);
+        this.descStat.setText(item.statStr);
+        this.descCost.setText(`Sell: +${sellPrice}G (70%)`);
+        this.descCost.setColor('#ffaa00');
+
+        this.buyBtnBg.setFillStyle(0x555555);
+        this.sellBtnBg.setFillStyle(0xd35400);
+      }
+    } else {
+      this.descName.setText("SELECT AN ITEM");
+      this.descStat.setText("");
+      this.descCost.setText("");
+
+      this.buyBtnBg.setFillStyle(0x555555);
+      this.sellBtnBg.setFillStyle(0x555555);
+    }
   }
 
   updatePlayerStatsUI() {
@@ -310,13 +369,55 @@ export default class PreparationScene extends Phaser.Scene {
     }
   }
 
+  sellItem() {
+    if (this.selectedInventoryIndex === null) return;
+
+    let inv = this.registry.get('inventory');
+    if (this.selectedInventoryIndex < 0 || this.selectedInventoryIndex >= inv.length) return;
+
+    const item = inv[this.selectedInventoryIndex];
+    const sellPrice = Math.floor(item.cost * 0.7);
+
+    // Refund gold
+    let gold = this.registry.get('gold') + sellPrice;
+    this.registry.set('gold', gold);
+
+    // Deduct player stats
+    let stats = this.registry.get('playerStats');
+    stats[item.id] = Math.max(0, stats[item.id] - item.val);
+    this.registry.set('playerStats', stats);
+
+    // Remove item from inventory
+    inv.splice(this.selectedInventoryIndex, 1);
+    this.registry.set('inventory', inv);
+
+    // Reset selection
+    this.selectedInventoryIndex = null;
+    this.updateRightPanel();
+
+    // Update UI
+    this.goldText.setText(`GOLD: ${gold}`);
+    this.updateInventoryView();
+    this.updatePlayerStatsUI();
+
+    // Flash effect
+    this.sellBtnBg.setFillStyle(0xffffff);
+    this.time.delayedCall(100, () => this.sellBtnBg.setFillStyle(0x555555));
+  }
+
   updateInventoryView() {
     const inv = this.registry.get('inventory');
     this.inventorySlots.forEach((slot, index) => {
       if (index < inv.length) {
         slot.setFillStyle(inv[index].color);
+        if (index === this.selectedInventoryIndex) {
+          slot.setStrokeStyle(3, 0xffffff);
+        } else {
+          slot.setStrokeStyle(1, 0x444444);
+        }
       } else {
         slot.setFillStyle(0x333333);
+        slot.setStrokeStyle(1, 0x222222);
       }
     });
   }
