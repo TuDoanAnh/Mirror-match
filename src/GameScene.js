@@ -13,6 +13,9 @@ export default class GameScene extends Phaser.Scene {
   }
 
   create() {
+    // Generate texture assets isolated at x=0, y=0 with immediate graphics destruction
+    this.createProjectilesTextures();
+
     // Groups for projectiles
     this.playerProjectiles = this.physics.add.group({
       classType: Phaser.Physics.Arcade.Sprite,
@@ -73,13 +76,10 @@ export default class GameScene extends Phaser.Scene {
     // Check Game Over
     if (!this.isGameOver && (this.player.hp <= 0 || this.bot.hp <= 0)) {
       this.isGameOver = true;
-      // Removed this.physics.pause() to prevent internal physics loop freezes
+      const result = this.player.hp > 0 ? 'win' : 'lose';
+      this.cameras.main.fadeOut(500, 0, 0, 0);
       this.time.delayedCall(500, () => {
-        const result = this.player.hp > 0 ? 'win' : 'lose';
-        this.cameras.main.fadeOut(500, 0, 0, 0);
-        this.cameras.main.once('camerafadeoutcomplete', () => {
-          this.scene.start('GameOverScene', { result, level: this.level });
-        });
+        this.scene.start('GameOverScene', { result, level: this.level });
       });
     }
   }
@@ -103,7 +103,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   handleProjectileObstacleHit(projectile, obstacle) {
-    if (!projectile.passesThrough) {
+    if (!projectile.passesThrough && !projectile.isPiercing) {
       projectile.destroy();
     }
   }
@@ -187,5 +187,42 @@ export default class GameScene extends Phaser.Scene {
         this.cooldownTexts[skill].setColor('#00ff00');
       }
     });
+  }
+
+  createProjectilesTextures() {
+    // Generate Q Projectile Texture ('proj_Q')
+    if (!this.textures.exists('proj_Q')) {
+      const gQ = this.make.graphics({ x: 0, y: 0, add: false });
+      gQ.fillStyle(0x00ffff, 1);
+      gQ.beginPath();
+      gQ.moveTo(20, 10);
+      gQ.lineTo(0, 20);
+      gQ.lineTo(5, 10);
+      gQ.lineTo(0, 0);
+      gQ.closePath();
+      gQ.fillPath();
+      gQ.generateTexture('proj_Q', 20, 20);
+      gQ.destroy();
+    }
+
+    // Generate Ultimate Projectile Texture ('proj_SPACE')
+    if (!this.textures.exists('proj_SPACE')) {
+      const gUlt = this.make.graphics({ x: 0, y: 0, add: false });
+      gUlt.fillStyle(0xffaa00, 1);
+      gUlt.fillEllipse(40, 60, 80, 120);
+      gUlt.fillStyle(0xffffff, 1);
+      gUlt.fillEllipse(40, 60, 40, 100);
+      gUlt.generateTexture('proj_SPACE', 80, 120);
+      gUlt.destroy();
+    }
+
+    // Generate Trail Particle Texture ('proj_particle')
+    if (!this.textures.exists('proj_particle')) {
+      const gPart = this.make.graphics({ x: 0, y: 0, add: false });
+      gPart.fillStyle(0xffffff, 1);
+      gPart.fillCircle(8, 8, 8);
+      gPart.generateTexture('proj_particle', 16, 16);
+      gPart.destroy();
+    }
   }
 }

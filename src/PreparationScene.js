@@ -10,7 +10,7 @@ export default class PreparationScene extends Phaser.Scene {
     // Registry initialization
     if (!this.registry.has('unlockedLevel')) {
       this.registry.set('unlockedLevel', 1);
-      this.registry.set('gold', 0);
+      this.registry.set('gold', 350);
       this.registry.set('playerStats', { 
         bonusDamage: 0, bonusSpeed: 0, bonusHP: 0, cdr: 0, 
         armor: 0, lifesteal: 0, critChance: 0, armorPen: 0 
@@ -62,24 +62,48 @@ export default class PreparationScene extends Phaser.Scene {
     currentY += 60;
     this.add.circle(centerX, currentY, 32, 0xff0000);
 
-    // Stats
+    // Stats (2 Columns)
     currentY += 60;
-    const dummy = new EnemyBot(this, -1000, -1000, level);
     
-    // Base stats x coordinate for alignment
-    const statX = 75;
-    
-    const addStat = (label, val) => {
-      this.add.text(statX, currentY, `${label}: ${Math.round(val)}`, { fontSize: '18px', fill: '#aaaaaa' });
-      currentY += 30;
+    // Pure stats calculation based on level (no sprite creation needed)
+    const enemyStats = {
+      maxHp: 1000,
+      atk: 100,
+      armor: 0,
+      speed: 200,
+      critChance: 0,
+      cdr: 0,
+      lifesteal: 0,
+      armorPen: 0
     };
 
-    addStat("HP", dummy.maxHp);
-    addStat("ATK", dummy.skills.Q.config.damage);
-    addStat("Armor", dummy.armor);
-    addStat("Speed", dummy.speed);
+    if (level === 2) {
+      enemyStats.speed *= 1.2; enemyStats.maxHp *= 1.2; enemyStats.armor = 25;
+      enemyStats.atk *= 1.2; enemyStats.cdr = 15;
+    } else if (level === 3) {
+      enemyStats.speed *= 1.5; enemyStats.maxHp *= 1.5; enemyStats.armor = 50;
+      enemyStats.armorPen = 10; enemyStats.atk *= 1.5; enemyStats.cdr = 30;
+    } else if (level === 4) {
+      enemyStats.speed *= 1.8; enemyStats.maxHp *= 2; enemyStats.armor = 75;
+      enemyStats.armorPen = 20; enemyStats.critChance = 10; enemyStats.atk *= 2; enemyStats.cdr = 40;
+    } else if (level === 5) {
+      enemyStats.speed *= 2.5; enemyStats.maxHp *= 3.5; enemyStats.armor = 100;
+      enemyStats.armorPen = 30; enemyStats.critChance = 25; enemyStats.lifesteal = 10;
+      enemyStats.atk *= 3; enemyStats.cdr = 70;
+    }
+    
+    const col1X = 65;
+    const col2X = 175;
 
-    dummy.destroy();
+    this.add.text(col1X, currentY, `HP: ${Math.round(enemyStats.maxHp)}`, { fontSize: '14px', fill: '#aaaaaa' });
+    this.add.text(col1X, currentY + 25, `ATK: ${Math.round(enemyStats.atk)}`, { fontSize: '14px', fill: '#aaaaaa' });
+    this.add.text(col1X, currentY + 50, `Armor: ${Math.round(enemyStats.armor)}`, { fontSize: '14px', fill: '#aaaaaa' });
+    this.add.text(col1X, currentY + 75, `Speed: ${Math.round(enemyStats.speed)}`, { fontSize: '14px', fill: '#aaaaaa' });
+
+    this.add.text(col2X, currentY, `Crit: ${Math.round(enemyStats.critChance)}%`, { fontSize: '14px', fill: '#aaaaaa' });
+    this.add.text(col2X, currentY + 25, `CDR: ${Math.round(enemyStats.cdr)}%`, { fontSize: '14px', fill: '#aaaaaa' });
+    this.add.text(col2X, currentY + 50, `Lifesteal: ${Math.round(enemyStats.lifesteal)}%`, { fontSize: '14px', fill: '#aaaaaa' });
+    this.add.text(col2X, currentY + 75, `Arm Pen: ${Math.round(enemyStats.armorPen)}%`, { fontSize: '14px', fill: '#aaaaaa' });
   }
 
   drawCenterPanel() {

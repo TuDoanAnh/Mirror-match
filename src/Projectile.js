@@ -13,6 +13,7 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.damage = config.damage;
     this.speed = config.speed;
     this.passesThrough = config.isPiercing || false;
+    this.isPiercing = this.passesThrough;
 
     // Build the dynamic texture if it doesn't exist yet
     const texKey = `proj_${this.type}`;
@@ -58,29 +59,35 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
 
     // Particle Trail Effect
     const particleColor = this.type === 'Q' ? 0x00ffff : 0xffaa00;
-    this.trail = this.scene.add.particles(0, 0, this.texture.key, { // dynamically use the projectile's own texture
+    const trailTex = this.scene.textures.exists('proj_particle') ? 'proj_particle' : this.texture.key;
+    const trailScale = this.type === 'SPACE' ? { start: 0.8, end: 0 } : { start: 0.4, end: 0 };
+    
+    // Emitter base position at 0,0 so startFollow(this) centers particles on the projectile
+    this.trail = this.scene.add.particles(0, 0, trailTex, {
       speed: 0,
-      scale: { start: (this.type === 'SPACE' ? 1.5 : 0.5), end: 0 },
+      scale: trailScale,
+      tint: particleColor,
       alpha: { start: 0.8, end: 0 },
       blendMode: 'ADD',
-      lifespan: 300
+      lifespan: 250
     });
-    // Create a circular particle texture if needed, but we can just use setEmitter to track this object
     this.trail.startFollow(this);
   }
 
   preUpdate(time, delta) {
     super.preUpdate(time, delta);
     
-    // Destroy if out of bounds
-    const camera = this.scene.cameras.main;
+    // Destroy if projectile leaves the screen bounds
+    const width = this.scene.scale ? this.scene.scale.width : (this.scene.cameras.main ? this.scene.cameras.main.width : 1024);
+    const height = this.scene.scale ? this.scene.scale.height : (this.scene.cameras.main ? this.scene.cameras.main.height : 768);
+
     if (
-      this.x < -100 || 
-      this.x > camera.width + 100 || 
-      this.y < -100 || 
-      this.y > camera.height + 100
+      this.x < 0 || 
+      this.x > width || 
+      this.y < 0 || 
+      this.y > height
     ) {
-      this.destroyProjectile();
+      this.destroy();
     }
   }
 
@@ -92,6 +99,9 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
   destroyProjectile() {
     if (this.trail) {
       this.trail.stopFollow();
+      if (typeof this.trail.stop === 'function') {
+        this.trail.stop();
+      }
       // Let particles fade naturally
       this.scene.time.delayedCall(300, () => {
         if (this.trail) this.trail.destroy();

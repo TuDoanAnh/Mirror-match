@@ -161,4 +161,12 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     });
     particles.explode(15);
   }
+
+  destroy(fromScene) {
+    if (this.hpBar) {
+      this.hpBar.destroy();
+      this.hpBar = null;
+    }
+    super.destroy(fromScene);
+  }
 }
