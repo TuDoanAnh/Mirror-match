@@ -57,10 +57,11 @@ export default class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.playerProjectiles, this.creeps, this.handleProjectileHit, null, this);
     this.physics.add.overlap(this.creepProjectiles, this.player, this.handleProjectileHit, null, this);
 
-    // Obstacle Collisions
+    // Obstacle & Creep Collisions
     this.physics.add.collider(this.player, this.obstacles);
     this.physics.add.collider(this.bot, this.obstacles);
     this.physics.add.collider(this.creeps, this.obstacles);
+    this.physics.add.collider(this.creeps, this.creeps);
     
     // Use overlap instead of collider for projectiles so they don't get physically blocked!
     this.physics.add.overlap(this.playerProjectiles, this.obstacles, this.handleProjectileObstacleHit, null, this);

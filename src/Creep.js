@@ -64,12 +64,45 @@ export default class Creep extends BaseCharacter {
       return;
     }
 
-    // Aim & move towards player
+    // Aim towards player
     this.handleAim(player.x, player.y);
     const dist = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
 
-    if (dist > 150) {
-      this.scene.physics.velocityFromRotation(this.aimAngle, this.speed, this.body.velocity);
+    if (dist > 160) {
+      // 1. Target vector towards player
+      let targetX = Math.cos(this.aimAngle);
+      let targetY = Math.sin(this.aimAngle);
+
+      // 2. Anti-Clumping Separation vector from other creeps
+      let sepX = 0;
+      let sepY = 0;
+      if (this.scene.creeps) {
+        const creeps = this.scene.creeps.getChildren();
+        for (let i = 0; i < creeps.length; i++) {
+          const other = creeps[i];
+          if (other !== this && other.active && other.hp > 0) {
+            const d = Phaser.Math.Distance.Between(this.x, this.y, other.x, other.y);
+            if (d < 45 && d > 0) {
+              sepX += (this.x - other.x) / d;
+              sepY += (this.y - other.y) / d;
+            }
+          }
+        }
+      }
+
+      // Combine target direction + separation force
+      const moveX = targetX + sepX * 1.5;
+      const moveY = targetY + sepY * 1.5;
+      const desiredAngle = Math.atan2(moveY, moveX);
+
+      // 3. Feeler ray obstacle avoidance
+      const safeAngle = this.findSafeDirection(desiredAngle);
+
+      if (safeAngle !== null) {
+        this.scene.physics.velocityFromRotation(safeAngle, this.speed, this.body.velocity);
+      } else {
+        this.setVelocity(0, 0);
+      }
     } else {
       this.setVelocity(0, 0);
     }
@@ -79,6 +112,49 @@ export default class Creep extends BaseCharacter {
       this.lastShootTime = time;
       this.shootCreepBullet(player.x, player.y);
     }
+  }
+
+  findSafeDirection(desiredAngle, lookAhead = 55) {
+    const candidateOffsets = [0, 0.45, -0.45, 0.9, -0.9, 1.35, -1.35, Math.PI];
+
+    for (let i = 0; i < candidateOffsets.length; i++) {
+      const testAngle = desiredAngle + candidateOffsets[i];
+      const testX = this.x + Math.cos(testAngle) * lookAhead;
+      const testY = this.y + Math.sin(testAngle) * lookAhead;
+
+      // Map bounds check
+      if (testX < 35 || testX > 989 || testY < 35 || testY > 733) {
+        continue;
+      }
+
+      // Obstacles collision ray check
+      if (this.isPositionBlockedByObstacle(testX, testY)) {
+        continue;
+      }
+
+      return testAngle;
+    }
+
+    return null;
+  }
+
+  isPositionBlockedByObstacle(x, y, margin = 16) {
+    if (!this.scene.obstacles) return false;
+
+    const obstacles = this.scene.obstacles.getChildren();
+    for (let i = 0; i < obstacles.length; i++) {
+      const obs = obstacles[i];
+      const left = obs.x - obs.displayWidth / 2 - margin;
+      const right = obs.x + obs.displayWidth / 2 + margin;
+      const top = obs.y - obs.displayHeight / 2 - margin;
+      const bottom = obs.y + obs.displayHeight / 2 + margin;
+
+      if (x >= left && x <= right && y >= top && y <= bottom) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   shootCreepBullet(targetX, targetY) {
