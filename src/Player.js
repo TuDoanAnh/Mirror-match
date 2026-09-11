@@ -25,7 +25,7 @@ export default class Player extends BaseCharacter {
     // Load Skills from Hero Config
     this.skills = JSON.parse(JSON.stringify(heroData.skills));
     Object.keys(this.skills).forEach(k => {
-      this.skills[k].lastUsed = 0;
+      this.skills[k].lastUsed = -999999;
     });
 
     if (!isBot && scene.registry.has('playerStats')) {
