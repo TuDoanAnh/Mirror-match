@@ -12,7 +12,7 @@ export const GAME_CONFIG = {
     ARMOR_PEN: 0
   },
   ECONOMY: {
-    STARTING_GOLD: 2000,
+    STARTING_GOLD: 2500,
     GOLD_PER_LEVEL_WIN: 50,
     SELL_REFUND_RATIO: 0.7,
     MAX_LEVEL: 5
@@ -39,7 +39,8 @@ export const GAME_CONFIG = {
     1: { speedMult: 1.0, hpMult: 1.0, armor: 0, armorPen: 0, critChance: 0, lifesteal: 0, dmgMult: 1.0, cdrMult: 1.0, projSpeedMult: 1.0 },
     2: { speedMult: 1.2, hpMult: 1.2, armor: 25, armorPen: 0, critChance: 0, lifesteal: 0, dmgMult: 1.2, cdrMult: 0.85, projSpeedMult: 1.0 },
     3: { speedMult: 1.5, hpMult: 1.5, armor: 50, armorPen: 10, critChance: 0, lifesteal: 0, dmgMult: 1.5, cdrMult: 0.70, projSpeedMult: 1.3 },
-    4: { speedMult: 1.8, hpMult: 2.0, armor: 75, armorPen: 20, critChance: 10, lifesteal: 0, dmgMult: 2.0, cdrMult: 0.60, projSpeedMult: 1.5 },
+    4: { speedMult: 1.2, hpMult: 1.2, armor: 25, armorPen: 0, critChance: 0, lifesteal: 0, dmgMult: 1.2, cdrMult: 0.85, projSpeedMult: 1.0 },
+    //4: { speedMult: 1.8, hpMult: 2.0, armor: 75, armorPen: 20, critChance: 10, lifesteal: 0, dmgMult: 2.0, cdrMult: 0.60, projSpeedMult: 1.5 },
     5: { speedMult: 2.5, hpMult: 3.5, armor: 100, armorPen: 30, critChance: 25, lifesteal: 10, dmgMult: 3.0, cdrMult: 0.30, projSpeedMult: 2.0 }
   },
   CHARACTERS: {
@@ -55,7 +56,7 @@ export const GAME_CONFIG = {
       skills: {
         Q: { type: 'PROJECTILE', name: 'Mystic Shot', cooldown: 2000, config: { damage: 100, speed: 600, isPiercing: false } },
         E: { type: 'DASH', name: 'Arcane Shift', cooldown: 8000, config: { dashDistance: 150 } },
-        SPACE: { type: 'PROJECTILE', name: 'Trueshot Barrage', cooldown: 20000, config: { damage: 500, speed: 1000, isPiercing: true } }
+        SPACE: { type: 'PROJECTILE', name: 'Trueshot Barrage', cooldown: 20000, config: { damage: 400, speed: 700, isPiercing: true } }
       }
     },
     lux: {
@@ -70,7 +71,7 @@ export const GAME_CONFIG = {
       skills: {
         Q: { type: 'PROJECTILE', name: 'Light Binding', cooldown: 3000, config: { damage: 140, speed: 550, isPiercing: true, rootDuration: 1000 } },
         E: { type: 'SHIELD', name: 'Prismatic Barrier', cooldown: 7000, config: { shieldHp: 250, duration: 3000 } },
-        SPACE: { type: 'LUX_BEAM', name: 'Final Spark', cooldown: 18000, config: { damage: 650, channelTime: 1000, beamWidth: 50 } }
+        SPACE: { type: 'LUX_BEAM', name: 'Final Spark', cooldown: 14000, config: { damage: 750, channelTime: 500, beamWidth: 50 } }
       }
     },
     jinx: {
@@ -85,7 +86,7 @@ export const GAME_CONFIG = {
       skills: {
         Q: { type: 'SPREAD_SHOT', name: 'Fishbones Rockets', cooldown: 2500, config: { count: 3, spreadAngle: 0.25, damage: 70, speed: 650 } },
         E: { type: 'DASH', name: 'Zap / Speed Rush', cooldown: 6000, config: { dashDistance: 180 } },
-        SPACE: { type: 'PROJECTILE', name: 'Super Mega Death Rocket', cooldown: 22000, config: { damage: 650, speed: 1100, isPiercing: false, isExplosive: true, explosionRadius: 100 } }
+        SPACE: { type: 'PROJECTILE', name: 'Super Mega Death Rocket', cooldown: 15000, config: { damage: 650, speed: 1100, isPiercing: false, isExplosive: true, explosionRadius: 100 } }
       }
     }
   }
