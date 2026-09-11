@@ -61,7 +61,7 @@ export default class Player extends BaseCharacter {
   }
 
   handleInput() {
-    if (this.isChanneling) {
+    if (this.isChanneling || this.isRooted) {
       this.setVelocity(0, 0);
       return;
     }

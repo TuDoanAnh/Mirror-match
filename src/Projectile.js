@@ -16,6 +16,9 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.speed = config.speed;
     this.passesThrough = config.isPiercing || false;
     this.isPiercing = this.passesThrough;
+    this.rootDuration = config.rootDuration || 0;
+    this.isExplosive = config.isExplosive || false;
+    this.explosionRadius = config.explosionRadius || 90;
 
     const heroData = GAME_CONFIG.CHARACTERS[heroId] || GAME_CONFIG.CHARACTERS.ezreal;
     const projColor = (type === 'SPACE') ? (heroData.ultColor || 0xffaa00) : (heroData.projColor || 0x00ffff);

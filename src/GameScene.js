@@ -108,6 +108,12 @@ export default class GameScene extends Phaser.Scene {
   }
 
   handleProjectileObstacleHit(projectile, obstacle) {
+    if (projectile.isExplosive) {
+      this.triggerExplosion(projectile);
+      projectile.destroy();
+      return;
+    }
+
     if (!projectile.passesThrough && !projectile.isPiercing) {
       projectile.destroy();
     }
@@ -117,6 +123,18 @@ export default class GameScene extends Phaser.Scene {
     if (!projectile.hitEntities) projectile.hitEntities = new Set();
     if (projectile.hitEntities.has(entity)) return; 
     projectile.hitEntities.add(entity);
+
+    // Apply Root status effect if projectile has rootDuration (e.g. Lux Q)
+    if (projectile.rootDuration > 0 && typeof entity.applyRoot === 'function') {
+      entity.applyRoot(projectile.rootDuration);
+    }
+
+    // Trigger explosive rocket blast if explosive (e.g. Jinx Ult)
+    if (projectile.isExplosive) {
+      this.triggerExplosion(projectile, entity);
+      projectile.destroy();
+      return;
+    }
 
     const attacker = projectile.attacker;
     
@@ -146,6 +164,97 @@ export default class GameScene extends Phaser.Scene {
     if (!projectile.passesThrough && !projectile.isPiercing) {
       projectile.destroy();
     }
+  }
+
+  triggerExplosion(projectile, primaryTarget = null) {
+    const x = projectile.x;
+    const y = projectile.y;
+    const radius = projectile.explosionRadius || 100;
+    const attacker = projectile.attacker;
+    const damage = projectile.damage;
+
+    // 1. Fireball Visual Expansion
+    const fireball = this.add.circle(x, y, 12, 0xff3300);
+    fireball.setBlendMode('ADD');
+    this.tweens.add({
+      targets: fireball,
+      radius: radius,
+      alpha: 0,
+      duration: 350,
+      ease: 'Quad.easeOut',
+      onComplete: () => fireball.destroy()
+    });
+
+    // 2. Inner White Core Flash
+    const core = this.add.circle(x, y, 6, 0xffffff);
+    core.setBlendMode('ADD');
+    this.tweens.add({
+      targets: core,
+      radius: radius * 0.5,
+      alpha: 0,
+      duration: 250,
+      ease: 'Quad.easeOut',
+      onComplete: () => core.destroy()
+    });
+
+    // 3. Expanding Shockwave Ring
+    const ring = this.add.circle(x, y, 10);
+    ring.setStrokeStyle(4, 0xff0066);
+    ring.setBlendMode('ADD');
+    this.tweens.add({
+      targets: ring,
+      scale: radius / 8,
+      alpha: 0,
+      duration: 400,
+      ease: 'Cubic.easeOut',
+      onComplete: () => ring.destroy()
+    });
+
+    // 4. Spark Particles
+    const particles = this.add.particles(x, y, projectile.texture.key, {
+      speed: { min: 150, max: 400 },
+      scale: { start: 0.6, end: 0 },
+      blendMode: 'ADD',
+      lifespan: 400,
+      alpha: { start: 1, end: 0 }
+    });
+    particles.explode(25);
+
+    // 5. Camera Shake Impact
+    this.cameras.main.shake(200, 0.015);
+
+    // 6. AOE Damage Application
+    const targets = [];
+    if (attacker && !attacker.isBot) {
+      if (this.bot && this.bot.active && this.bot.hp > 0) targets.push(this.bot);
+    } else {
+      if (this.player && this.player.active && this.player.hp > 0) targets.push(this.player);
+    }
+
+    targets.forEach(ent => {
+      const dist = Phaser.Math.Distance.Between(x, y, ent.x, ent.y);
+      const entRadius = ent.body ? (ent.body.radius || 16) : 16;
+      if (dist <= radius + entRadius) {
+        let baseDamage = damage;
+        let isCrit = false;
+
+        if (attacker && Phaser.Math.Between(1, 100) <= (attacker.critChance || 0)) {
+          baseDamage *= 2;
+          isCrit = true;
+        }
+
+        const armorPen = attacker ? attacker.armorPen : 0;
+        const effectiveArmor = Math.max(0, ent.armor * (1 - armorPen / 100));
+        const finalDamage = Math.round(baseDamage * (100 / (100 + effectiveArmor)));
+
+        ent.takeDamage(finalDamage, isCrit);
+
+        if (attacker && attacker.lifesteal > 0 && attacker.hp > 0) {
+          const healAmt = Math.round(finalDamage * (attacker.lifesteal / 100));
+          attacker.heal(healAmt);
+        }
+      }
+    });
   }
 
   tryUsePlayerSkill(skillKey, time) {

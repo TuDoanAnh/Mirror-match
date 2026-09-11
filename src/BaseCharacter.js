@@ -128,6 +128,45 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
+  applyRoot(duration = 1000) {
+    this.isRooted = true;
+    this.setVelocity(0, 0);
+
+    // Visual Binding Ring Effect
+    const rootRing = this.scene.add.circle(this.x, this.y, 22);
+    rootRing.setStrokeStyle(3, 0xffff00, 0.9);
+    rootRing.setDepth(15);
+    
+    const pulseTween = this.scene.tweens.add({
+      targets: rootRing,
+      scale: 1.25,
+      alpha: 0.6,
+      duration: 250,
+      repeat: -1,
+      yoyo: true
+    });
+
+    const updateRing = () => {
+      if (rootRing && rootRing.active) {
+        rootRing.setPosition(this.x, this.y);
+      }
+    };
+
+    const ringTimer = this.scene.time.addEvent({
+      delay: 20,
+      callback: updateRing,
+      loop: true
+    });
+
+    if (this.rootTimer) this.rootTimer.remove();
+    this.rootTimer = this.scene.time.delayedCall(duration, () => {
+      this.isRooted = false;
+      ringTimer.remove();
+      pulseTween.stop();
+      if (rootRing && rootRing.active) rootRing.destroy();
+    });
+  }
+
   takeDamage(amount, isCrit = false) {
     let remainingDamage = amount;
 
@@ -214,6 +253,7 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
   }
 
   destroy(fromScene) {
+    this.isRooted = false;
     if (this.hpBar) {
       this.hpBar.destroy();
       this.hpBar = null;
@@ -221,6 +261,10 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     if (this.shieldTimer) {
       this.shieldTimer.remove();
       this.shieldTimer = null;
+    }
+    if (this.rootTimer) {
+      this.rootTimer.remove();
+      this.rootTimer = null;
     }
     super.destroy(fromScene);
   }

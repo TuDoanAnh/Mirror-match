@@ -57,7 +57,7 @@ export const GAME_CONFIG = {
       description: 'Long-range mage with piercing light bolts & prismatic barrier shield.',
       baseStats: { hp: 900, speed: 190, armor: 0, lifesteal: 0, critChance: 0, armorPen: 0 },
       skills: {
-        Q: { type: 'PROJECTILE', name: 'Light Binding', cooldown: 3000, config: { damage: 140, speed: 550, isPiercing: true } },
+        Q: { type: 'PROJECTILE', name: 'Light Binding', cooldown: 3000, config: { damage: 140, speed: 550, isPiercing: true, rootDuration: 1000 } },
         E: { type: 'SHIELD', name: 'Prismatic Barrier', cooldown: 7000, config: { shieldHp: 250, duration: 3000 } },
         SPACE: { type: 'LUX_BEAM', name: 'Final Spark', cooldown: 18000, config: { damage: 650, channelTime: 1000, beamWidth: 50 } }
       }
@@ -74,7 +74,7 @@ export const GAME_CONFIG = {
       skills: {
         Q: { type: 'SPREAD_SHOT', name: 'Fishbones Rockets', cooldown: 2500, config: { count: 3, spreadAngle: 0.25, damage: 70, speed: 650 } },
         E: { type: 'DASH', name: 'Zap / Speed Rush', cooldown: 6000, config: { dashDistance: 180 } },
-        SPACE: { type: 'PROJECTILE', name: 'Super Mega Death Rocket', cooldown: 22000, config: { damage: 700, speed: 1100, isPiercing: true } }
+        SPACE: { type: 'PROJECTILE', name: 'Super Mega Death Rocket', cooldown: 22000, config: { damage: 650, speed: 1100, isPiercing: false, isExplosive: true, explosionRadius: 100 } }
       }
     }
   }
