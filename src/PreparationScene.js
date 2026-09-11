@@ -10,7 +10,7 @@ export default class PreparationScene extends Phaser.Scene {
   create() {
     // Registry initialization
     if (!this.registry.has('unlockedLevel')) {
-      this.registry.set('unlockedLevel', 1);
+      this.registry.set('unlockedLevel', 4);
       this.registry.set('gold', GAME_CONFIG.ECONOMY.STARTING_GOLD);
       this.registry.set('playerStats', { 
         bonusDamage: 0, bonusSpeed: 0, bonusHP: 0, cdr: 0, 
@@ -103,7 +103,6 @@ export default class PreparationScene extends Phaser.Scene {
   drawHeroSelection(centerX, startY) {
     let currentY = startY;
     const unlockedLevel = this.registry.get('unlockedLevel');
-    const isLevel1 = unlockedLevel === 1;
 
     this.add.text(centerX, currentY, "HERO SELECT", { fontSize: '18px', fill: '#00ffff', fontStyle: 'bold' }).setOrigin(0.5);
     
@@ -123,13 +122,13 @@ export default class PreparationScene extends Phaser.Scene {
       const txtColor = isSelected ? '#000000' : '#ffffff';
       this.add.text(x, currentY, heroData.name, { fontSize: '13px', fill: txtColor, fontStyle: 'bold' }).setOrigin(0.5);
 
-      if (isLevel1) {
-        btn.setInteractive({ useHandCursor: true });
-        btn.on('pointerdown', () => {
+      btn.setInteractive({ useHandCursor: true });
+      btn.on('pointerdown', () => {
+        if (currentHero !== hId) {
           this.registry.set('selectedHero', hId);
           this.scene.restart();
-        });
-      }
+        }
+      });
     });
 
     // Hero Description Info
@@ -140,22 +139,18 @@ export default class PreparationScene extends Phaser.Scene {
     currentY += 22;
     this.add.text(centerX, currentY, selectedData.description, { fontSize: '11px', fill: '#aaaaaa', align: 'center', wordWrap: { width: 230 } }).setOrigin(0.5, 0);
 
-    // Reset Campaign Button if locked (> Level 1)
-    if (!isLevel1) {
-      currentY += 120;
-      this.add.text(centerX, currentY - 20, "(Hero Locked During Campaign)", { fontSize: '11px', fill: '#ff5555' }).setOrigin(0.5);
-      
-      const resetBtn = this.add.rectangle(centerX, currentY + 10, 200, 30, 0x880000).setInteractive({ useHandCursor: true });
-      this.add.text(centerX, currentY + 10, "RESET TO LEVEL 1", { fontSize: '13px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+    // Reset Progress Button (Always available for convenience)
+    currentY += 120;
+    const resetBtn = this.add.rectangle(centerX, currentY, 200, 30, 0x661111).setInteractive({ useHandCursor: true });
+    this.add.text(centerX, currentY, "RESET TO LEVEL 1", { fontSize: '13px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
 
-      resetBtn.on('pointerdown', () => {
-        this.registry.set('unlockedLevel', 1);
-        this.registry.set('gold', GAME_CONFIG.ECONOMY.STARTING_GOLD);
-        this.registry.set('playerStats', { bonusDamage: 0, bonusSpeed: 0, bonusHP: 0, cdr: 0, armor: 0, lifesteal: 0, critChance: 0, armorPen: 0 });
-        this.registry.set('inventory', []);
-        this.scene.restart();
-      });
-    }
+    resetBtn.on('pointerdown', () => {
+      this.registry.set('unlockedLevel', 1);
+      this.registry.set('gold', GAME_CONFIG.ECONOMY.STARTING_GOLD);
+      this.registry.set('playerStats', { bonusDamage: 0, bonusSpeed: 0, bonusHP: 0, cdr: 0, armor: 0, lifesteal: 0, critChance: 0, armorPen: 0 });
+      this.registry.set('inventory', []);
+      this.scene.restart();
+    });
   }
 
   drawCenterPanel() {

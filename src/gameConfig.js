@@ -12,10 +12,21 @@ export const GAME_CONFIG = {
     ARMOR_PEN: 0
   },
   ECONOMY: {
-    STARTING_GOLD: 350,
+    STARTING_GOLD: 2000,
     GOLD_PER_LEVEL_WIN: 50,
     SELL_REFUND_RATIO: 0.7,
     MAX_LEVEL: 5
+  },
+  CREEP_STATS: {
+    hp: 250,
+    atk: 25,
+    armor: 10,
+    speed: 120,
+    spawnInterval: 6000,
+    maxCreeps: 3,
+    spawnMinLevel: 4,
+    color: 0xcc3333,
+    goldReward: 30
   },
   SHOP_ITEMS: [
     { id: 'bonusDamage', name: 'Long Sword', statStr: '+10 Damage', val: 10, cost: 350, color: 0x8888ff },

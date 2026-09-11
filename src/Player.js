@@ -302,6 +302,11 @@ export default class Player extends BaseCharacter {
         if (this.scene.bot && this.scene.bot.active && this.scene.bot.hp > 0) {
           targets.push(this.scene.bot);
         }
+        if (this.scene.creeps) {
+          this.scene.creeps.getChildren().forEach(c => {
+            if (c.active && c.hp > 0) targets.push(c);
+          });
+        }
       } else {
         if (this.scene.player && this.scene.player.active && this.scene.player.hp > 0) {
           targets.push(this.scene.player);

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import Player from './Player';
 import EnemyBot from './EnemyBot';
+import Creep from './Creep';
 import { GAME_CONFIG } from './gameConfig';
 
 export default class GameScene extends Phaser.Scene {
@@ -20,7 +21,7 @@ export default class GameScene extends Phaser.Scene {
     // Generate texture assets isolated at x=0, y=0 with immediate graphics destruction
     this.createProjectilesTextures();
 
-    // Groups for projectiles
+    // Groups for projectiles & creeps
     this.playerProjectiles = this.physics.add.group({
       classType: Phaser.Physics.Arcade.Sprite,
       runChildUpdate: true
@@ -28,6 +29,14 @@ export default class GameScene extends Phaser.Scene {
     
     this.enemyProjectiles = this.physics.add.group({
       classType: Phaser.Physics.Arcade.Sprite,
+      runChildUpdate: true
+    });
+
+    this.creeps = this.physics.add.group({
+      runChildUpdate: true
+    });
+
+    this.creepProjectiles = this.physics.add.group({
       runChildUpdate: true
     });
 
@@ -43,17 +52,38 @@ export default class GameScene extends Phaser.Scene {
     // Entity Collisions
     this.physics.add.overlap(this.playerProjectiles, this.bot, this.handleProjectileHit, null, this);
     this.physics.add.overlap(this.enemyProjectiles, this.player, this.handleProjectileHit, null, this);
+    
+    // Creep Collisions
+    this.physics.add.overlap(this.playerProjectiles, this.creeps, this.handleProjectileHit, null, this);
+    this.physics.add.overlap(this.creepProjectiles, this.player, this.handleProjectileHit, null, this);
 
     // Obstacle Collisions
     this.physics.add.collider(this.player, this.obstacles);
     this.physics.add.collider(this.bot, this.obstacles);
+    this.physics.add.collider(this.creeps, this.obstacles);
     
     // Use overlap instead of collider for projectiles so they don't get physically blocked!
     this.physics.add.overlap(this.playerProjectiles, this.obstacles, this.handleProjectileObstacleHit, null, this);
     this.physics.add.overlap(this.enemyProjectiles, this.obstacles, this.handleProjectileObstacleHit, null, this);
+    this.physics.add.overlap(this.creepProjectiles, this.obstacles, this.handleProjectileObstacleHit, null, this);
 
     // Ensure player/bot collide with bounds
     this.physics.world.setBounds(0, 0, 1024, 768);
+    
+    // Creep Spawner for Level 4+
+    if (this.level >= (GAME_CONFIG.CREEP_STATS.spawnMinLevel || 4)) {
+      // Spawn initial 2 creeps
+      this.time.delayedCall(1000, () => this.spawnCreepAroundBot());
+      this.time.delayedCall(2000, () => this.spawnCreepAroundBot());
+
+      // Spawner timer loop
+      this.time.addEvent({
+        delay: GAME_CONFIG.CREEP_STATS.spawnInterval || 6000,
+        callback: this.spawnCreepAroundBot,
+        callbackScope: this,
+        loop: true
+      });
+    }
     
     // UI Setup
     this.createUI();
@@ -119,7 +149,20 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  handleProjectileHit(entity, projectile) {
+  handleProjectileHit(obj1, obj2) {
+    let projectile = obj1;
+    let entity = obj2;
+
+    if (obj1 && typeof obj1.takeDamage === 'function') {
+      entity = obj1;
+      projectile = obj2;
+    } else if (obj2 && typeof obj2.takeDamage === 'function') {
+      entity = obj2;
+      projectile = obj1;
+    }
+
+    if (!entity || !projectile || typeof entity.takeDamage !== 'function') return;
+
     if (!projectile.hitEntities) projectile.hitEntities = new Set();
     if (projectile.hitEntities.has(entity)) return; 
     projectile.hitEntities.add(entity);
@@ -138,18 +181,18 @@ export default class GameScene extends Phaser.Scene {
 
     const attacker = projectile.attacker;
     
-    let baseDamage = projectile.damage;
+    let baseDamage = projectile.damage || 0;
     let isCrit = false;
 
     // 1. Crit Logic
-    if (attacker && Phaser.Math.Between(1, 100) <= attacker.critChance) {
+    if (attacker && Phaser.Math.Between(1, 100) <= (attacker.critChance || 0)) {
       baseDamage *= 2;
       isCrit = true;
     }
 
     // 2. Armor & ArmorPen Logic
-    const armorPen = attacker ? attacker.armorPen : 0;
-    const effectiveArmor = Math.max(0, entity.armor * (1 - armorPen / 100));
+    const armorPen = attacker ? (attacker.armorPen || 0) : 0;
+    const effectiveArmor = Math.max(0, (entity.armor || 0) * (1 - armorPen / 100));
     const finalDamage = baseDamage * (100 / (100 + effectiveArmor));
 
     // 3. Apply Damage
@@ -164,6 +207,25 @@ export default class GameScene extends Phaser.Scene {
     if (!projectile.passesThrough && !projectile.isPiercing) {
       projectile.destroy();
     }
+  }
+
+  spawnCreepAroundBot() {
+    if (this.isGameOver || !this.bot || !this.bot.active || this.bot.hp <= 0) return;
+    if (!this.creeps) return;
+
+    const maxCreeps = GAME_CONFIG.CREEP_STATS.maxCreeps || 3;
+    if (this.creeps.countActive(true) >= maxCreeps) return;
+
+    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+    const dist = Phaser.Math.Between(40, 90);
+    let spawnX = this.bot.x + Math.cos(angle) * dist;
+    let spawnY = this.bot.y + Math.sin(angle) * dist;
+
+    spawnX = Phaser.Math.Clamp(spawnX, 50, 974);
+    spawnY = Phaser.Math.Clamp(spawnY, 50, 718);
+
+    const creep = new Creep(this, spawnX, spawnY);
+    this.creeps.add(creep);
   }
 
   triggerExplosion(projectile, primaryTarget = null) {
@@ -227,6 +289,11 @@ export default class GameScene extends Phaser.Scene {
     const targets = [];
     if (attacker && !attacker.isBot) {
       if (this.bot && this.bot.active && this.bot.hp > 0) targets.push(this.bot);
+      if (this.creeps) {
+        this.creeps.getChildren().forEach(c => {
+          if (c.active && c.hp > 0) targets.push(c);
+        });
+      }
     } else {
       if (this.player && this.player.active && this.player.hp > 0) targets.push(this.player);
     }
