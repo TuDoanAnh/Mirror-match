@@ -66,7 +66,8 @@ export default class PreparationScene extends Phaser.Scene {
 
     // Graphic
     currentY += 45;
-    this.add.circle(centerX, currentY, 24, 0xff0000);
+    this.add.circle(centerX, currentY, 26, 0xffffff, 0.25);
+    this.add.circle(centerX, currentY, 22, 0xff0000);
 
     // Stats (2 Columns)
     currentY += 45;
@@ -131,16 +132,23 @@ export default class PreparationScene extends Phaser.Scene {
       });
     });
 
-    // Hero Description Info
-    currentY += 40;
+    // Hero Avatar Graphic (Clean colored circle)
+    currentY += 45;
     const selectedData = GAME_CONFIG.CHARACTERS[currentHero];
+    
+    // Outer ring & inner color circle
+    this.add.circle(centerX, currentY, 26, 0xffffff, 0.25);
+    this.add.circle(centerX, currentY, 22, selectedData.color);
+
+    // Hero Description Info
+    currentY += 35;
     this.add.text(centerX, currentY, `${selectedData.name} - ${selectedData.title}`, { fontSize: '13px', fill: '#ffff00', fontStyle: 'bold' }).setOrigin(0.5);
 
     currentY += 22;
     this.add.text(centerX, currentY, selectedData.description, { fontSize: '11px', fill: '#aaaaaa', align: 'center', wordWrap: { width: 230 } }).setOrigin(0.5, 0);
 
     // Reset Progress Button (Always available for convenience)
-    currentY += 120;
+    currentY += 100;
     const resetBtn = this.add.rectangle(centerX, currentY, 200, 30, 0x661111).setInteractive({ useHandCursor: true });
     this.add.text(centerX, currentY, "RESET TO LEVEL 1", { fontSize: '13px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
 
