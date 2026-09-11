@@ -59,7 +59,7 @@ export const GAME_CONFIG = {
       skills: {
         Q: { type: 'PROJECTILE', name: 'Light Binding', cooldown: 3000, config: { damage: 140, speed: 550, isPiercing: true } },
         E: { type: 'SHIELD', name: 'Prismatic Barrier', cooldown: 7000, config: { shieldHp: 250, duration: 3000 } },
-        SPACE: { type: 'PROJECTILE', name: 'Final Spark', cooldown: 18000, config: { damage: 650, speed: 1200, isPiercing: true } }
+        SPACE: { type: 'LUX_BEAM', name: 'Final Spark', cooldown: 18000, config: { damage: 650, channelTime: 1000, beamWidth: 50 } }
       }
     },
     jinx: {

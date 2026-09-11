@@ -61,6 +61,11 @@ export default class Player extends BaseCharacter {
   }
 
   handleInput() {
+    if (this.isChanneling) {
+      this.setVelocity(0, 0);
+      return;
+    }
+
     let vx = 0;
     let vy = 0;
 
@@ -101,6 +106,8 @@ export default class Player extends BaseCharacter {
       this.executeDash(skillKey, targetX, targetY, fireAngle);
     } else if (skill.type === 'SHIELD') {
       this.addShield(skill.config.shieldHp, skill.config.duration);
+    } else if (skill.type === 'LUX_BEAM') {
+      this.executeLuxBeam(skillKey, targetX, targetY, fireAngle);
     }
   }
 
@@ -166,5 +173,173 @@ export default class Player extends BaseCharacter {
       this.projectileGroup.add(proj);
       proj.fire(currentAngle);
     }
+  }
+
+  executeLuxBeam(skillKey, targetX, targetY, fireAngle) {
+    const skill = this.skills[skillKey];
+    const damage = (skill.config && skill.config.damage) || 650;
+    const channelTime = (skill.config && skill.config.channelTime) || 1000;
+    const beamWidth = (skill.config && skill.config.beamWidth) || 50;
+
+    this.isChanneling = true;
+    this.setVelocity(0, 0);
+    this.setRotation(fireAngle);
+
+    const beamLength = 2000;
+    const indicator = this.scene.add.graphics();
+    
+    // Charging aura ring at player position
+    const auraCircle = this.scene.add.circle(this.x, this.y, 45);
+    auraCircle.setStrokeStyle(3, 0xffdd00);
+    auraCircle.setBlendMode('ADD');
+
+    const auraTween = this.scene.tweens.add({
+      targets: auraCircle,
+      scale: 0.1,
+      alpha: { start: 1, end: 0.2 },
+      duration: channelTime,
+      ease: 'Linear'
+    });
+
+    const updateIndicator = () => {
+      if (!indicator || !indicator.active) return;
+      indicator.clear();
+
+      // Pulsing thin red laser sight line
+      const alpha = 0.5 + Math.sin(this.scene.time.now / 40) * 0.3;
+      const curEndX = this.x + Math.cos(fireAngle) * beamLength;
+      const curEndY = this.y + Math.sin(fireAngle) * beamLength;
+
+      // Outer wide warning beam (subtle red zone)
+      indicator.lineStyle(beamWidth, 0xff0000, 0.15);
+      indicator.beginPath();
+      indicator.moveTo(this.x, this.y);
+      indicator.lineTo(curEndX, curEndY);
+      indicator.strokePath();
+
+      // Inner sharp targeting line
+      indicator.lineStyle(3, 0xff3333, alpha);
+      indicator.beginPath();
+      indicator.moveTo(this.x, this.y);
+      indicator.lineTo(curEndX, curEndY);
+      indicator.strokePath();
+
+      auraCircle.setPosition(this.x, this.y);
+    };
+
+    const indicatorTimer = this.scene.time.addEvent({
+      delay: 30,
+      callback: updateIndicator,
+      loop: true
+    });
+
+    // Fire Beam after 1 second channel
+    this.scene.time.delayedCall(channelTime, () => {
+      this.isChanneling = false;
+
+      // Cleanup indicator graphics & timer
+      indicatorTimer.remove();
+      indicator.destroy();
+      auraTween.stop();
+      auraCircle.destroy();
+
+      if (!this.active || this.hp <= 0) return;
+
+      const laserStartX = this.x;
+      const laserStartY = this.y;
+      const laserEndX = laserStartX + Math.cos(fireAngle) * beamLength;
+      const laserEndY = laserStartY + Math.sin(fireAngle) * beamLength;
+
+      // Multi-layer laser beam graphic
+      const beamGraphics = this.scene.add.graphics();
+      beamGraphics.setBlendMode('ADD');
+
+      // Outer glowing golden laser
+      beamGraphics.lineStyle(beamWidth, 0xffdd00, 0.9);
+      beamGraphics.beginPath();
+      beamGraphics.moveTo(laserStartX, laserStartY);
+      beamGraphics.lineTo(laserEndX, laserEndY);
+      beamGraphics.strokePath();
+
+      // Core white laser
+      beamGraphics.lineStyle(beamWidth * 0.4, 0xffffff, 1.0);
+      beamGraphics.beginPath();
+      beamGraphics.moveTo(laserStartX, laserStartY);
+      beamGraphics.lineTo(laserEndX, laserEndY);
+      beamGraphics.strokePath();
+
+      // Flash circle at origin
+      const flashCircle = this.scene.add.circle(laserStartX, laserStartY, beamWidth * 0.8, 0xffffff);
+      flashCircle.setBlendMode('ADD');
+
+      this.scene.tweens.add({
+        targets: [beamGraphics, flashCircle],
+        alpha: 0,
+        duration: 350,
+        ease: 'Quad.easeOut',
+        onComplete: () => {
+          beamGraphics.destroy();
+          flashCircle.destroy();
+        }
+      });
+
+      // Point to segment distance helper
+      const pointToSegmentDist = (px, py, x1, y1, x2, y2) => {
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const lenSq = dx * dx + dy * dy;
+        if (lenSq === 0) return Phaser.Math.Distance.Between(px, py, x1, y1);
+        let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+        t = Math.max(0, Math.min(1, t));
+        const projX = x1 + t * dx;
+        const projY = y1 + t * dy;
+        return Phaser.Math.Distance.Between(px, py, projX, projY);
+      };
+
+      // Hit detection on targets
+      const targets = [];
+      if (!this.isBot) {
+        if (this.scene.bot && this.scene.bot.active && this.scene.bot.hp > 0) {
+          targets.push(this.scene.bot);
+        }
+      } else {
+        if (this.scene.player && this.scene.player.active && this.scene.player.hp > 0) {
+          targets.push(this.scene.player);
+        }
+      }
+
+      targets.forEach(target => {
+        const dist = pointToSegmentDist(target.x, target.y, laserStartX, laserStartY, laserEndX, laserEndY);
+        const targetRadius = (target.body && target.body.radius) ? target.body.radius : 16;
+
+        if (dist <= (beamWidth / 2 + targetRadius)) {
+          const isCrit = (Math.random() * 100) < (this.critChance || 0);
+          let finalDmg = damage;
+          if (isCrit) finalDmg *= 1.5;
+
+          const effectiveArmor = Math.max(0, target.armor * (1 - (this.armorPen || 0) / 100));
+          const dmgReduction = 100 / (100 + effectiveArmor);
+          finalDmg = Math.round(finalDmg * dmgReduction);
+
+          target.takeDamage(finalDmg, isCrit);
+
+          if (this.lifesteal > 0 && finalDmg > 0) {
+            const healAmt = Math.round(finalDmg * (this.lifesteal / 100));
+            this.heal(healAmt);
+          }
+
+          // Hit visual explosion effect
+          const hitBurst = this.scene.add.circle(target.x, target.y, 35, 0xffffff);
+          hitBurst.setBlendMode('ADD');
+          this.scene.tweens.add({
+            targets: hitBurst,
+            scale: 2.2,
+            alpha: 0,
+            duration: 300,
+            onComplete: () => hitBurst.destroy()
+          });
+        }
+      });
+    });
   }
 }

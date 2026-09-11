@@ -72,11 +72,13 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
   }
 
   handleAim(targetX, targetY) {
+    if (this.isChanneling) return;
     this.aimAngle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
     this.setRotation(this.aimAngle);
   }
 
   canUseSkill(skillKey, time) {
+    if (this.isChanneling) return false;
     if (!this.skills[skillKey]) return false;
     return time >= this.skills[skillKey].lastUsed + this.skills[skillKey].cooldown;
   }
