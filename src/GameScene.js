@@ -338,43 +338,332 @@ export default class GameScene extends Phaser.Scene {
   }
 
   createUI() {
-    this.uiContainer = this.add.container(512, 720);
-    this.uiContainer.setDepth(100); // Draw above everything
+    this.createSkillIconsTextures();
 
+    const heroId = this.registry.get('selectedHero') || 'ezreal';
+    const heroData = GAME_CONFIG.CHARACTERS[heroId] || GAME_CONFIG.CHARACTERS.ezreal;
+
+    this.uiContainer = this.add.container(512, 715);
+    this.uiContainer.setDepth(100);
+
+    // Frame background (Sleek dark HUD panel)
     const bg = this.add.graphics();
-    bg.fillStyle(0x000000, 0.7);
-    bg.fillRect(-220, -30, 440, 60);
+    bg.fillStyle(0x0f172a, 0.9);
+    bg.fillRoundedRect(-145, -36, 290, 72, 8);
+    bg.lineStyle(2, 0xd4af37, 0.8);
+    bg.strokeRoundedRect(-145, -36, 290, 72, 8);
     this.uiContainer.add(bg);
 
-    this.cooldownTexts = {};
-    const skills = ['Q', 'E', 'SPACE'];
-    skills.forEach((skill, index) => {
-      const x = -130 + (index * 130);
-      const text = this.add.text(x, 0, `${skill}: RDY`, {
-        fontSize: '18px',
-        fill: '#ffffff',
-        fontFamily: 'monospace'
+    // Hero title badge at top of HUD
+    const heroBadgeText = this.add.text(0, -26, heroData.name.toUpperCase(), {
+      fontSize: '10px',
+      fill: '#d4af37',
+      fontStyle: 'bold'
+    }).setOrigin(0.5, 0.5);
+    this.uiContainer.add(heroBadgeText);
+
+    this.skillSlots = {};
+    const skills = [
+      { key: 'Q', label: 'Q', x: -85 },
+      { key: 'E', label: 'E', x: 0 },
+      { key: 'SPACE', label: 'R', x: 85 }
+    ];
+
+    skills.forEach(skill => {
+      const iconKey = `icon_${heroId}_${skill.key}`;
+
+      // Box Background
+      const boxBg = this.add.rectangle(skill.x, 3, 56, 56, 0x1e293b).setOrigin(0.5);
+      
+      // Icon Sprite
+      const iconSprite = this.add.sprite(skill.x, 3, iconKey).setOrigin(0.5);
+
+      // Dark Overlay (Visible during cooldown)
+      const darkOverlay = this.add.rectangle(skill.x, 3, 56, 56, 0x000000, 0.5).setOrigin(0.5);
+      darkOverlay.setVisible(false);
+
+      // Border Graphics (For ready/cooldown frame border)
+      const borderGraphics = this.add.graphics();
+      
+      // Radial Sweep Graphics (For clockwise circular clock cooldown sweep)
+      const sweepGraphics = this.add.graphics();
+
+      // Hotkey badge (Bottom-left corner of the skill square box)
+      const badgeBg = this.add.rectangle(skill.x - 19, 21, 16, 14, 0x0f172a, 0.95).setOrigin(0.5);
+      const badgeBorder = this.add.graphics();
+      badgeBorder.lineStyle(1, 0xd4af37, 0.8);
+      badgeBorder.strokeRect(skill.x - 27, 14, 16, 14);
+
+      const badgeText = this.add.text(skill.x - 19, 21, skill.label, {
+        fontSize: '11px',
+        fill: '#fde047',
+        fontStyle: 'bold'
       }).setOrigin(0.5);
-      this.cooldownTexts[skill] = text;
-      this.uiContainer.add(text);
+
+      // Remaining Seconds Countdown Text (Centered over box)
+      const cdText = this.add.text(skill.x, 3, '', {
+        fontSize: '20px',
+        fill: '#ffffff',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 5
+      }).setOrigin(0.5);
+      cdText.setVisible(false);
+
+      this.uiContainer.add([
+        boxBg,
+        iconSprite,
+        darkOverlay,
+        sweepGraphics,
+        borderGraphics,
+        badgeBg,
+        badgeBorder,
+        badgeText,
+        cdText
+      ]);
+
+      this.skillSlots[skill.key] = {
+        x: skill.x,
+        y: 3,
+        boxBg,
+        iconSprite,
+        darkOverlay,
+        borderGraphics,
+        sweepGraphics,
+        cdText
+      };
     });
   }
 
   updateUI(time) {
     if (!this.player || this.player.hp <= 0) return;
 
-    ['Q', 'E', 'SPACE'].forEach(skill => {
-      const s = this.player.skills[skill];
-      if (!s) return;
+    ['Q', 'E', 'SPACE'].forEach(skillKey => {
+      const slot = this.skillSlots[skillKey];
+      const s = this.player.skills[skillKey];
+      if (!slot || !s) return;
+
       const remaining = s.lastUsed + s.cooldown - time;
-      
+      const totalCd = s.cooldown || 1000;
+
+      slot.sweepGraphics.clear();
+      slot.borderGraphics.clear();
+
       if (remaining > 0) {
-        this.cooldownTexts[skill].setText(`${skill}: ${(remaining/1000).toFixed(1)}s`);
-        this.cooldownTexts[skill].setColor('#ff0000');
+        // --- ON COOLDOWN ---
+        slot.darkOverlay.setVisible(true);
+
+        // Frame border when cooling down (dim grey/blue)
+        slot.borderGraphics.lineStyle(2, 0x475569, 1);
+        slot.borderGraphics.strokeRect(slot.x - 28, slot.y - 28, 56, 56);
+
+        // Clockwise Radial Sweep Pie Slice Overlay
+        const progress = Math.min(1, Math.max(0, remaining / totalCd));
+        const radius = 38; // Large enough to cover the 56x56 square box
+        const startAngle = -Math.PI / 2; // Top (12 o'clock)
+        const endAngle = startAngle + (progress * Math.PI * 2);
+
+        slot.sweepGraphics.fillStyle(0x000000, 0.65);
+        slot.sweepGraphics.beginPath();
+        slot.sweepGraphics.moveTo(slot.x, slot.y);
+        slot.sweepGraphics.arc(slot.x, slot.y, radius, startAngle, endAngle, false);
+        slot.sweepGraphics.closePath();
+        slot.sweepGraphics.fillPath();
+
+        // Remaining seconds text (e.g. "6.2", "1.5", "0.4")
+        const sec = (remaining / 1000).toFixed(1);
+        slot.cdText.setText(sec);
+        slot.cdText.setVisible(true);
+
       } else {
-        this.cooldownTexts[skill].setText(`${skill}: RDY`);
-        this.cooldownTexts[skill].setColor('#00ff00');
+        // --- READY ---
+        slot.darkOverlay.setVisible(false);
+
+        // Frame border when READY (bright gold / cyan)
+        slot.borderGraphics.lineStyle(2, 0xf59e0b, 1);
+        slot.borderGraphics.strokeRect(slot.x - 28, slot.y - 28, 56, 56);
+
+        // Glowing outer stroke corners
+        slot.borderGraphics.lineStyle(1, 0xffffff, 0.8);
+        slot.borderGraphics.strokeRect(slot.x - 29, slot.y - 29, 58, 58);
+
+        slot.cdText.setVisible(false);
       }
+    });
+  }
+
+  createSkillIconsTextures() {
+    const size = 56;
+
+    const makeIcon = (key, drawFn) => {
+      if (this.textures.exists(key)) return;
+      const g = this.make.graphics({ x: 0, y: 0, add: false });
+      drawFn(g, size);
+      g.generateTexture(key, size, size);
+      g.destroy();
+    };
+
+    // 1. Ezreal Q - Mystic Shot (Cyan Bolt)
+    makeIcon('icon_ezreal_Q', (g, s) => {
+      g.fillStyle(0x0a192f, 1);
+      g.fillRect(0, 0, s, s);
+      g.lineStyle(2, 0x38bdf8, 1);
+      g.strokeRect(1, 1, s - 2, s - 2);
+      g.fillStyle(0x00ffff, 1);
+      g.beginPath();
+      g.moveTo(s * 0.75, s * 0.25);
+      g.lineTo(s * 0.25, s * 0.55);
+      g.lineTo(s * 0.45, s * 0.75);
+      g.closePath();
+      g.fillPath();
+      g.lineStyle(3, 0x38bdf8, 0.8);
+      g.beginPath();
+      g.moveTo(s * 0.2, s * 0.8);
+      g.lineTo(s * 0.5, s * 0.5);
+      g.strokePath();
+    });
+
+    // 2. Ezreal E - Arcane Shift (Golden Wings / Teleport)
+    makeIcon('icon_ezreal_E', (g, s) => {
+      g.fillStyle(0x1e1b4b, 1);
+      g.fillRect(0, 0, s, s);
+      g.lineStyle(2, 0xf59e0b, 1);
+      g.strokeRect(1, 1, s - 2, s - 2);
+      g.fillStyle(0xfbbf24, 1);
+      g.beginPath();
+      g.moveTo(s * 0.5, s * 0.2);
+      g.lineTo(s * 0.8, s * 0.5);
+      g.lineTo(s * 0.65, s * 0.5);
+      g.lineTo(s * 0.5, s * 0.35);
+      g.lineTo(s * 0.35, s * 0.5);
+      g.lineTo(s * 0.2, s * 0.5);
+      g.closePath();
+      g.fillPath();
+
+      g.fillStyle(0xf59e0b, 1);
+      g.beginPath();
+      g.moveTo(s * 0.5, s * 0.45);
+      g.lineTo(s * 0.8, s * 0.75);
+      g.lineTo(s * 0.65, s * 0.75);
+      g.lineTo(s * 0.5, s * 0.6);
+      g.lineTo(s * 0.35, s * 0.75);
+      g.lineTo(s * 0.2, s * 0.75);
+      g.closePath();
+      g.fillPath();
+    });
+
+    // 3. Ezreal SPACE - Trueshot Barrage (Golden Crescent Wave)
+    makeIcon('icon_ezreal_SPACE', (g, s) => {
+      g.fillStyle(0x2d1202, 1);
+      g.fillRect(0, 0, s, s);
+      g.lineStyle(2, 0xf59e0b, 1);
+      g.strokeRect(1, 1, s - 2, s - 2);
+      g.fillStyle(0xfde047, 1);
+      g.beginPath();
+      g.arc(s * 0.5, s * 0.5, s * 0.35, -Math.PI * 0.6, Math.PI * 0.6, false);
+      g.lineTo(s * 0.5, s * 0.5);
+      g.closePath();
+      g.fillPath();
+    });
+
+    // 4. Lux Q - Light Binding (Star Sphere)
+    makeIcon('icon_lux_Q', (g, s) => {
+      g.fillStyle(0x2e2300, 1);
+      g.fillRect(0, 0, s, s);
+      g.lineStyle(2, 0xfacc15, 1);
+      g.strokeRect(1, 1, s - 2, s - 2);
+      g.fillStyle(0xfffde7, 1);
+      g.fillCircle(s * 0.5, s * 0.5, s * 0.25);
+      g.lineStyle(3, 0xfacc15, 0.9);
+      g.beginPath();
+      g.moveTo(s * 0.15, s * 0.5); g.lineTo(s * 0.85, s * 0.5);
+      g.moveTo(s * 0.5, s * 0.15); g.lineTo(s * 0.5, s * 0.85);
+      g.strokePath();
+    });
+
+    // 5. Lux E - Prismatic Barrier (Prism Shield)
+    makeIcon('icon_lux_E', (g, s) => {
+      g.fillStyle(0x032b2b, 1);
+      g.fillRect(0, 0, s, s);
+      g.lineStyle(2, 0x2dd4bf, 1);
+      g.strokeRect(1, 1, s - 2, s - 2);
+      g.fillStyle(0x99f6e4, 0.9);
+      g.beginPath();
+      g.moveTo(s * 0.5, s * 0.18);
+      g.lineTo(s * 0.82, s * 0.4);
+      g.lineTo(s * 0.5, s * 0.82);
+      g.lineTo(s * 0.18, s * 0.4);
+      g.closePath();
+      g.fillPath();
+    });
+
+    // 6. Lux SPACE - Final Spark (Mega Beam)
+    makeIcon('icon_lux_SPACE', (g, s) => {
+      g.fillStyle(0x3b3300, 1);
+      g.fillRect(0, 0, s, s);
+      g.lineStyle(2, 0xfef08a, 1);
+      g.strokeRect(1, 1, s - 2, s - 2);
+      g.fillStyle(0xfde047, 0.6);
+      g.fillRect(0, s * 0.3, s, s * 0.4);
+      g.fillStyle(0xffffff, 1);
+      g.fillRect(0, s * 0.42, s, s * 0.16);
+      g.fillCircle(s * 0.5, s * 0.5, s * 0.28);
+    });
+
+    // 7. Jinx Q - Fishbones Rockets (Triple Rocket Spread)
+    makeIcon('icon_jinx_Q', (g, s) => {
+      g.fillStyle(0x3b072c, 1);
+      g.fillRect(0, 0, s, s);
+      g.lineStyle(2, 0xf43f5e, 1);
+      g.strokeRect(1, 1, s - 2, s - 2);
+      [0.3, 0.5, 0.7].forEach(ratio => {
+        g.fillStyle(0xf43f5e, 1);
+        g.fillRect(s * ratio - 3, s * 0.35, 6, 18);
+        g.beginPath();
+        g.moveTo(s * ratio, s * 0.2);
+        g.lineTo(s * ratio - 4, s * 0.35);
+        g.lineTo(s * ratio + 4, s * 0.35);
+        g.closePath();
+        g.fillPath();
+      });
+    });
+
+    // 8. Jinx E - Zap / Speed Rush (Lightning Bolt)
+    makeIcon('icon_jinx_E', (g, s) => {
+      g.fillStyle(0x062c43, 1);
+      g.fillRect(0, 0, s, s);
+      g.lineStyle(2, 0x06b6d4, 1);
+      g.strokeRect(1, 1, s - 2, s - 2);
+      g.fillStyle(0x22d3ee, 1);
+      g.beginPath();
+      g.moveTo(s * 0.55, s * 0.15);
+      g.lineTo(s * 0.25, s * 0.52);
+      g.lineTo(s * 0.48, s * 0.52);
+      g.lineTo(s * 0.42, s * 0.85);
+      g.lineTo(s * 0.75, s * 0.45);
+      g.lineTo(s * 0.52, s * 0.45);
+      g.closePath();
+      g.fillPath();
+    });
+
+    // 9. Jinx SPACE - Super Mega Death Rocket (Giant Rocket Tip)
+    makeIcon('icon_jinx_SPACE', (g, s) => {
+      g.fillStyle(0x450a0a, 1);
+      g.fillRect(0, 0, s, s);
+      g.lineStyle(2, 0xef4444, 1);
+      g.strokeRect(1, 1, s - 2, s - 2);
+      g.fillStyle(0xd97706, 1);
+      g.fillRect(s * 0.35, s * 0.4, s * 0.3, s * 0.45);
+      g.fillStyle(0xdc2626, 1);
+      g.beginPath();
+      g.moveTo(s * 0.5, s * 0.15);
+      g.lineTo(s * 0.28, s * 0.42);
+      g.lineTo(s * 0.72, s * 0.42);
+      g.closePath();
+      g.fillPath();
+      g.fillStyle(0xffffff, 1);
+      g.fillCircle(s * 0.42, s * 0.5, 3);
+      g.fillCircle(s * 0.58, s * 0.5, 3);
     });
   }
 
