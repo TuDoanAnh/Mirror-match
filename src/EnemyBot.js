@@ -2,6 +2,8 @@ import Phaser from 'phaser';
 import Player from './Player';
 import { GAME_CONFIG } from './gameConfig';
 import { MAP_OBSTACLES } from './mapObstacles';
+import { MAP_POLYGONS } from './mapPolygons';
+import { isPointInAnyPolygon, isSegmentIntersectingAnyPolygon } from './polygonCollision';
 
 export default class EnemyBot extends Player {
   constructor(scene, x, y, level = 1) {
@@ -306,6 +308,10 @@ export default class EnemyBot extends Player {
 
   // Checks multiple sample points along the ray segment from (x1,y1) to (x2,y2)
   isSegmentBlockedByObstacle(x1, y1, x2, y2, margin = 18) {
+    if (isSegmentIntersectingAnyPolygon(x1, y1, x2, y2, MAP_POLYGONS)) {
+      return true;
+    }
+
     const steps = 4;
     for (let s = 1; s <= steps; s++) {
       const t = s / steps;
@@ -319,6 +325,10 @@ export default class EnemyBot extends Player {
   }
 
   isPositionBlockedByObstacle(x, y, margin = 18) {
+    if (isPointInAnyPolygon(x, y, MAP_POLYGONS)) {
+      return true;
+    }
+
     for (let i = 0; i < MAP_OBSTACLES.length; i++) {
       const obs = MAP_OBSTACLES[i];
       if (obs.isPassable) continue;

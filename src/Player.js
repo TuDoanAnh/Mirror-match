@@ -4,6 +4,8 @@ import Projectile from './Projectile';
 import { GAME_CONFIG } from './gameConfig';
 import { playSkillSFX } from './soundManager';
 import { MAP_OBSTACLES } from './mapObstacles';
+import { MAP_POLYGONS } from './mapPolygons';
+import { isPointInAnyPolygon } from './polygonCollision';
 
 export default class Player extends BaseCharacter {
   constructor(scene, x, y, isBot = false, color = 0x0088ff) {
@@ -185,6 +187,11 @@ export default class Player extends BaseCharacter {
 
       // Active playable arena bounds check
       if (testX < 190 || testX > 1230 || testY < 130 || testY > 880) {
+        break;
+      }
+
+      // Check collision against MAP_POLYGONS
+      if (isPointInAnyPolygon(testX, testY, MAP_POLYGONS)) {
         break;
       }
 

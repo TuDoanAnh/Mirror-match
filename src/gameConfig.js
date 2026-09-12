@@ -39,7 +39,7 @@ export const GAME_CONFIG = {
     1: { speedMult: 1.0, hpMult: 1.0, armor: 0, armorPen: 0, critChance: 0, lifesteal: 0, dmgMult: 1.0, cdrMult: 1.0, projSpeedMult: 1.0 },
     2: { speedMult: 1.2, hpMult: 1.2, armor: 25, armorPen: 0, critChance: 0, lifesteal: 0, dmgMult: 1.2, cdrMult: 0.85, projSpeedMult: 1.0 },
     3: { speedMult: 1.5, hpMult: 1.5, armor: 50, armorPen: 10, critChance: 0, lifesteal: 0, dmgMult: 1.5, cdrMult: 0.70, projSpeedMult: 1.3 },
-    4: { speedMult: 1.2, hpMult: 1.2, armor: 25, armorPen: 0, critChance: 0, lifesteal: 0, dmgMult: 1.2, cdrMult: 0.85, projSpeedMult: 1.0 },
+    4: { speedMult: 1.2, hpMult: 1.2, armor: 25, armorPen: 0, critChance: 0, lifesteal: 0, dmgMult: 0, cdrMult: 0.85, projSpeedMult: 1.0 },
     //4: { speedMult: 1.8, hpMult: 2.0, armor: 75, armorPen: 20, critChance: 10, lifesteal: 0, dmgMult: 2.0, cdrMult: 0.60, projSpeedMult: 1.5 },
     5: { speedMult: 1.5, hpMult: 3.5, armor: 100, armorPen: 30, critChance: 25, lifesteal: 10, dmgMult: 1.5, cdrMult: 0.30, projSpeedMult: 2.0 }
   },
