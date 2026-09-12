@@ -70,10 +70,14 @@ export default class PreparationScene extends Phaser.Scene {
     const level = this.registry.get('unlockedLevel');
     this.add.text(centerX, currentY, `LEVEL ${level} (EZREAL BOT)`, { fontSize: '13px', fill: '#ffffff' }).setOrigin(0.5);
 
-    // Graphic
+    // Graphic (Ezreal Bot Sprite)
     currentY += 45;
     this.add.circle(centerX, currentY, 26, 0xffffff, 0.25);
-    this.add.circle(centerX, currentY, 22, 0xff0000);
+    const ezrealBotSprite = this.add.sprite(centerX, currentY, 'ezreal_spritesheet', 0);
+    ezrealBotSprite.setScale(1.2);
+    if (this.anims.exists('ezreal_idle')) {
+      ezrealBotSprite.play('ezreal_idle');
+    }
 
     // Stats (2 Columns)
     currentY += 45;
@@ -104,7 +108,7 @@ export default class PreparationScene extends Phaser.Scene {
     this.add.text(col2X, currentY + 60, `Arm Pen: ${Math.round(enemyStats.armorPen)}%`, { fontSize: '13px', fill: '#aaaaaa' });
 
     // Hero Selection Section
-    this.drawHeroSelection(centerX, currentY + 95);
+    this.drawHeroSelection(centerX, currentY + 105);
   }
 
   drawHeroSelection(centerX, startY) {
@@ -113,7 +117,7 @@ export default class PreparationScene extends Phaser.Scene {
 
     this.add.text(centerX, currentY, "HERO SELECT", { fontSize: '18px', fill: '#00ffff', fontStyle: 'bold' }).setOrigin(0.5);
     
-    currentY += 35;
+    currentY += 40;
     const heroes = ['ezreal', 'lux', 'jinx'];
     const currentHero = this.registry.get('selectedHero') || 'ezreal';
 
@@ -158,7 +162,7 @@ export default class PreparationScene extends Phaser.Scene {
     });
 
     // Hero Avatar Graphic
-    currentY += 45;
+    currentY += 55;
     const selectedData = GAME_CONFIG.CHARACTERS[currentHero];
     
     // Outer ring & inner color circle or character sprite
@@ -176,14 +180,14 @@ export default class PreparationScene extends Phaser.Scene {
     }
 
     // Hero Description Info
-    currentY += 35;
+    currentY += 50;
     this.add.text(centerX, currentY, `${selectedData.name} - ${selectedData.title}`, { fontSize: '13px', fill: '#ffff00', fontStyle: 'bold' }).setOrigin(0.5);
 
-    currentY += 22;
+    currentY += 25;
     this.add.text(centerX, currentY, selectedData.description, { fontSize: '11px', fill: '#aaaaaa', align: 'center', wordWrap: { width: 230 } }).setOrigin(0.5, 0);
 
     // Reset Progress Button (Always available for convenience)
-    currentY += 100;
+    currentY += 105;
     const resetBtn = this.add.rectangle(centerX, currentY, 200, 30, 0x661111).setInteractive({ useHandCursor: true });
     this.add.text(centerX, currentY, "RESET TO LEVEL 1", { fontSize: '13px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
 

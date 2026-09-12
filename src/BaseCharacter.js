@@ -101,20 +101,32 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     const speedSq = vx * vx + vy * vy;
 
     if (speedSq > 100) {
-      if (Math.abs(vx) > Math.abs(vy)) {
+      if (Math.abs(vx) >= Math.abs(vy)) {
         if (vx < 0) {
-          if (this.anims.currentAnim?.key !== `${prefix}_walk_left`) this.play(`${prefix}_walk_left`, true);
+          this.setFlipX(false);
+          if (this.anims.currentAnim?.key !== `${prefix}_walk_left`) {
+            this.play(`${prefix}_walk_left`, true);
+          }
         } else {
-          if (this.anims.currentAnim?.key !== `${prefix}_walk_right`) this.play(`${prefix}_walk_right`, true);
+          this.setFlipX(true);
+          if (this.anims.currentAnim?.key !== `${prefix}_walk_right`) {
+            this.play(`${prefix}_walk_right`, true);
+          }
         }
       } else {
+        this.setFlipX(false);
         if (vy < 0) {
-          if (this.anims.currentAnim?.key !== `${prefix}_walk_up`) this.play(`${prefix}_walk_up`, true);
+          if (this.anims.currentAnim?.key !== `${prefix}_walk_up`) {
+            this.play(`${prefix}_walk_up`, true);
+          }
         } else {
-          if (this.anims.currentAnim?.key !== `${prefix}_walk_down`) this.play(`${prefix}_walk_down`, true);
+          if (this.anims.currentAnim?.key !== `${prefix}_walk_down`) {
+            this.play(`${prefix}_walk_down`, true);
+          }
         }
       }
     } else {
+      this.setFlipX(false);
       if (this.anims.currentAnim?.key !== `${prefix}_idle`) {
         this.play(`${prefix}_idle`, true);
       }

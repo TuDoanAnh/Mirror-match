@@ -52,13 +52,14 @@ export default class Player extends BaseCharacter {
   }
 
   update(time, delta) {
-    super.update(time, delta);
     if (this.hp <= 0) return;
 
     if (!this.isBot) {
       this.handleInput();
       this.handleAim(this.scene.input.activePointer.worldX, this.scene.input.activePointer.worldY);
     }
+
+    super.update(time, delta);
   }
 
   handleInput() {
