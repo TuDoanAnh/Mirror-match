@@ -10,6 +10,10 @@ const config = {
   width: GAME_CONFIG.CANVAS.WIDTH,
   height: GAME_CONFIG.CANVAS.HEIGHT,
   parent: 'app',
+  scale: {
+    mode: Phaser.Scale.FIT,
+    autoCenter: Phaser.Scale.CENTER_BOTH
+  },
   physics: {
     default: 'arcade',
     arcade: {

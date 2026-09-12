@@ -33,13 +33,16 @@ export default class PreparationScene extends Phaser.Scene {
       this.registry.set('selectedHero', 'lux');
     }
 
-    this.add.rectangle(0, 0, 1024, 768, 0x111111).setOrigin(0);
+    const width = GAME_CONFIG.CANVAS.WIDTH;
+    const height = GAME_CONFIG.CANVAS.HEIGHT;
+
+    this.add.rectangle(0, 0, width, height, 0x111111).setOrigin(0);
 
     // Ambient BG Grid
-    const grid = this.add.grid(512, 384, 1024, 768, 64, 64, 0x000000, 0, 0x222222, 0.5);
+    const grid = this.add.grid(width / 2, height / 2, width, height, 64, 64, 0x000000, 0, 0x222222, 0.5);
     this.tweens.add({
       targets: grid,
-      y: 384 + 64,
+      y: (height / 2) + 64,
       duration: 3000,
       repeat: -1,
       yoyo: true,
@@ -58,12 +61,14 @@ export default class PreparationScene extends Phaser.Scene {
   }
 
   drawLeftPanel() {
-    // Left Panel bounds: x = 50 to 300 (width 250), Center X = 175
-    const centerX = 175;
-    let currentY = 50;
+    // Left Panel bounds: startX = 293, width = 250, Center X = 418, topY = 178
+    const startX = 293;
+    const topY = 178;
+    const centerX = startX + 125;
+    let currentY = topY;
 
     // Background
-    this.add.rectangle(50, 50, 250, 668, 0x1a1a1a).setOrigin(0, 0);
+    this.add.rectangle(startX, topY, 250, 668, 0x1a1a1a).setOrigin(0, 0);
 
     // Title
     currentY += 30;
@@ -98,8 +103,8 @@ export default class PreparationScene extends Phaser.Scene {
       armorPen: scale.armorPen
     };
     
-    const col1X = 65;
-    const col2X = 175;
+    const col1X = centerX - 110;
+    const col2X = centerX;
 
     this.add.text(col1X, currentY, `HP: ${Math.round(enemyStats.maxHp)}`, { fontSize: '13px', fill: '#aaaaaa' });
     this.add.text(col1X, currentY + 20, `ATK: ${Math.round(enemyStats.atk)}`, { fontSize: '13px', fill: '#aaaaaa' });
@@ -151,7 +156,7 @@ export default class PreparationScene extends Phaser.Scene {
 
     heroes.forEach((hId, index) => {
       const heroData = GAME_CONFIG.CHARACTERS[hId];
-      const x = 90 + (index * 85);
+      const x = (centerX - 85) + (index * 85);
       const isSelected = hId === currentHero;
 
       const btnColor = isSelected ? heroData.color : 0x333333;
@@ -205,12 +210,14 @@ export default class PreparationScene extends Phaser.Scene {
   }
 
   drawCenterPanel() {
-    // Center Panel bounds: x = 350 to 650 (width 300), Center X = 500
-    const centerX = 500;
-    let currentY = 50;
+    // Center Panel bounds: startX = 593, width = 300, Center X = 743, topY = 178
+    const startX = 593;
+    const topY = 178;
+    const centerX = startX + 150;
+    let currentY = topY;
 
     // Background
-    this.add.rectangle(350, 50, 300, 668, 0x1a1a1a).setOrigin(0, 0);
+    this.add.rectangle(startX, topY, 300, 668, 0x1a1a1a).setOrigin(0, 0);
 
     // Title
     currentY += 40;
@@ -224,12 +231,11 @@ export default class PreparationScene extends Phaser.Scene {
     let col = 0;
     const paddingX = 90;
     const paddingY = 110;
-    // 3 columns means centers at 410, 500, 590
     
     this.itemButtons = [];
 
     this.shopItems.forEach((item, index) => {
-      const x = 410 + (col * paddingX);
+      const x = (centerX - 90) + (col * paddingX);
       const y = currentY + (row * paddingY);
 
       const box = this.add.rectangle(x, y, 64, 64, item.color).setInteractive({ useHandCursor: true });
@@ -260,16 +266,18 @@ export default class PreparationScene extends Phaser.Scene {
   }
 
   drawRightPanel() {
-    // Right Panel bounds: x = 700 to 1000 (width 300), Center X = 850
-    const centerX = 850;
-    let currentY = 50;
+    // Right Panel bounds: startX = 943, width = 300, Center X = 1093, topY = 178
+    const startX = 943;
+    const topY = 178;
+    const centerX = startX + 150;
+    let currentY = topY;
 
     // Background
-    this.add.rectangle(700, 50, 300, 668, 0x1a1a1a).setOrigin(0, 0);
+    this.add.rectangle(startX, topY, 300, 668, 0x1a1a1a).setOrigin(0, 0);
 
     // Gold
     currentY += 40;
-    this.goldText = this.add.text(980, currentY, `GOLD: ${this.registry.get('gold')}`, { fontSize: '24px', fill: '#ffff00', fontStyle: 'bold' }).setOrigin(1, 0.5);
+    this.goldText = this.add.text(startX + 280, currentY, `GOLD: ${this.registry.get('gold')}`, { fontSize: '24px', fill: '#ffff00', fontStyle: 'bold' }).setOrigin(1, 0.5);
 
     // Inventory Title
     currentY += 50;
@@ -281,7 +289,7 @@ export default class PreparationScene extends Phaser.Scene {
     for(let i=0; i<6; i++) {
       const col = i % 3;
       const row = Math.floor(i / 3);
-      const x = 790 + (col * 60);
+      const x = (centerX - 60) + (col * 60);
       const y = currentY + (row * 60);
       
       const slotBg = this.add.rectangle(x, y, 50, 50, 0x333333).setInteractive({ useHandCursor: true });
@@ -315,8 +323,8 @@ export default class PreparationScene extends Phaser.Scene {
     // Detailed Stats (2 columns)
     currentY += 30;
     const stats = this.registry.get('playerStats');
-    const col1X = 720;
-    const col2X = 850;
+    const col1X = centerX - 130;
+    const col2X = centerX;
     
     // To allow dynamic updating of the UI when an item is bought, store these texts
     this.statTexts = {
@@ -343,16 +351,16 @@ export default class PreparationScene extends Phaser.Scene {
     const btnY = currentY;
 
     // BUY Button (Left)
-    this.buyBtnBg = this.add.rectangle(785, btnY, 110, 40, 0x555555).setInteractive({ useHandCursor: true });
-    this.buyBtnText = this.add.text(785, btnY, "BUY", { fontSize: '18px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+    this.buyBtnBg = this.add.rectangle(centerX - 65, btnY, 110, 40, 0x555555).setInteractive({ useHandCursor: true });
+    this.buyBtnText = this.add.text(centerX - 65, btnY, "BUY", { fontSize: '18px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
     
     this.buyBtnBg.on('pointerover', () => this.tweens.add({ targets: [this.buyBtnBg, this.buyBtnText], scale: 1.08, duration: 150, ease: 'Power2' }));
     this.buyBtnBg.on('pointerout', () => this.tweens.add({ targets: [this.buyBtnBg, this.buyBtnText], scale: 1.0, duration: 150, ease: 'Power2' }));
     this.buyBtnBg.on('pointerdown', () => this.buyItem());
 
     // SELL Button (Right)
-    this.sellBtnBg = this.add.rectangle(915, btnY, 110, 40, 0x555555).setInteractive({ useHandCursor: true });
-    this.sellBtnText = this.add.text(915, btnY, "SELL", { fontSize: '18px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+    this.sellBtnBg = this.add.rectangle(centerX + 65, btnY, 110, 40, 0x555555).setInteractive({ useHandCursor: true });
+    this.sellBtnText = this.add.text(centerX + 65, btnY, "SELL", { fontSize: '18px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
 
     this.sellBtnBg.on('pointerover', () => this.tweens.add({ targets: [this.sellBtnBg, this.sellBtnText], scale: 1.08, duration: 150, ease: 'Power2' }));
     this.sellBtnBg.on('pointerout', () => this.tweens.add({ targets: [this.sellBtnBg, this.sellBtnText], scale: 1.0, duration: 150, ease: 'Power2' }));

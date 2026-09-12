@@ -5,15 +5,21 @@ import Creep from './Creep';
 import { GAME_CONFIG } from './gameConfig';
 import { preloadLuxAssets, createLuxAnimations } from './luxAnimations';
 import { preloadCharacterSFX, playHitSFX } from './soundManager';
+import mapImageUrl from './assets/image/Map.png';
+import { MAP_OBSTACLES } from './mapObstacles';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
     super('GameScene');
+    this.isDebugMode = false;
   }
 
   preload() {
     preloadLuxAssets(this);
     preloadCharacterSFX(this);
+    if (!this.textures.exists('battle_map')) {
+      this.load.image('battle_map', mapImageUrl);
+    }
   }
 
   init(data) {
@@ -25,6 +31,9 @@ export default class GameScene extends Phaser.Scene {
   create() {
     createLuxAnimations(this);
     this.isGameOver = false;
+
+    // Map Image Background (1536 x 1024)
+    this.add.image(768, 512, 'battle_map').setDepth(-20);
 
     // Generate texture assets isolated at x=0, y=0 with immediate graphics destruction
     this.createProjectilesTextures();
@@ -52,9 +61,9 @@ export default class GameScene extends Phaser.Scene {
     this.obstacles = this.physics.add.staticGroup();
     this.createObstacles();
 
-    // Create entities
-    this.player = new Player(this, 200, 384, false, this.playerColor);
-    this.bot = new EnemyBot(this, 824, 384, this.level);
+    // Create entities at map spawn points
+    this.player = new Player(this, 280, 512, false, this.playerColor);
+    this.bot = new EnemyBot(this, 1256, 512, this.level);
     this.bot.setTarget(this.player);
 
     // Entity Collisions
@@ -76,8 +85,8 @@ export default class GameScene extends Phaser.Scene {
     this.physics.add.overlap(this.enemyProjectiles, this.obstacles, this.handleProjectileObstacleHit, null, this);
     this.physics.add.overlap(this.creepProjectiles, this.obstacles, this.handleProjectileObstacleHit, null, this);
 
-    // Ensure player/bot collide with bounds
-    this.physics.world.setBounds(0, 0, 1024, 768);
+    // Ensure player/bot collide with bounds (1536 x 1024)
+    this.physics.world.setBounds(0, 0, 1536, 1024);
     
     // Creep Spawner for Level 4+
     if (this.level >= (GAME_CONFIG.CREEP_STATS.spawnMinLevel || 4)) {
@@ -96,12 +105,14 @@ export default class GameScene extends Phaser.Scene {
     
     // UI Setup
     this.createUI();
+    this.createDebugToggleButton();
 
-    // Input listeners for skills
+    // Input listeners for skills & debug toggle (Press 'B' to toggle debug colliders)
     this.input.keyboard.removeAllListeners();
     this.input.keyboard.on('keydown-Q', () => this.tryUsePlayerSkill('Q', this.time.now));
     this.input.keyboard.on('keydown-E', () => this.tryUsePlayerSkill('E', this.time.now));
     this.input.keyboard.on('keydown-SPACE', () => this.tryUsePlayerSkill('SPACE', this.time.now));
+    this.input.keyboard.on('keydown-B', () => this.toggleDebugMode());
 
     // Fade In
     this.cameras.main.fadeIn(500, 0, 0, 0);
@@ -129,20 +140,187 @@ export default class GameScene extends Phaser.Scene {
   }
 
   createObstacles() {
-    const obstacleData = [
-      { x: 312, y: 234, w: 50, h: 100 },
-      { x: 712, y: 234, w: 50, h: 100 },
-      { x: 312, y: 534, w: 50, h: 100 },
-      { x: 712, y: 534, w: 50, h: 100 },
-      { x: 512, y: 384, w: 100, h: 50 } // Center block
-    ];
-
-    obstacleData.forEach(obs => {
-      const rect = this.add.rectangle(obs.x, obs.y, obs.w, obs.h, 0x4a5568, 1);
-      rect.setStrokeStyle(2, 0xffffff);
-      rect.setDepth(10);
+    MAP_OBSTACLES.forEach(obs => {
+      const rect = this.add.rectangle(obs.x, obs.y, obs.w, obs.h, 0x000000, 0);
       this.physics.add.existing(rect, true);
+      rect.obstacleData = obs;
       this.obstacles.add(rect);
+    });
+  }
+
+  createDebugToggleButton() {
+    // Top-left button to toggle Collider Debug mode easily
+    const btnContainer = this.add.container(140, 30);
+    btnContainer.setScrollFactor(0);
+    btnContainer.setDepth(2000);
+
+    const bg = this.add.rectangle(0, 0, 240, 36, 0x0f172a, 0.95).setInteractive({ useHandCursor: true });
+    bg.setStrokeStyle(2, 0x38bdf8);
+
+    const txt = this.add.text(0, 0, '🛠️ DEBUG COLLIDER (Phím B)', {
+      fontSize: '12px',
+      fill: '#38bdf8',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    btnContainer.add([bg, txt]);
+
+    bg.on('pointerdown', () => this.toggleDebugMode());
+    bg.on('pointerover', () => bg.setFillStyle(0x1e293b, 1));
+    bg.on('pointerout', () => bg.setFillStyle(0x0f172a, 0.95));
+
+    // Copy Data Button next to debug button
+    const copyBtn = this.add.container(360, 30);
+    copyBtn.setScrollFactor(0);
+    copyBtn.setDepth(2000);
+
+    const copyBg = this.add.rectangle(0, 0, 180, 36, 0x14532d, 0.95).setInteractive({ useHandCursor: true });
+    copyBg.setStrokeStyle(2, 0x22c55e);
+
+    const copyTxt = this.add.text(0, 0, '📋 COPY TỌA ĐỘ MỚI', {
+      fontSize: '11px',
+      fill: '#86efac',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    copyBtn.add([copyBg, copyTxt]);
+
+    copyBg.on('pointerdown', () => this.exportObstacleCoordinates());
+    copyBg.on('pointerover', () => copyBg.setFillStyle(0x166534, 1));
+    copyBg.on('pointerout', () => copyBg.setFillStyle(0x14532d, 0.95));
+
+    this.debugBtnText = txt;
+  }
+
+  toggleDebugMode() {
+    this.isDebugMode = !this.isDebugMode;
+
+    if (this.debugBtnText) {
+      this.debugBtnText.setText(this.isDebugMode ? '✅ DEBUG: ĐANG BẬT (BẬT KÉO CHUỘT)' : '🛠️ DEBUG COLLIDER (Phím B)');
+      this.debugBtnText.setColor(this.isDebugMode ? '#4ade80' : '#38bdf8');
+    }
+
+    if (this.debugGraphics) {
+      this.debugGraphics.destroy();
+      this.debugGraphics = null;
+    }
+    if (this.debugTextsContainer) {
+      this.debugTextsContainer.destroy();
+      this.debugTextsContainer = null;
+    }
+
+    // Toggle interactive drag on obstacles
+    this.obstacles.getChildren().forEach(rect => {
+      if (this.isDebugMode) {
+        rect.setInteractive({ draggable: true });
+        rect.off('drag');
+        rect.on('drag', (pointer, dragX, dragY) => {
+          if (!rect.obstacleData) return;
+          const obs = rect.obstacleData;
+          obs.x = Math.round(dragX);
+          obs.y = Math.round(dragY);
+
+          rect.setPosition(obs.x, obs.y);
+          rect.body.reset(obs.x - obs.w / 2, obs.y - obs.h / 2);
+
+          this.renderDebugOverlay();
+        });
+      } else {
+        rect.disableInteractive();
+      }
+    });
+
+    if (this.isDebugMode) {
+      this.renderDebugOverlay();
+    }
+  }
+
+  renderDebugOverlay() {
+    if (this.debugGraphics) this.debugGraphics.destroy();
+    if (this.debugTextsContainer) this.debugTextsContainer.destroy();
+
+    this.debugGraphics = this.add.graphics();
+    this.debugGraphics.setDepth(1500);
+
+    this.debugTextsContainer = this.add.container(0, 0);
+    this.debugTextsContainer.setDepth(1501);
+
+    // 1. Draw 100px Grid Lines
+    this.debugGraphics.lineStyle(1, 0xffff00, 0.25);
+    for (let x = 0; x <= 1536; x += 100) {
+      this.debugGraphics.moveTo(x, 0);
+      this.debugGraphics.lineTo(x, 1024);
+      const t = this.add.text(x + 2, 5, `${x}`, { fontSize: '10px', fill: '#ffff00' });
+      this.debugTextsContainer.add(t);
+    }
+    for (let y = 0; y <= 1024; y += 100) {
+      this.debugGraphics.moveTo(0, y);
+      this.debugGraphics.lineTo(1536, y);
+      const t = this.add.text(5, y + 2, `${y}`, { fontSize: '10px', fill: '#ffff00' });
+      this.debugTextsContainer.add(t);
+    }
+    this.debugGraphics.strokePath();
+
+    // 2. Draw Obstacle Bounding Boxes & Labels
+    MAP_OBSTACLES.forEach(obs => {
+      // Fill & Stroke
+      this.debugGraphics.fillStyle(0xff0000, 0.35);
+      this.debugGraphics.fillRect(obs.x - obs.w / 2, obs.y - obs.h / 2, obs.w, obs.h);
+      
+      this.debugGraphics.lineStyle(2, 0x00ffff, 1);
+      this.debugGraphics.strokeRect(obs.x - obs.w / 2, obs.y - obs.h / 2, obs.w, obs.h);
+
+      // Center Point Dot
+      this.debugGraphics.fillStyle(0xffff00, 1);
+      this.debugGraphics.fillCircle(obs.x, obs.y, 4);
+
+      // Label Text above box
+      const label = this.add.text(obs.x, obs.y - obs.h / 2 - 4, `${obs.name}\n(${obs.x}, ${obs.y}, ${obs.w}, ${obs.h})`, {
+        fontSize: '10px',
+        fill: '#ffffff',
+        backgroundColor: '#000000c0',
+        align: 'center',
+        padding: { x: 3, y: 1 }
+      }).setOrigin(0.5, 1);
+
+      this.debugTextsContainer.add(label);
+    });
+  }
+
+  exportObstacleCoordinates() {
+    const lines = MAP_OBSTACLES.map(obs => `  { name: '${obs.name}', x: ${obs.x}, y: ${obs.y}, w: ${obs.w}, h: ${obs.h} }`);
+    const code = `export const MAP_OBSTACLES = [\n${lines.join(',\n')}\n];`;
+
+    console.log('--- TOẠ ĐỘ VẬT CẢN MỚI ---');
+    console.log(code);
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(code).catch(() => {});
+    }
+
+    // Toast notification
+    const toast = this.add.container(768, 80);
+    toast.setScrollFactor(0);
+    toast.setDepth(3000);
+
+    const toastBg = this.add.rectangle(0, 0, 480, 40, 0x166534, 0.95);
+    toastBg.setStrokeStyle(2, 0x4ade80);
+
+    const toastTxt = this.add.text(0, 0, '✅ Đã Copy Mã Tọa Độ Mới Vào Clipboard & Console!', {
+      fontSize: '13px',
+      fill: '#ffffff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    toast.add([toastBg, toastTxt]);
+
+    this.tweens.add({
+      targets: toast,
+      y: 100,
+      alpha: 0,
+      duration: 2500,
+      ease: 'Power2',
+      onComplete: () => toast.destroy()
     });
   }
 
@@ -346,7 +524,7 @@ export default class GameScene extends Phaser.Scene {
     const heroId = this.registry.get('selectedHero') || 'ezreal';
     const heroData = GAME_CONFIG.CHARACTERS[heroId] || GAME_CONFIG.CHARACTERS.ezreal;
 
-    this.uiContainer = this.add.container(512, 715);
+    this.uiContainer = this.add.container(768, 968);
     this.uiContainer.setDepth(100);
 
     // Frame background (Sleek dark HUD panel)

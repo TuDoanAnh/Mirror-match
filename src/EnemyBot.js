@@ -201,7 +201,7 @@ export default class EnemyBot extends Player {
       const testY = this.y + Math.sin(testAngle) * lookAhead;
 
       // Map bounds check
-      if (testX < 40 || testX > 984 || testY < 40 || testY > 728) {
+      if (testX < 170 || testX > 1366 || testY < 120 || testY > 900) {
         continue;
       }
 
