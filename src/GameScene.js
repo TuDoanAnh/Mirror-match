@@ -4,6 +4,7 @@ import EnemyBot from './EnemyBot';
 import Creep from './Creep';
 import { GAME_CONFIG } from './gameConfig';
 import { preloadLuxAssets, createLuxAnimations } from './luxAnimations';
+import { preloadEzrealSkillAssets, createEzrealSkillAnimations } from './ezrealSkillAnimations';
 import { preloadCharacterSFX, playHitSFX } from './soundManager';
 import mapImageUrl from './assets/image/Map.png';
 import { MAP_OBSTACLES } from './mapObstacles';
@@ -18,6 +19,7 @@ export default class GameScene extends Phaser.Scene {
 
   preload() {
     preloadLuxAssets(this);
+    preloadEzrealSkillAssets(this);
     preloadCharacterSFX(this);
     if (!this.textures.exists('battle_map')) {
       this.load.image('battle_map', mapImageUrl);
@@ -32,6 +34,7 @@ export default class GameScene extends Phaser.Scene {
 
   create() {
     createLuxAnimations(this);
+    createEzrealSkillAnimations(this);
     this.isGameOver = false;
 
     // Map Image Background (1536 x 1024)

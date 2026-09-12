@@ -24,41 +24,59 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
     const projColor = (type === 'SPACE') ? (heroData.ultColor || 0xffaa00) : (heroData.projColor || 0x00ffff);
     this.particleColor = projColor;
 
-    // Build the dynamic texture if it doesn't exist yet
-    const texKey = `proj_${heroId}_${this.type}`;
-    if (!scene.textures.exists(texKey)) {
-      const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
-      
-      if (this.type === 'Q') {
-        // Glowing Arrow/Bolt
-        graphics.fillStyle(projColor, 1);
-        graphics.beginPath();
-        graphics.moveTo(20, 10); // tip
-        graphics.lineTo(0, 20);  // bottom tail
-        graphics.lineTo(5, 10);  // inner tail
-        graphics.lineTo(0, 0);   // top tail
-        graphics.closePath();
-        graphics.fillPath();
-        graphics.generateTexture(texKey, 20, 20);
-      } else if (this.type === 'SPACE') {
-        // Massive Energy Wave/Beam
-        graphics.fillStyle(projColor, 1);
-        graphics.fillEllipse(40, 60, 80, 120);
-        graphics.fillStyle(0xffffff, 1);
-        graphics.fillEllipse(40, 60, 40, 100);
-        graphics.generateTexture(texKey, 80, 120);
+    // Use Ezreal Skill Spritesheets if available for Ezreal / Jinx Q/Space skills
+    const isEzrealOrFallback = (heroId === 'ezreal' || (heroId === 'jinx' && !scene.textures.exists('jinx_q_skill')));
+
+    if (this.type === 'Q' && scene.textures.exists('ezreal_q_skill') && isEzrealOrFallback) {
+      this.setTexture('ezreal_q_skill', 0);
+      if (scene.anims.exists('ezreal_q_anim')) {
+        this.play('ezreal_q_anim');
       }
-      graphics.destroy();
-    }
+      this.setScale(0.55);
+      this.setOrigin(0.5, 0.5);
+      this.body.setSize(90, 36);
+    } else if (this.type === 'SPACE' && scene.textures.exists('ezreal_space_skill') && isEzrealOrFallback) {
+      this.setTexture('ezreal_space_skill', 0);
+      if (scene.anims.exists('ezreal_space_anim')) {
+        this.play('ezreal_space_anim');
+      }
+      this.setScale(0.65);
+      this.setOrigin(0.5, 0.5);
+      this.body.setSize(220, 110);
+    } else {
+      // Build dynamic fallback graphics texture
+      const texKey = `proj_${heroId}_${this.type}`;
+      if (!scene.textures.exists(texKey)) {
+        const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
+        
+        if (this.type === 'Q') {
+          graphics.fillStyle(projColor, 1);
+          graphics.beginPath();
+          graphics.moveTo(20, 10);
+          graphics.lineTo(0, 20);
+          graphics.lineTo(5, 10);
+          graphics.lineTo(0, 0);
+          graphics.closePath();
+          graphics.fillPath();
+          graphics.generateTexture(texKey, 20, 20);
+        } else if (this.type === 'SPACE') {
+          graphics.fillStyle(projColor, 1);
+          graphics.fillEllipse(40, 60, 80, 120);
+          graphics.fillStyle(0xffffff, 1);
+          graphics.fillEllipse(40, 60, 40, 100);
+          graphics.generateTexture(texKey, 80, 120);
+        }
+        graphics.destroy();
+      }
 
-    this.setTexture(texKey);
-    this.setOrigin(0.5, 0.5);
+      this.setTexture(texKey);
+      this.setOrigin(0.5, 0.5);
 
-    // Setup physics body based on texture bounds
-    if (this.type === 'Q') {
-      this.body.setSize(20, 20);
-    } else if (this.type === 'SPACE') {
-      this.body.setSize(80, 120);
+      if (this.type === 'Q') {
+        this.body.setSize(20, 20);
+      } else if (this.type === 'SPACE') {
+        this.body.setSize(80, 120);
+      }
     }
   }
 
