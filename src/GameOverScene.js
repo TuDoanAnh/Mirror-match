@@ -12,7 +12,12 @@ export default class GameOverScene extends Phaser.Scene {
   }
 
   create() {
-    this.add.rectangle(0, 0, GAME_CONFIG.CANVAS.WIDTH, GAME_CONFIG.CANVAS.HEIGHT, 0x000000, 0.8).setOrigin(0);
+    const width = GAME_CONFIG.CANVAS.WIDTH;
+    const height = GAME_CONFIG.CANVAS.HEIGHT;
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    this.add.rectangle(0, 0, width, height, 0x000000, 0.85).setOrigin(0);
 
     const isWin = this.result === 'win';
     
@@ -34,7 +39,7 @@ export default class GameOverScene extends Phaser.Scene {
       }
     }
 
-    this.add.text(512, 300, textStr, {
+    this.add.text(centerX, centerY - 100, textStr, {
       fontSize: '48px',
       fill: colorStr,
       fontStyle: 'bold',
@@ -45,8 +50,8 @@ export default class GameOverScene extends Phaser.Scene {
 
     this.cameras.main.fadeIn(500, 0, 0, 0);
 
-    const btnBg = this.add.rectangle(512, 500, 300, 60, 0x333333).setInteractive({ useHandCursor: true });
-    const btnTxt = this.add.text(512, 500, "RETURN TO MENU", {
+    const btnBg = this.add.rectangle(centerX, centerY + 120, 320, 64, 0x333333).setInteractive({ useHandCursor: true });
+    const btnTxt = this.add.text(centerX, centerY + 120, "RETURN TO MENU", {
       fontSize: '28px',
       fill: '#ffffff',
       fontStyle: 'bold'
