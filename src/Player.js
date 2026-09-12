@@ -3,6 +3,7 @@ import BaseCharacter from './BaseCharacter';
 import Projectile from './Projectile';
 import { GAME_CONFIG } from './gameConfig';
 import { playSkillSFX } from './soundManager';
+import { MAP_OBSTACLES } from './mapObstacles';
 
 export default class Player extends BaseCharacter {
   constructor(scene, x, y, isBot = false, color = 0x0088ff) {
@@ -171,6 +172,51 @@ export default class Player extends BaseCharacter {
     }
   }
 
+  getSafeDashPosition(startX, startY, fireAngle, maxDist) {
+    let safeX = startX;
+    let safeY = startY;
+    const stepSize = 8;
+    const totalSteps = Math.floor(maxDist / stepSize);
+
+    for (let i = 1; i <= totalSteps; i++) {
+      const testDist = i * stepSize;
+      const testX = startX + Math.cos(fireAngle) * testDist;
+      const testY = startY + Math.sin(fireAngle) * testDist;
+
+      // Active playable arena bounds check
+      if (testX < 190 || testX > 1230 || testY < 130 || testY > 880) {
+        break;
+      }
+
+      // Check collision against MAP_OBSTACLES
+      let isBlocked = false;
+      for (let j = 0; j < MAP_OBSTACLES.length; j++) {
+        const obs = MAP_OBSTACLES[j];
+        if (obs.isPassable) continue;
+
+        const margin = 28;
+        const left = obs.x - obs.w / 2 - margin;
+        const right = obs.x + obs.w / 2 + margin;
+        const top = obs.y - obs.h / 2 - margin;
+        const bottom = obs.y + obs.h / 2 + margin;
+
+        if (testX >= left && testX <= right && testY >= top && testY <= bottom) {
+          isBlocked = true;
+          break;
+        }
+      }
+
+      if (isBlocked) {
+        break;
+      }
+
+      safeX = testX;
+      safeY = testY;
+    }
+
+    return { x: safeX, y: safeY };
+  }
+
   executeDash(skillKey, targetX, targetY, fireAngle) {
     const skill = this.skills[skillKey];
     const dashDist = skill.config ? skill.config.dashDistance : (skill.dashDistance || 150);
@@ -180,8 +226,12 @@ export default class Player extends BaseCharacter {
     const startX = this.x;
     const startY = this.y;
     
-    this.x += Math.cos(fireAngle) * actualDist;
-    this.y += Math.sin(fireAngle) * actualDist;
+    const safePos = this.getSafeDashPosition(startX, startY, fireAngle, actualDist);
+    this.x = safePos.x;
+    this.y = safePos.y;
+    if (this.body) {
+      this.body.reset(this.x, this.y);
+    }
 
     const endX = this.x;
     const endY = this.y;

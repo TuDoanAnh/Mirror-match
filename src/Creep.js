@@ -18,6 +18,7 @@ export default class Creep extends BaseCharacter {
 
     this.lastShootTime = 0;
     this.shootCooldown = 2500; // Shoots every 2.5s
+    this.lastChosenSign = 1; // Hysteresis flag for Creep steering
 
     // Generate unique compact creep texture
     const texKey = 'creep_minion_tex';
@@ -45,6 +46,12 @@ export default class Creep extends BaseCharacter {
     this.updateHpBar();
   }
 
+  smoothSetVelocity(targetVx, targetVy, lerpFactor = 0.22) {
+    if (!this.body) return;
+    this.body.velocity.x = Phaser.Math.Linear(this.body.velocity.x, targetVx, lerpFactor);
+    this.body.velocity.y = Phaser.Math.Linear(this.body.velocity.y, targetVy, lerpFactor);
+  }
+
   update(time, delta) {
     if (this.hp <= 0) return;
 
@@ -55,13 +62,13 @@ export default class Creep extends BaseCharacter {
     }
 
     if (this.isRooted) {
-      this.setVelocity(0, 0);
+      this.smoothSetVelocity(0, 0, 0.3);
       return;
     }
 
     const player = this.scene.player;
     if (!player || player.hp <= 0) {
-      this.setVelocity(0, 0);
+      this.smoothSetVelocity(0, 0, 0.3);
       return;
     }
 
@@ -96,6 +103,15 @@ export default class Creep extends BaseCharacter {
         }
       }
 
+      // Strong repulsion from Enemy Bot to prevent crowding or trapping Bot
+      if (this.scene.bot && this.scene.bot.active && this.scene.bot.hp > 0) {
+        const bd = Phaser.Math.Distance.Between(this.x, this.y, this.scene.bot.x, this.scene.bot.y);
+        if (bd < 60 && bd > 0) {
+          sepX += (this.x - this.scene.bot.x) / bd * 2.5;
+          sepY += (this.y - this.scene.bot.y) / bd * 2.5;
+        }
+      }
+
       // Combine target direction + separation force
       const moveX = targetX + sepX * 1.5;
       const moveY = targetY + sepY * 1.5;
@@ -105,12 +121,14 @@ export default class Creep extends BaseCharacter {
       const safeAngle = this.findSafeDirection(desiredAngle);
 
       if (safeAngle !== null) {
-        this.scene.physics.velocityFromRotation(safeAngle, this.speed, this.body.velocity);
+        const targetVx = Math.cos(safeAngle) * this.speed;
+        const targetVy = Math.sin(safeAngle) * this.speed;
+        this.smoothSetVelocity(targetVx, targetVy, 0.22);
       } else {
-        this.setVelocity(0, 0);
+        this.smoothSetVelocity(0, 0, 0.3);
       }
     } else {
-      this.setVelocity(0, 0);
+      this.smoothSetVelocity(0, 0, 0.3);
     }
 
     // Fire ranged creep bullet
@@ -122,6 +140,25 @@ export default class Creep extends BaseCharacter {
 
   handleWallUnsticking() {
     if (!this.body) return false;
+
+    // Instant un-embedding if body ever gets embedded inside a static collider
+    if (this.body.embedded) {
+      const popAngle = Phaser.Math.Angle.Between(this.x, this.y, 768, 512);
+      this.x += Math.cos(popAngle) * 8;
+      this.y += Math.sin(popAngle) * 8;
+      this.body.reset(this.x, this.y);
+      return true;
+    }
+
+    // Emergency boundary pocket rescue (If trapped in right/left base alcoves or outer walls)
+    if (this.x > 1230 || this.x < 190 || this.y < 130 || this.y > 880) {
+      const centerAngle = Phaser.Math.Angle.Between(this.x, this.y, 768, 512);
+      const safeCenterAngle = this.findSafeDirection(centerAngle);
+      const finalAngle = safeCenterAngle !== null ? safeCenterAngle : centerAngle;
+      this.smoothSetVelocity(Math.cos(finalAngle) * this.speed, Math.sin(finalAngle) * this.speed, 0.35);
+      return true;
+    }
+
     const isBlocked = this.body.blocked.left || this.body.blocked.right || this.body.blocked.up || this.body.blocked.down;
     
     if (isBlocked) {
@@ -133,7 +170,7 @@ export default class Creep extends BaseCharacter {
         const dx = this.x - obs.x;
         const dy = this.y - obs.y;
         const distSq = dx * dx + dy * dy;
-        const maxThreshold = (Math.max(obs.w, obs.h) / 2 + 40) ** 2;
+        const maxThreshold = (Math.max(obs.w, obs.h) / 2 + 45) ** 2;
 
         if (distSq < maxThreshold && distSq > 0) {
           const len = Math.sqrt(distSq);
@@ -144,7 +181,7 @@ export default class Creep extends BaseCharacter {
 
       if (pushX !== 0 || pushY !== 0) {
         const pushAngle = Math.atan2(pushY, pushX);
-        this.setVelocity(Math.cos(pushAngle) * this.speed, Math.sin(pushAngle) * this.speed);
+        this.smoothSetVelocity(Math.cos(pushAngle) * this.speed, Math.sin(pushAngle) * this.speed, 0.4);
         return true;
       }
     }
@@ -152,23 +189,33 @@ export default class Creep extends BaseCharacter {
     return false;
   }
 
-  findSafeDirection(desiredAngle, lookAhead = 60) {
-    const candidateOffsets = [0, 0.45, -0.45, 0.9, -0.9, 1.35, -1.35, Math.PI];
+  findSafeDirection(desiredAngle, lookAhead = 70) {
+    let candidateOffsets;
+    if (this.lastChosenSign >= 0) {
+      candidateOffsets = [0, 0.4, 0.8, 1.2, 1.6, -0.4, -0.8, -1.2, -1.6, Math.PI];
+    } else {
+      candidateOffsets = [0, -0.4, -0.8, -1.2, -1.6, 0.4, 0.8, 1.2, 1.6, Math.PI];
+    }
 
     for (let i = 0; i < candidateOffsets.length; i++) {
-      const testAngle = desiredAngle + candidateOffsets[i];
+      const offset = candidateOffsets[i];
+      const testAngle = desiredAngle + offset;
       const testX = this.x + Math.cos(testAngle) * lookAhead;
       const testY = this.y + Math.sin(testAngle) * lookAhead;
 
-      // Map bounds check (1536 x 1024)
-      if (testX < 130 || testX > 1406 || testY < 120 || testY > 900) {
+      // Active arena bounds check (190..1230, 130..880)
+      if (testX < 190 || testX > 1230 || testY < 130 || testY > 880) {
         continue;
       }
 
-      // Obstacles collision ray check
-      if (this.isPositionBlockedByObstacle(testX, testY)) {
+      // Check entire line segment raycast
+      if (this.isSegmentBlockedByObstacle(this.x, this.y, testX, testY)) {
         continue;
       }
+
+      // Record steer direction sign for hysteresis persistence
+      if (offset > 0.05) this.lastChosenSign = 1;
+      else if (offset < -0.05) this.lastChosenSign = -1;
 
       return testAngle;
     }
@@ -176,7 +223,21 @@ export default class Creep extends BaseCharacter {
     return null;
   }
 
-  isPositionBlockedByObstacle(x, y, margin = 28) {
+  // Checks multiple sample points along the ray segment from (x1,y1) to (x2,y2)
+  isSegmentBlockedByObstacle(x1, y1, x2, y2, margin = 18) {
+    const steps = 4;
+    for (let s = 1; s <= steps; s++) {
+      const t = s / steps;
+      const px = x1 + (x2 - x1) * t;
+      const py = y1 + (y2 - y1) * t;
+      if (this.isPositionBlockedByObstacle(px, py, margin)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  isPositionBlockedByObstacle(x, y, margin = 18) {
     for (let i = 0; i < MAP_OBSTACLES.length; i++) {
       const obs = MAP_OBSTACLES[i];
       if (obs.isPassable) continue;

@@ -63,7 +63,7 @@ export default class GameScene extends Phaser.Scene {
 
     // Create entities at map spawn points
     this.player = new Player(this, 280, 512, false, this.playerColor);
-    this.bot = new EnemyBot(this, 1256, 512, this.level);
+    this.bot = new EnemyBot(this, 1180, 512, this.level);
     this.bot.setTarget(this.player);
 
     // Entity Collisions
@@ -447,8 +447,8 @@ export default class GameScene extends Phaser.Scene {
     let spawnX = this.bot.x + Math.cos(angle) * dist;
     let spawnY = this.bot.y + Math.sin(angle) * dist;
 
-    spawnX = Phaser.Math.Clamp(spawnX, 50, 974);
-    spawnY = Phaser.Math.Clamp(spawnY, 50, 718);
+    spawnX = Phaser.Math.Clamp(spawnX, 200, 1220);
+    spawnY = Phaser.Math.Clamp(spawnY, 150, 880);
 
     const creep = new Creep(this, spawnX, spawnY);
     this.creeps.add(creep);
