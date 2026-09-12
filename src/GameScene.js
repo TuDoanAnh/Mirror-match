@@ -121,9 +121,11 @@ export default class GameScene extends Phaser.Scene {
   update(time, delta) {
     if (this.player.hp > 0) {
       this.player.update(time, delta);
+      this.updateOcclusion(this.player);
     }
     if (this.bot.hp > 0 && this.player.hp > 0) {
       this.bot.update(time, delta);
+      this.updateOcclusion(this.bot);
     }
     
     this.updateUI(time);
@@ -139,12 +141,47 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
+  updateOcclusion(entity) {
+    if (!entity || !entity.active || entity.hp <= 0) return;
+
+    let isOccluded = false;
+
+    MAP_OBSTACLES.forEach(obs => {
+      // Check if entity X/Y is within obstacle bounds
+      const inX = entity.x >= (obs.x - obs.w / 2) && entity.x <= (obs.x + obs.w / 2);
+      const inY = entity.y >= (obs.y - obs.h / 2 - 10) && entity.y <= (obs.y + obs.h / 2 + 10);
+
+      if (inX && inY) {
+        // If object allows hiding behind or is passable:
+        if (obs.hideWhenBehind || obs.isPassable) {
+          // If entity is ABOVE (behind) the center Y of the object
+          if (entity.y < obs.y) {
+            isOccluded = true;
+          }
+        }
+      }
+    });
+
+    const targetAlpha = isOccluded ? 0.35 : 1.0;
+    if (Math.abs(entity.alpha - targetAlpha) > 0.01) {
+      entity.setAlpha(targetAlpha);
+    }
+  }
+
   createObstacles() {
+    this.obstacleRects = [];
+
     MAP_OBSTACLES.forEach(obs => {
       const rect = this.add.rectangle(obs.x, obs.y, obs.w, obs.h, 0x000000, 0);
-      this.physics.add.existing(rect, true);
       rect.obstacleData = obs;
-      this.obstacles.add(rect);
+
+      // Only add to static physics group if NOT passable!
+      if (!obs.isPassable) {
+        this.physics.add.existing(rect, true);
+        this.obstacles.add(rect);
+      }
+
+      this.obstacleRects.push(rect);
     });
   }
 
