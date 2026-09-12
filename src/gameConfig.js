@@ -86,7 +86,7 @@ export const GAME_CONFIG = {
       skills: {
         Q: { type: 'SPREAD_SHOT', name: 'Fishbones Rockets', cooldown: 2000, config: { count: 3, spreadAngle: 0.25, damage: 70, speed: 650 } },
         E: { type: 'DASH', name: 'Zap / Speed Rush', cooldown: 8000, config: { dashDistance: 180 } },
-        SPACE: { type: 'PROJECTILE', name: 'Super Mega Death Rocket', cooldown: 15000, config: { damage: 650, speed: 700, isPiercing: false, isExplosive: true, explosionRadius: 100, channelTime: 500 } }
+        SPACE: { type: 'PROJECTILE', name: 'Super Mega Death Rocket', cooldown: 15000, config: { damage: 650, speed: 1000, isPiercing: false, isExplosive: true, explosionRadius: 100, channelTime: 500 } }
       }
     }
   }

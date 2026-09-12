@@ -5,7 +5,7 @@ import { MAP_OBSTACLES } from './mapObstacles';
 
 export default class Creep extends BaseCharacter {
   constructor(scene, x, y) {
-    super(scene, x, y, true, GAME_CONFIG.CREEP_STATS.color || 0xcc3333);
+    super(scene, x, y, true, GAME_CONFIG.CREEP_STATS.color || 0xcc3333, 'creep');
 
     const stats = GAME_CONFIG.CREEP_STATS;
 
@@ -20,28 +20,18 @@ export default class Creep extends BaseCharacter {
     this.shootCooldown = 2500; // Shoots every 2.5s
     this.lastChosenSign = 1; // Hysteresis flag for Creep steering
 
-    // Generate unique compact creep texture
-    const texKey = 'creep_minion_tex';
-    if (!scene.textures.exists(texKey)) {
-      const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
-      // Red mechanical spider/drone body
-      graphics.fillStyle(0xaa1111, 1);
-      graphics.lineStyle(2, 0xff5555, 1);
-      graphics.fillCircle(12, 12, 10);
-      graphics.strokeCircle(12, 12, 10);
-      
-      // Glowing eye core
-      graphics.fillStyle(0xffff00, 1);
-      graphics.fillCircle(16, 12, 4);
-
-      graphics.generateTexture(texKey, 24, 24);
-      graphics.destroy();
+    if (scene.textures.exists('creep_spritesheet')) {
+      this.setTexture('creep_spritesheet', 0);
     }
-
-    this.setTexture(texKey);
+    this.setScale(0.65);
     this.setOrigin(0.5, 0.5);
-    this.body.setCircle(10);
+    this.body.setSize(22, 22);
+    this.body.setOffset(13, 17);
     this.setCollideWorldBounds(true);
+
+    if (this.anims && scene.anims.exists('creep_idle')) {
+      this.play('creep_idle', true);
+    }
 
     this.updateHpBar();
   }
@@ -58,8 +48,10 @@ export default class Creep extends BaseCharacter {
     // HP Bar follow
     if (this.hpBar) {
       this.hpBar.x = this.x - 25;
-      this.hpBar.y = this.y - 20;
+      this.hpBar.y = this.y - 18;
     }
+
+    this.updateAnimation('creep');
 
     if (this.isRooted) {
       this.smoothSetVelocity(0, 0, 0.3);

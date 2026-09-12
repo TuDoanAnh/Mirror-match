@@ -115,7 +115,12 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
             this.play(`${prefix}_walk_left`, true);
           }
         } else {
-          this.setFlipX(true);
+          // If hero/creep has dedicated walk_right animation, do not flipX
+          if (this.heroId === 'creep' || this.anims.exists(`${prefix}_walk_right`)) {
+            this.setFlipX(false);
+          } else {
+            this.setFlipX(true);
+          }
           if (this.anims.currentAnim?.key !== `${prefix}_walk_right`) {
             this.play(`${prefix}_walk_right`, true);
           }
@@ -146,11 +151,8 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
   handleAim(targetX, targetY) {
     if (this.isChanneling) return;
     this.aimAngle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
-    if (!['ezreal', 'lux', 'jinx'].includes(this.heroId)) {
-      this.setRotation(this.aimAngle);
-    } else {
-      this.setRotation(0);
-    }
+    // Animated top-down characters keep 0 rotation (use directional animations)
+    this.setRotation(0);
   }
 
   canUseSkill(skillKey, time) {

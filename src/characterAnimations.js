@@ -1,11 +1,13 @@
 import luxSpritesheetUrl from './assets/image/lux_spritesheet.png';
 import ezrealSpritesheetUrl from './assets/image/ezreal_spritesheet.png';
 import jinxSpritesheetUrl from './assets/image/jinx_spritesheet.png';
+import creepSpritesheetUrl from './assets/image/creep_spritesheet.png';
 
 const HERO_URLS = {
   lux: luxSpritesheetUrl,
   ezreal: ezrealSpritesheetUrl,
-  jinx: jinxSpritesheetUrl
+  jinx: jinxSpritesheetUrl,
+  creep: creepSpritesheetUrl
 };
 
 export function preloadCharacterAssets(scene) {
@@ -72,4 +74,49 @@ export function createCharacterAnimations(scene) {
       repeat: 0
     });
   });
+
+  // Create Creep (Frog) Animations
+  if (!scene.anims.exists('creep_idle')) {
+    scene.anims.create({
+      key: 'creep_idle',
+      frames: scene.anims.generateFrameNumbers('creep_spritesheet', { start: 0, end: 4 }),
+      frameRate: 6,
+      repeat: -1
+    });
+
+    scene.anims.create({
+      key: 'creep_walk_down',
+      frames: scene.anims.generateFrameNumbers('creep_spritesheet', { start: 6, end: 10 }),
+      frameRate: 8,
+      repeat: -1
+    });
+
+    scene.anims.create({
+      key: 'creep_walk_up',
+      frames: scene.anims.generateFrameNumbers('creep_spritesheet', { start: 12, end: 17 }),
+      frameRate: 8,
+      repeat: -1
+    });
+
+    scene.anims.create({
+      key: 'creep_walk_left',
+      frames: scene.anims.generateFrameNumbers('creep_spritesheet', { start: 18, end: 22 }),
+      frameRate: 8,
+      repeat: -1
+    });
+
+    scene.anims.create({
+      key: 'creep_walk_right',
+      frames: scene.anims.generateFrameNumbers('creep_spritesheet', { start: 24, end: 28 }),
+      frameRate: 8,
+      repeat: -1
+    });
+
+    scene.anims.create({
+      key: 'creep_hurt',
+      frames: scene.anims.generateFrameNumbers('creep_spritesheet', { start: 30, end: 34 }),
+      frameRate: 10,
+      repeat: 0
+    });
+  }
 }
