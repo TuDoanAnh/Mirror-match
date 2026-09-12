@@ -85,10 +85,10 @@ export function playPreparationBGM(scene) {
   const startMusic = () => {
     let existing = scene.sound.get('bg_prep_music');
     if (!existing) {
-      existing = scene.sound.add('bg_prep_music', { loop: true, volume: 0.4 });
+      existing = scene.sound.add('bg_prep_music', { loop: true, volume: 1 });
     }
     if (!existing.isPlaying) {
-      existing.play({ loop: true, volume: 0.4 });
+      existing.play({ loop: true, volume: 1 });
     }
   };
 
