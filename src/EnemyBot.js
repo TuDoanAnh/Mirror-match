@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import Player from './Player';
 import { GAME_CONFIG } from './gameConfig';
+import { MAP_OBSTACLES } from './mapObstacles';
 
 export default class EnemyBot extends Player {
   constructor(scene, x, y, level = 1) {
@@ -55,7 +56,7 @@ export default class EnemyBot extends Player {
       return;
     }
 
-    // 1. Aiming & Lead Prediction
+    // 1. Aiming & Lead Prediction (Clamped inside 1536x1024 map bounds)
     const targetVelX = (this.target.body && this.target.body.velocity) ? this.target.body.velocity.x : 0;
     const targetVelY = (this.target.body && this.target.body.velocity) ? this.target.body.velocity.y : 0;
     
@@ -63,21 +64,59 @@ export default class EnemyBot extends Player {
     const qSpeed = (this.skills.Q && this.skills.Q.config) ? this.skills.Q.config.speed : 600;
     const leadTime = dist / qSpeed;
 
-    const aimX = Phaser.Math.Clamp(this.target.x + targetVelX * leadTime * 0.5, 40, 984);
-    const aimY = Phaser.Math.Clamp(this.target.y + targetVelY * leadTime * 0.5, 40, 728);
+    const aimX = Phaser.Math.Clamp(this.target.x + targetVelX * leadTime * 0.5, 120, 1416);
+    const aimY = Phaser.Math.Clamp(this.target.y + targetVelY * leadTime * 0.5, 120, 900);
 
     this.handleAim(aimX, aimY);
 
-    // 2. Skillshot Dodging & Threat Evasion
+    // 2. Wall Un-sticking Check (Emergency Recovery if touching wall)
+    if (this.handleWallUnsticking()) {
+      return;
+    }
+
+    // 3. Skillshot Dodging & Threat Evasion
     const isDodging = this.handleSkillshotDodging(time);
 
-    // 3. Movement & Obstacle Avoidance (if not dodging emergency threat)
+    // 4. Movement & Obstacle Avoidance (if not dodging emergency threat)
     if (!isDodging) {
       this.updateSmartMovement(delta, dist);
     }
 
-    // 4. Smart Skill Usage
+    // 5. Smart Skill Usage
     this.updateSkillCasting(time, dist, aimX, aimY);
+  }
+
+  // Wall Recovery: Detects physical collision against obstacle/boundary & repels away smoothly
+  handleWallUnsticking() {
+    if (!this.body) return false;
+    const isBlocked = this.body.blocked.left || this.body.blocked.right || this.body.blocked.up || this.body.blocked.down;
+    
+    if (isBlocked) {
+      let pushX = 0;
+      let pushY = 0;
+
+      MAP_OBSTACLES.forEach(obs => {
+        if (obs.isPassable) return;
+        const dx = this.x - obs.x;
+        const dy = this.y - obs.y;
+        const distSq = dx * dx + dy * dy;
+        const maxThreshold = (Math.max(obs.w, obs.h) / 2 + 50) ** 2;
+
+        if (distSq < maxThreshold && distSq > 0) {
+          const len = Math.sqrt(distSq);
+          pushX += (dx / len);
+          pushY += (dy / len);
+        }
+      });
+
+      if (pushX !== 0 || pushY !== 0) {
+        const pushAngle = Math.atan2(pushY, pushX);
+        this.setVelocity(Math.cos(pushAngle) * this.speed, Math.sin(pushAngle) * this.speed);
+        return true;
+      }
+    }
+
+    return false;
   }
 
   // Detects incoming player projectiles & sidesteps or E-dashes out of danger
@@ -86,7 +125,7 @@ export default class EnemyBot extends Player {
 
     const projectiles = this.scene.playerProjectiles.getChildren();
     let closestThreat = null;
-    let minThreatDist = 240;
+    let minThreatDist = 260;
 
     for (let i = 0; i < projectiles.length; i++) {
       const p = projectiles[i];
@@ -153,7 +192,7 @@ export default class EnemyBot extends Player {
       // Retreat
       radialX = -Math.cos(angleToPlayer);
       radialY = -Math.sin(angleToPlayer);
-    } else if (dist > 450) {
+    } else if (dist > 480) {
       // Advance
       radialX = Math.cos(angleToPlayer);
       radialY = Math.sin(angleToPlayer);
@@ -182,26 +221,27 @@ export default class EnemyBot extends Player {
 
   // Cast skills intelligently
   updateSkillCasting(time, dist, aimX, aimY) {
-    if (dist < 500 && Phaser.Math.Between(1, 100) > 90) {
+    if (dist < 520 && Phaser.Math.Between(1, 100) > 90) {
       this.useSkill('Q', time, aimX, aimY);
     }
 
-    if (dist < 650 && Phaser.Math.Between(1, 100) > 97) {
+    if (dist < 680 && Phaser.Math.Between(1, 100) > 97) {
       this.useSkill('SPACE', time, aimX, aimY);
     }
   }
 
-  // Feeler raycasting: Tests candidate angles to avoid walls & map bounds
-  findSafeDirection(desiredAngle, lookAhead = 70) {
-    const candidateOffsets = [0, 0.52, -0.52, 1.05, -1.05, 1.57, -1.57, 2.36, -2.36, Math.PI];
+  // Multi-ray feeler raycasting: Dynamic lookAhead based on movement speed
+  findSafeDirection(desiredAngle) {
+    const lookAhead = Math.max(70, (this.speed || 200) * 0.35);
+    const candidateOffsets = [0, 0.4, -0.4, 0.8, -0.8, 1.2, -1.2, 1.6, -1.6, 2.3, -2.3, Math.PI];
 
     for (let i = 0; i < candidateOffsets.length; i++) {
       const testAngle = desiredAngle + candidateOffsets[i];
       const testX = this.x + Math.cos(testAngle) * lookAhead;
       const testY = this.y + Math.sin(testAngle) * lookAhead;
 
-      // Map bounds check
-      if (testX < 170 || testX > 1366 || testY < 120 || testY > 900) {
+      // Map bounds check (1536 x 1024)
+      if (testX < 130 || testX > 1406 || testY < 120 || testY > 900) {
         continue;
       }
 
@@ -216,16 +256,15 @@ export default class EnemyBot extends Player {
     return null;
   }
 
-  isPositionBlockedByObstacle(x, y, margin = 20) {
-    if (!this.scene.obstacles) return false;
+  isPositionBlockedByObstacle(x, y, margin = 35) {
+    for (let i = 0; i < MAP_OBSTACLES.length; i++) {
+      const obs = MAP_OBSTACLES[i];
+      if (obs.isPassable) continue; // Passable objects don't block movement
 
-    const obstacles = this.scene.obstacles.getChildren();
-    for (let i = 0; i < obstacles.length; i++) {
-      const obs = obstacles[i];
-      const left = obs.x - obs.displayWidth / 2 - margin;
-      const right = obs.x + obs.displayWidth / 2 + margin;
-      const top = obs.y - obs.displayHeight / 2 - margin;
-      const bottom = obs.y + obs.displayHeight / 2 + margin;
+      const left = obs.x - obs.w / 2 - margin;
+      const right = obs.x + obs.w / 2 + margin;
+      const top = obs.y - obs.h / 2 - margin;
+      const bottom = obs.y + obs.h / 2 + margin;
 
       if (x >= left && x <= right && y >= top && y <= bottom) {
         return true;

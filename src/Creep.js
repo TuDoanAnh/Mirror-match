@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import BaseCharacter from './BaseCharacter';
 import { GAME_CONFIG } from './gameConfig';
+import { MAP_OBSTACLES } from './mapObstacles';
 
 export default class Creep extends BaseCharacter {
   constructor(scene, x, y) {
@@ -68,6 +69,11 @@ export default class Creep extends BaseCharacter {
     this.handleAim(player.x, player.y);
     const dist = Phaser.Math.Distance.Between(this.x, this.y, player.x, player.y);
 
+    // Wall Recovery: Unstick if touching a wall
+    if (this.handleWallUnsticking()) {
+      return;
+    }
+
     if (dist > 160) {
       // 1. Target vector towards player
       let targetX = Math.cos(this.aimAngle);
@@ -114,7 +120,39 @@ export default class Creep extends BaseCharacter {
     }
   }
 
-  findSafeDirection(desiredAngle, lookAhead = 55) {
+  handleWallUnsticking() {
+    if (!this.body) return false;
+    const isBlocked = this.body.blocked.left || this.body.blocked.right || this.body.blocked.up || this.body.blocked.down;
+    
+    if (isBlocked) {
+      let pushX = 0;
+      let pushY = 0;
+
+      MAP_OBSTACLES.forEach(obs => {
+        if (obs.isPassable) return;
+        const dx = this.x - obs.x;
+        const dy = this.y - obs.y;
+        const distSq = dx * dx + dy * dy;
+        const maxThreshold = (Math.max(obs.w, obs.h) / 2 + 40) ** 2;
+
+        if (distSq < maxThreshold && distSq > 0) {
+          const len = Math.sqrt(distSq);
+          pushX += (dx / len);
+          pushY += (dy / len);
+        }
+      });
+
+      if (pushX !== 0 || pushY !== 0) {
+        const pushAngle = Math.atan2(pushY, pushX);
+        this.setVelocity(Math.cos(pushAngle) * this.speed, Math.sin(pushAngle) * this.speed);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  findSafeDirection(desiredAngle, lookAhead = 60) {
     const candidateOffsets = [0, 0.45, -0.45, 0.9, -0.9, 1.35, -1.35, Math.PI];
 
     for (let i = 0; i < candidateOffsets.length; i++) {
@@ -122,8 +160,8 @@ export default class Creep extends BaseCharacter {
       const testX = this.x + Math.cos(testAngle) * lookAhead;
       const testY = this.y + Math.sin(testAngle) * lookAhead;
 
-      // Map bounds check
-      if (testX < 35 || testX > 989 || testY < 35 || testY > 733) {
+      // Map bounds check (1536 x 1024)
+      if (testX < 130 || testX > 1406 || testY < 120 || testY > 900) {
         continue;
       }
 
@@ -138,16 +176,15 @@ export default class Creep extends BaseCharacter {
     return null;
   }
 
-  isPositionBlockedByObstacle(x, y, margin = 16) {
-    if (!this.scene.obstacles) return false;
+  isPositionBlockedByObstacle(x, y, margin = 28) {
+    for (let i = 0; i < MAP_OBSTACLES.length; i++) {
+      const obs = MAP_OBSTACLES[i];
+      if (obs.isPassable) continue;
 
-    const obstacles = this.scene.obstacles.getChildren();
-    for (let i = 0; i < obstacles.length; i++) {
-      const obs = obstacles[i];
-      const left = obs.x - obs.displayWidth / 2 - margin;
-      const right = obs.x + obs.displayWidth / 2 + margin;
-      const top = obs.y - obs.displayHeight / 2 - margin;
-      const bottom = obs.y + obs.displayHeight / 2 + margin;
+      const left = obs.x - obs.w / 2 - margin;
+      const right = obs.x + obs.w / 2 + margin;
+      const top = obs.y - obs.h / 2 - margin;
+      const bottom = obs.y + obs.h / 2 + margin;
 
       if (x >= left && x <= right && y >= top && y <= bottom) {
         return true;
@@ -181,9 +218,9 @@ export default class Creep extends BaseCharacter {
     this.scene.creepProjectiles.add(bullet);
     this.scene.physics.velocityFromRotation(angle, 400, bullet.body.velocity);
 
-    // Auto cleanup out of bounds
+    // Auto cleanup out of bounds (1536 x 1024)
     bullet.preUpdate = (time, delta) => {
-      if (bullet.x < 0 || bullet.x > 1024 || bullet.y < 0 || bullet.y > 768) {
+      if (bullet.x < 0 || bullet.x > 1536 || bullet.y < 0 || bullet.y > 1024) {
         bullet.destroy();
       }
     };

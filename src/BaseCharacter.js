@@ -98,9 +98,16 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     const prefix = this.heroId;
     const vx = this.body ? this.body.velocity.x : 0;
     const vy = this.body ? this.body.velocity.y : 0;
-    const speedSq = vx * vx + vy * vy;
+    const currentSpeed = Math.sqrt(vx * vx + vy * vy);
 
-    if (speedSq > 100) {
+    if (currentSpeed > 10) {
+      // Dynamically scale animation playback speed with movement speed
+      const baseSpeed = this.speed || 200;
+      const animScale = Math.min(2.8, Math.max(0.6, currentSpeed / baseSpeed));
+      if (this.anims) {
+        this.anims.timeScale = animScale;
+      }
+
       if (Math.abs(vx) >= Math.abs(vy)) {
         if (vx < 0) {
           this.setFlipX(false);
@@ -127,6 +134,9 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
       }
     } else {
       this.setFlipX(false);
+      if (this.anims) {
+        this.anims.timeScale = 1.0;
+      }
       if (this.anims.currentAnim?.key !== `${prefix}_idle`) {
         this.play(`${prefix}_idle`, true);
       }

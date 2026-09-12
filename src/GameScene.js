@@ -114,8 +114,9 @@ export default class GameScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-SPACE', () => this.tryUsePlayerSkill('SPACE', this.time.now));
     this.input.keyboard.on('keydown-B', () => this.toggleDebugMode());
 
-    // Fade In
-    this.cameras.main.fadeIn(500, 0, 0, 0);
+    // Reset camera effects & Fade In
+    this.cameras.main.resetFX();
+    this.cameras.main.fadeIn(300, 0, 0, 0);
   }
 
   update(time, delta) {
