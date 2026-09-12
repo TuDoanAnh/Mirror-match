@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import EnemyBot from './EnemyBot';
 import { GAME_CONFIG } from './gameConfig';
 import { preloadLuxAssets, createLuxAnimations } from './luxAnimations';
+import { preloadCharacterSFX, playPreparationBGM, stopPreparationBGM } from './soundManager';
 
 export default class PreparationScene extends Phaser.Scene {
   constructor() {
@@ -10,10 +11,13 @@ export default class PreparationScene extends Phaser.Scene {
 
   preload() {
     preloadLuxAssets(this);
+    preloadCharacterSFX(this);
   }
 
   create() {
     createLuxAnimations(this);
+    playPreparationBGM(this);
+
     // Registry initialization
     if (!this.registry.has('unlockedLevel')) {
       this.registry.set('unlockedLevel', 4);
@@ -360,6 +364,7 @@ export default class PreparationScene extends Phaser.Scene {
     const readyTxt = this.add.text(centerX, currentY, "READY", { fontSize: '28px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     const onReady = () => {
+      stopPreparationBGM(this);
       this.cameras.main.fadeOut(500, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         this.scene.start('GameScene', {

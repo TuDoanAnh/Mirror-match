@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import BaseCharacter from './BaseCharacter';
 import Projectile from './Projectile';
 import { GAME_CONFIG } from './gameConfig';
+import { playSkillSFX } from './soundManager';
 
 export default class Player extends BaseCharacter {
   constructor(scene, x, y, isBot = false, color = 0x0088ff) {
@@ -100,16 +101,73 @@ export default class Player extends BaseCharacter {
     const skill = this.skills[skillKey];
     if (!skill) return;
 
-    if (skill.type === 'PROJECTILE') {
-      this.shootProjectile(skillKey, fireAngle);
-    } else if (skill.type === 'SPREAD_SHOT') {
-      this.shootSpreadProjectiles(skillKey, fireAngle);
-    } else if (skill.type === 'DASH') {
-      this.executeDash(skillKey, targetX, targetY, fireAngle);
-    } else if (skill.type === 'SHIELD') {
-      this.addShield(skill.config.shieldHp, skill.config.duration);
-    } else if (skill.type === 'LUX_BEAM') {
+    // Play skill SFX
+    playSkillSFX(this.scene, this.heroId, skillKey);
+
+    const channelTime = (skill.config && skill.config.channelTime) || 0;
+
+    if (skill.type === 'LUX_BEAM') {
       this.executeLuxBeam(skillKey, targetX, targetY, fireAngle);
+      return;
+    }
+
+    if (channelTime > 0) {
+      this.isChanneling = true;
+      this.setVelocity(0, 0);
+      this.setRotation(fireAngle);
+
+      // Charging aura ring at player position
+      const auraCircle = this.scene.add.circle(this.x, this.y, 40);
+      auraCircle.setStrokeStyle(3, this.heroData.color || 0xffaa00);
+      auraCircle.setBlendMode('ADD');
+
+      const auraTween = this.scene.tweens.add({
+        targets: auraCircle,
+        scale: 0.1,
+        alpha: { start: 1, end: 0.2 },
+        duration: channelTime,
+        ease: 'Linear'
+      });
+
+      // Targeting sight line
+      const indicator = this.scene.add.graphics();
+      const beamLength = 1000;
+      const curEndX = this.x + Math.cos(fireAngle) * beamLength;
+      const curEndY = this.y + Math.sin(fireAngle) * beamLength;
+      indicator.lineStyle(2, this.heroData.color || 0xffaa00, 0.6);
+      indicator.beginPath();
+      indicator.moveTo(this.x, this.y);
+      indicator.lineTo(curEndX, curEndY);
+      indicator.strokePath();
+
+      this.scene.time.delayedCall(channelTime, () => {
+        this.isChanneling = false;
+        indicator.destroy();
+        auraTween.stop();
+        auraCircle.destroy();
+
+        if (!this.active || this.hp <= 0) return;
+
+        if (skill.type === 'PROJECTILE') {
+          this.shootProjectile(skillKey, fireAngle);
+        } else if (skill.type === 'SPREAD_SHOT') {
+          this.shootSpreadProjectiles(skillKey, fireAngle);
+        } else if (skill.type === 'DASH') {
+          this.executeDash(skillKey, targetX, targetY, fireAngle);
+        } else if (skill.type === 'SHIELD') {
+          this.addShield(skill.config.shieldHp, skill.config.duration);
+        }
+      });
+    } else {
+      if (skill.type === 'PROJECTILE') {
+        this.shootProjectile(skillKey, fireAngle);
+      } else if (skill.type === 'SPREAD_SHOT') {
+        this.shootSpreadProjectiles(skillKey, fireAngle);
+      } else if (skill.type === 'DASH') {
+        this.executeDash(skillKey, targetX, targetY, fireAngle);
+      } else if (skill.type === 'SHIELD') {
+        this.addShield(skill.config.shieldHp, skill.config.duration);
+      }
     }
   }
 

@@ -4,6 +4,7 @@ import EnemyBot from './EnemyBot';
 import Creep from './Creep';
 import { GAME_CONFIG } from './gameConfig';
 import { preloadLuxAssets, createLuxAnimations } from './luxAnimations';
+import { preloadCharacterSFX, playHitSFX } from './soundManager';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -12,6 +13,7 @@ export default class GameScene extends Phaser.Scene {
 
   preload() {
     preloadLuxAssets(this);
+    preloadCharacterSFX(this);
   }
 
   init(data) {
@@ -204,6 +206,7 @@ export default class GameScene extends Phaser.Scene {
 
     // 3. Apply Damage
     entity.takeDamage(finalDamage, isCrit);
+    playHitSFX(this, attacker ? attacker.heroId : 'ezreal');
 
     // 4. Lifesteal Logic
     if (attacker && attacker.lifesteal > 0 && attacker.hp > 0) {
