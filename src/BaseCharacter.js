@@ -51,15 +51,17 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
   }
 
   setupHeroTexture(color = 0x0088ff) {
-    if (this.heroId === 'lux') {
-      if (this.scene.textures.exists('lux_spritesheet')) {
-        this.setTexture('lux_spritesheet', 0);
+    if (['ezreal', 'lux', 'jinx'].includes(this.heroId)) {
+      const sheetKey = `${this.heroId}_spritesheet`;
+      if (this.scene.textures.exists(sheetKey)) {
+        this.setTexture(sheetKey, 0);
       }
       this.setOrigin(0.5, 0.6);
       this.body.setCircle(16, 8, 12);
       this.setScale(1.1);
-      if (this.scene.anims && this.scene.anims.exists('lux_idle')) {
-        this.play('lux_idle');
+      const idleKey = `${this.heroId}_idle`;
+      if (this.scene.anims && this.scene.anims.exists(idleKey)) {
+        this.play(idleKey);
       }
     } else {
       const texKey = this.isBot ? 'bot_tex' : `player_tex_${color}`;
@@ -90,9 +92,10 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
   }
 
   updateAnimation() {
-    if (this.heroId !== 'lux' || !this.active || this.hp <= 0) return;
+    if (!['ezreal', 'lux', 'jinx'].includes(this.heroId) || !this.active || this.hp <= 0) return;
     if (this.isHurtAnimating) return;
 
+    const prefix = this.heroId;
     const vx = this.body ? this.body.velocity.x : 0;
     const vy = this.body ? this.body.velocity.y : 0;
     const speedSq = vx * vx + vy * vy;
@@ -100,20 +103,20 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     if (speedSq > 100) {
       if (Math.abs(vx) > Math.abs(vy)) {
         if (vx < 0) {
-          if (this.anims.currentAnim?.key !== 'lux_walk_left') this.play('lux_walk_left', true);
+          if (this.anims.currentAnim?.key !== `${prefix}_walk_left`) this.play(`${prefix}_walk_left`, true);
         } else {
-          if (this.anims.currentAnim?.key !== 'lux_walk_right') this.play('lux_walk_right', true);
+          if (this.anims.currentAnim?.key !== `${prefix}_walk_right`) this.play(`${prefix}_walk_right`, true);
         }
       } else {
         if (vy < 0) {
-          if (this.anims.currentAnim?.key !== 'lux_walk_up') this.play('lux_walk_up', true);
+          if (this.anims.currentAnim?.key !== `${prefix}_walk_up`) this.play(`${prefix}_walk_up`, true);
         } else {
-          if (this.anims.currentAnim?.key !== 'lux_walk_down') this.play('lux_walk_down', true);
+          if (this.anims.currentAnim?.key !== `${prefix}_walk_down`) this.play(`${prefix}_walk_down`, true);
         }
       }
     } else {
-      if (this.anims.currentAnim?.key !== 'lux_idle') {
-        this.play('lux_idle', true);
+      if (this.anims.currentAnim?.key !== `${prefix}_idle`) {
+        this.play(`${prefix}_idle`, true);
       }
     }
   }
@@ -121,7 +124,7 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
   handleAim(targetX, targetY) {
     if (this.isChanneling) return;
     this.aimAngle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
-    if (this.heroId !== 'lux') {
+    if (!['ezreal', 'lux', 'jinx'].includes(this.heroId)) {
       this.setRotation(this.aimAngle);
     } else {
       this.setRotation(0);
@@ -140,7 +143,7 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     this.skills[skillKey].lastUsed = time;
     
     const fireAngle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
-    if (this.heroId !== 'lux') {
+    if (!['ezreal', 'lux', 'jinx'].includes(this.heroId)) {
       this.setRotation(fireAngle);
     }
 
@@ -242,10 +245,11 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
       if(this.active) this.clearTint();
     });
 
-    if (this.heroId === 'lux' && this.scene.anims && this.scene.anims.exists('lux_hurt')) {
+    const hurtKey = `${this.heroId}_hurt`;
+    if (['ezreal', 'lux', 'jinx'].includes(this.heroId) && this.scene.anims && this.scene.anims.exists(hurtKey)) {
       this.isHurtAnimating = true;
-      this.play('lux_hurt');
-      this.once('animationcomplete-lux_hurt', () => {
+      this.play(hurtKey);
+      this.once(`animationcomplete-${hurtKey}`, () => {
         this.isHurtAnimating = false;
       });
     }

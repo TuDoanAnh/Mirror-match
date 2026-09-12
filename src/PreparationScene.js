@@ -117,6 +117,30 @@ export default class PreparationScene extends Phaser.Scene {
     const heroes = ['ezreal', 'lux', 'jinx'];
     const currentHero = this.registry.get('selectedHero') || 'ezreal';
 
+    const selectHeroById = (hId) => {
+      const current = this.registry.get('selectedHero');
+      if (current !== hId) {
+        this.registry.set('selectedHero', hId);
+        this.scene.restart();
+      }
+    };
+
+    const keys = this.input.keyboard.addKeys({
+      one: Phaser.Input.Keyboard.KeyCodes.ONE,
+      two: Phaser.Input.Keyboard.KeyCodes.TWO,
+      three: Phaser.Input.Keyboard.KeyCodes.THREE,
+      numOne: Phaser.Input.Keyboard.KeyCodes.NUMPAD_ONE,
+      numTwo: Phaser.Input.Keyboard.KeyCodes.NUMPAD_TWO,
+      numThree: Phaser.Input.Keyboard.KeyCodes.NUMPAD_THREE
+    });
+
+    keys.one.on('down', () => selectHeroById('ezreal'));
+    keys.numOne.on('down', () => selectHeroById('ezreal'));
+    keys.two.on('down', () => selectHeroById('lux'));
+    keys.numTwo.on('down', () => selectHeroById('lux'));
+    keys.three.on('down', () => selectHeroById('jinx'));
+    keys.numThree.on('down', () => selectHeroById('jinx'));
+
     heroes.forEach((hId, index) => {
       const heroData = GAME_CONFIG.CHARACTERS[hId];
       const x = 90 + (index * 85);
@@ -129,14 +153,8 @@ export default class PreparationScene extends Phaser.Scene {
       const txtColor = isSelected ? '#000000' : '#ffffff';
       const txt = this.add.text(x, currentY, heroData.name, { fontSize: '13px', fill: txtColor, fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-      const onSelect = () => {
-        if (currentHero !== hId) {
-          this.registry.set('selectedHero', hId);
-          this.scene.restart();
-        }
-      };
-      btn.on('pointerdown', onSelect);
-      txt.on('pointerdown', onSelect);
+      btn.on('pointerdown', () => selectHeroById(hId));
+      txt.on('pointerdown', () => selectHeroById(hId));
     });
 
     // Hero Avatar Graphic
@@ -145,11 +163,13 @@ export default class PreparationScene extends Phaser.Scene {
     
     // Outer ring & inner color circle or character sprite
     this.add.circle(centerX, currentY, 26, 0xffffff, 0.25);
-    if (currentHero === 'lux') {
-      const heroSprite = this.add.sprite(centerX, currentY, 'lux_spritesheet', 0);
+    if (['ezreal', 'lux', 'jinx'].includes(currentHero)) {
+      const sheetKey = `${currentHero}_spritesheet`;
+      const idleKey = `${currentHero}_idle`;
+      const heroSprite = this.add.sprite(centerX, currentY, sheetKey, 0);
       heroSprite.setScale(1.2);
-      if (this.anims.exists('lux_idle')) {
-        heroSprite.play('lux_idle');
+      if (this.anims.exists(idleKey)) {
+        heroSprite.play(idleKey);
       }
     } else {
       this.add.circle(centerX, currentY, 22, selectedData.color);
