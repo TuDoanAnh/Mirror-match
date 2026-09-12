@@ -2,13 +2,14 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from './gameConfig';
 
 export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
-  constructor(scene, x, y, isBot = false, color = 0x0088ff) {
+  constructor(scene, x, y, isBot = false, color = 0x0088ff, heroId = null) {
     super(scene, x, y, ''); 
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
     this.isBot = isBot;
+    this.heroId = heroId;
     
     // Default Base Stats from GAME_CONFIG
     const baseStats = GAME_CONFIG.BASE_STATS || { HP: 1000, SPEED: 200, ARMOR: 0, LIFESTEAL: 0, CRIT_CHANCE: 0, ARMOR_PEN: 0 };
@@ -26,33 +27,7 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     // Skills definition (Q, E, SPACE)
     this.skills = {};
 
-    // Generate Texture
-    const texKey = isBot ? 'bot_tex' : `player_tex_${color}`;
-    if (!scene.textures.exists(texKey)) {
-      const graphics = scene.make.graphics({ x: 0, y: 0, add: false });
-      // Draw a sleek sci-fi ship pointing right
-      graphics.fillStyle(isBot ? 0xff0000 : color, 1);
-      graphics.lineStyle(2, 0xffffff, 1);
-      graphics.beginPath();
-      graphics.moveTo(32, 16); // Nose
-      graphics.lineTo(0, 32);  // Bottom wing
-      graphics.lineTo(8, 16);  // Back engine indent
-      graphics.lineTo(0, 0);   // Top wing
-      graphics.closePath();
-      graphics.fillPath();
-      graphics.strokePath();
-      
-      // Engine glow
-      graphics.fillStyle(isBot ? 0xff5555 : 0x00ffff, 1);
-      graphics.fillCircle(6, 16, 4);
-      
-      graphics.generateTexture(texKey, 32, 32);
-      graphics.destroy();
-    }
-
-    this.setTexture(texKey);
-    this.setOrigin(0.5, 0.5);
-    this.body.setCircle(16);
+    this.setupHeroTexture(color);
     this.setCollideWorldBounds(true);
 
     // HP Bar
@@ -67,14 +42,90 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     if (this.hp <= 0) return;
 
     // HP Bar Follow
-    this.hpBar.x = this.x - 25;
-    this.hpBar.y = this.y - 30;
+    if (this.hpBar) {
+      this.hpBar.x = this.x - 25;
+      this.hpBar.y = this.y - 30;
+    }
+
+    this.updateAnimation();
+  }
+
+  setupHeroTexture(color = 0x0088ff) {
+    if (this.heroId === 'lux') {
+      if (this.scene.textures.exists('lux_spritesheet')) {
+        this.setTexture('lux_spritesheet', 0);
+      }
+      this.setOrigin(0.5, 0.6);
+      this.body.setCircle(16, 8, 12);
+      this.setScale(1.1);
+      if (this.scene.anims && this.scene.anims.exists('lux_idle')) {
+        this.play('lux_idle');
+      }
+    } else {
+      const texKey = this.isBot ? 'bot_tex' : `player_tex_${color}`;
+      if (!this.scene.textures.exists(texKey)) {
+        const graphics = this.scene.make.graphics({ x: 0, y: 0, add: false });
+        graphics.fillStyle(this.isBot ? 0xff0000 : color, 1);
+        graphics.lineStyle(2, 0xffffff, 1);
+        graphics.beginPath();
+        graphics.moveTo(32, 16);
+        graphics.lineTo(0, 32);
+        graphics.lineTo(8, 16);
+        graphics.lineTo(0, 0);
+        graphics.closePath();
+        graphics.fillPath();
+        graphics.strokePath();
+        
+        graphics.fillStyle(this.isBot ? 0xff5555 : 0x00ffff, 1);
+        graphics.fillCircle(6, 16, 4);
+        
+        graphics.generateTexture(texKey, 32, 32);
+        graphics.destroy();
+      }
+
+      this.setTexture(texKey);
+      this.setOrigin(0.5, 0.5);
+      this.body.setCircle(16);
+    }
+  }
+
+  updateAnimation() {
+    if (this.heroId !== 'lux' || !this.active || this.hp <= 0) return;
+    if (this.isHurtAnimating) return;
+
+    const vx = this.body ? this.body.velocity.x : 0;
+    const vy = this.body ? this.body.velocity.y : 0;
+    const speedSq = vx * vx + vy * vy;
+
+    if (speedSq > 100) {
+      if (Math.abs(vx) > Math.abs(vy)) {
+        if (vx < 0) {
+          if (this.anims.currentAnim?.key !== 'lux_walk_left') this.play('lux_walk_left', true);
+        } else {
+          if (this.anims.currentAnim?.key !== 'lux_walk_right') this.play('lux_walk_right', true);
+        }
+      } else {
+        if (vy < 0) {
+          if (this.anims.currentAnim?.key !== 'lux_walk_up') this.play('lux_walk_up', true);
+        } else {
+          if (this.anims.currentAnim?.key !== 'lux_walk_down') this.play('lux_walk_down', true);
+        }
+      }
+    } else {
+      if (this.anims.currentAnim?.key !== 'lux_idle') {
+        this.play('lux_idle', true);
+      }
+    }
   }
 
   handleAim(targetX, targetY) {
     if (this.isChanneling) return;
     this.aimAngle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
-    this.setRotation(this.aimAngle);
+    if (this.heroId !== 'lux') {
+      this.setRotation(this.aimAngle);
+    } else {
+      this.setRotation(0);
+    }
   }
 
   canUseSkill(skillKey, time) {
@@ -89,7 +140,9 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     this.skills[skillKey].lastUsed = time;
     
     const fireAngle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
-    this.setRotation(fireAngle);
+    if (this.heroId !== 'lux') {
+      this.setRotation(fireAngle);
+    }
 
     if (skillKey === 'Q') {
       this.executeQ(targetX, targetY, fireAngle);
@@ -188,6 +241,14 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     this.scene.time.delayedCall(150, () => {
       if(this.active) this.clearTint();
     });
+
+    if (this.heroId === 'lux' && this.scene.anims && this.scene.anims.exists('lux_hurt')) {
+      this.isHurtAnimating = true;
+      this.play('lux_hurt');
+      this.once('animationcomplete-lux_hurt', () => {
+        this.isHurtAnimating = false;
+      });
+    }
 
     if (this.hp <= 0) {
       this.die();

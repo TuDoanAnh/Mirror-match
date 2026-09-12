@@ -1,13 +1,19 @@
 import Phaser from 'phaser';
 import EnemyBot from './EnemyBot';
 import { GAME_CONFIG } from './gameConfig';
+import { preloadLuxAssets, createLuxAnimations } from './luxAnimations';
 
 export default class PreparationScene extends Phaser.Scene {
   constructor() {
     super('PreparationScene');
   }
 
+  preload() {
+    preloadLuxAssets(this);
+  }
+
   create() {
+    createLuxAnimations(this);
     // Registry initialization
     if (!this.registry.has('unlockedLevel')) {
       this.registry.set('unlockedLevel', 4);
@@ -20,7 +26,7 @@ export default class PreparationScene extends Phaser.Scene {
     }
 
     if (!this.registry.has('selectedHero')) {
-      this.registry.set('selectedHero', 'ezreal');
+      this.registry.set('selectedHero', 'lux');
     }
 
     this.add.rectangle(0, 0, 1024, 768, 0x111111).setOrigin(0);
@@ -117,28 +123,37 @@ export default class PreparationScene extends Phaser.Scene {
       const isSelected = hId === currentHero;
 
       const btnColor = isSelected ? heroData.color : 0x333333;
-      const btn = this.add.rectangle(x, currentY, 75, 32, btnColor);
+      const btn = this.add.rectangle(x, currentY, 75, 32, btnColor).setInteractive({ useHandCursor: true });
       if (isSelected) btn.setStrokeStyle(2, 0xffffff);
 
       const txtColor = isSelected ? '#000000' : '#ffffff';
-      this.add.text(x, currentY, heroData.name, { fontSize: '13px', fill: txtColor, fontStyle: 'bold' }).setOrigin(0.5);
+      const txt = this.add.text(x, currentY, heroData.name, { fontSize: '13px', fill: txtColor, fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-      btn.setInteractive({ useHandCursor: true });
-      btn.on('pointerdown', () => {
+      const onSelect = () => {
         if (currentHero !== hId) {
           this.registry.set('selectedHero', hId);
           this.scene.restart();
         }
-      });
+      };
+      btn.on('pointerdown', onSelect);
+      txt.on('pointerdown', onSelect);
     });
 
-    // Hero Avatar Graphic (Clean colored circle)
+    // Hero Avatar Graphic
     currentY += 45;
     const selectedData = GAME_CONFIG.CHARACTERS[currentHero];
     
-    // Outer ring & inner color circle
+    // Outer ring & inner color circle or character sprite
     this.add.circle(centerX, currentY, 26, 0xffffff, 0.25);
-    this.add.circle(centerX, currentY, 22, selectedData.color);
+    if (currentHero === 'lux') {
+      const heroSprite = this.add.sprite(centerX, currentY, 'lux_spritesheet', 0);
+      heroSprite.setScale(1.2);
+      if (this.anims.exists('lux_idle')) {
+        heroSprite.play('lux_idle');
+      }
+    } else {
+      this.add.circle(centerX, currentY, 22, selectedData.color);
+    }
 
     // Hero Description Info
     currentY += 35;
@@ -318,12 +333,9 @@ export default class PreparationScene extends Phaser.Scene {
     // READY Button
     currentY += 80;
     const readyBtn = this.add.rectangle(centerX, currentY, 200, 60, 0x00aa00).setInteractive({ useHandCursor: true });
-    const readyTxt = this.add.text(centerX, currentY, "READY", { fontSize: '28px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+    const readyTxt = this.add.text(centerX, currentY, "READY", { fontSize: '28px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-    readyBtn.on('pointerover', () => this.tweens.add({ targets: [readyBtn, readyTxt], scale: 1.05, duration: 150, ease: 'Power2' }));
-    readyBtn.on('pointerout', () => this.tweens.add({ targets: [readyBtn, readyTxt], scale: 1.0, duration: 150, ease: 'Power2' }));
-
-    readyBtn.on('pointerdown', () => {
+    const onReady = () => {
       this.cameras.main.fadeOut(500, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         this.scene.start('GameScene', {
@@ -331,7 +343,13 @@ export default class PreparationScene extends Phaser.Scene {
           color: 0x0088ff
         });
       });
-    });
+    };
+
+    readyBtn.on('pointerover', () => this.tweens.add({ targets: [readyBtn, readyTxt], scale: 1.05, duration: 150, ease: 'Power2' }));
+    readyBtn.on('pointerout', () => this.tweens.add({ targets: [readyBtn, readyTxt], scale: 1.0, duration: 150, ease: 'Power2' }));
+    readyBtn.on('pointerdown', onReady);
+    readyTxt.on('pointerdown', onReady);
+    this.input.keyboard.once('keydown-ENTER', onReady);
 
     this.updateInventoryView();
   }

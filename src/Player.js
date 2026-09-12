@@ -8,10 +8,11 @@ export default class Player extends BaseCharacter {
     const heroId = isBot ? 'ezreal' : (scene.registry.get('selectedHero') || 'ezreal');
     const heroData = GAME_CONFIG.CHARACTERS[heroId] || GAME_CONFIG.CHARACTERS.ezreal;
 
-    super(scene, x, y, isBot, isBot ? 0xff0000 : heroData.color);
+    super(scene, x, y, isBot, isBot ? 0xff0000 : heroData.color, heroId);
 
     this.heroId = heroId;
     this.heroData = heroData;
+    this.setupHeroTexture(isBot ? 0xff0000 : heroData.color);
 
     // Load Base Stats from Hero Config
     this.maxHp = heroData.baseStats.hp;

@@ -3,10 +3,15 @@ import Player from './Player';
 import EnemyBot from './EnemyBot';
 import Creep from './Creep';
 import { GAME_CONFIG } from './gameConfig';
+import { preloadLuxAssets, createLuxAnimations } from './luxAnimations';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
     super('GameScene');
+  }
+
+  preload() {
+    preloadLuxAssets(this);
   }
 
   init(data) {
@@ -16,6 +21,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   create() {
+    createLuxAnimations(this);
     this.isGameOver = false;
 
     // Generate texture assets isolated at x=0, y=0 with immediate graphics destruction
