@@ -22,6 +22,10 @@ export default class Creep extends BaseCharacter {
     this.shootCooldown = 2500; // Shoots every 2.5s
     this.lastChosenSign = 1; // Hysteresis flag for Creep steering
 
+    this.setDepth(10);
+    this.shadow = scene.add.ellipse(x, y + 12, 22, 10, 0x000000, 0.45);
+    this.shadow.setDepth(4);
+
     if (scene.textures.exists('creep_spritesheet')) {
       this.setTexture('creep_spritesheet', 0);
     }
@@ -46,6 +50,10 @@ export default class Creep extends BaseCharacter {
 
   update(time, delta) {
     if (this.hp <= 0) return;
+
+    if (this.shadow) {
+      this.shadow.setPosition(this.x, this.y + 12);
+    }
 
     // HP Bar follow
     if (this.hpBar) {

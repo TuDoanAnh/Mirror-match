@@ -40,8 +40,8 @@ export default class GameScene extends Phaser.Scene {
     createJinxAnimations(this);
     this.isGameOver = false;
 
-    // Map Image Background (1536 x 1024)
-    this.add.image(768, 512, 'battle_map').setDepth(-20);
+    // Map Image Background (1536 x 1024) with soft contrast tinting
+    this.add.image(768, 512, 'battle_map').setDepth(-20).setTint(0xf0f0f0);
 
     // Generate texture assets isolated at x=0, y=0 with immediate graphics destruction
     this.createProjectilesTextures();

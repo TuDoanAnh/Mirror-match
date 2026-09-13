@@ -27,11 +27,34 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     // Skills definition (Q, E, SPACE)
     this.skills = {};
 
-    this.setupHeroTexture(color);
-    this.setCollideWorldBounds(true);
+    this.setDepth(10);
+
+    // Character Drop Shadow under feet
+    this.shadow = scene.add.ellipse(x, y + 18, 30, 12, 0x000000, 0.45);
+    this.shadow.setDepth(4);
+
+    // Glowing Hero Base Ring Indicator
+    if (['ezreal', 'lux', 'jinx'].includes(this.heroId)) {
+      const ringColor = this.isBot ? 0xff2255 : 0x00e5ff;
+      this.baseRing = scene.add.ellipse(x, y + 18, 34, 14);
+      this.baseRing.setStrokeStyle(2, ringColor, 0.85);
+      this.baseRing.setDepth(5);
+
+      scene.tweens.add({
+        targets: this.baseRing,
+        alpha: { start: 0.85, end: 0.35 },
+        scaleX: { start: 1.0, end: 1.08 },
+        scaleY: { start: 1.0, end: 1.08 },
+        duration: 1000,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
+    }
 
     // HP Bar
     this.hpBar = scene.add.graphics();
+    this.hpBar.setDepth(15);
     this.updateHpBar();
 
     // Reference to projectile group
@@ -40,6 +63,14 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
 
   update(time, delta) {
     if (this.hp <= 0) return;
+
+    // Follow Character Position for Shadow & Base Ring
+    if (this.shadow) {
+      this.shadow.setPosition(this.x, this.y + 18);
+    }
+    if (this.baseRing) {
+      this.baseRing.setPosition(this.x, this.y + 18);
+    }
 
     // HP Bar Follow
     if (this.hpBar) {
@@ -293,24 +324,37 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     if (!this.hpBar) return;
     this.hpBar.clear();
 
-    // Background bar
-    this.hpBar.fillStyle(0x000000, 0.8);
-    this.hpBar.fillRect(0, 0, 50, 6);
+    const barW = 52;
+    const barH = 8;
+    const radius = 4;
 
-    // HP Fill
-    const fillPercent = Math.max(0, this.hp / this.maxHp);
-    this.hpBar.fillStyle(this.isBot ? 0xff0000 : 0x00ff00, 1);
-    this.hpBar.fillRect(1, 1, 48 * fillPercent, 4);
+    // Dark Rounded Background Container with Border
+    this.hpBar.fillStyle(0x0f172a, 0.85);
+    this.hpBar.fillRoundedRect(0, 0, barW, barH, radius);
+    this.hpBar.lineStyle(1, 0x334155, 0.9);
+    this.hpBar.strokeRoundedRect(0, 0, barW, barH, radius);
+
+    // HP Fill (Light softer red for bot, vibrant green for player)
+    const fillPercent = Math.max(0, Math.min(1, this.hp / this.maxHp));
+    if (fillPercent > 0) {
+      const hpColor = this.isBot ? 0xff4d4d : 0x34d399; // Softer light red vs vibrant green
+      const fillW = Math.max(4, (barW - 2) * fillPercent);
+      this.hpBar.fillStyle(hpColor, 1);
+      this.hpBar.fillRoundedRect(1, 1, fillW, barH - 2, Math.min(3, fillW / 2));
+    }
 
     // Shield Overlay Fill
     if (this.shieldHp > 0) {
       const shieldPercent = Math.min(1, this.shieldHp / this.maxHp);
-      this.hpBar.fillStyle(0xffff00, 0.9);
-      this.hpBar.fillRect(1, 1, 48 * shieldPercent, 4);
+      const shieldW = Math.max(4, (barW - 2) * shieldPercent);
+      this.hpBar.fillStyle(0xfacc15, 0.95);
+      this.hpBar.fillRoundedRect(1, 1, shieldW, barH - 2, Math.min(3, shieldW / 2));
     }
   }
 
   die() {
+    if (this.shadow) this.shadow.destroy();
+    if (this.baseRing) this.baseRing.destroy();
     if (this.hpBar) this.hpBar.destroy();
     this.disableBody(true, true);
     
@@ -338,6 +382,14 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
 
   destroy(fromScene) {
     this.isRooted = false;
+    if (this.shadow) {
+      this.shadow.destroy();
+      this.shadow = null;
+    }
+    if (this.baseRing) {
+      this.baseRing.destroy();
+      this.baseRing = null;
+    }
     if (this.hpBar) {
       this.hpBar.destroy();
       this.hpBar = null;
