@@ -200,12 +200,10 @@ export default class Player extends BaseCharacter {
           this.executeDash(skillKey, targetX, targetY, fireAngle);
         } else if (skill.type === 'SHIELD') {
           this.addShield(skill.config.shieldHp, skill.config.duration);
-        } else if (skill.type === 'AHRI_ORB') {
-          this.executeAhriOrb(skillKey, fireAngle);
-        } else if (skill.type === 'AHRI_CHARM') {
-          this.executeAhriCharm(skillKey, fireAngle);
-        } else if (skill.type === 'AHRI_RUSH') {
-          this.executeAhriRush(skillKey, targetX, targetY, fireAngle);
+        } else if (skill.type === 'YASUO_Q') {
+          this.executeYasuoQ(skillKey, fireAngle);
+        } else if (skill.type === 'YASUO_WINDWALL') {
+          this.executeYasuoWindWall(skillKey, targetX, targetY, fireAngle);
         } else if (skill.type === 'ZED_SHURIKEN') {
           this.executeZedShuriken(skillKey, fireAngle);
         } else if (skill.type === 'ZED_SHADOW') {
@@ -223,12 +221,10 @@ export default class Player extends BaseCharacter {
         this.executeDash(skillKey, targetX, targetY, fireAngle);
       } else if (skill.type === 'SHIELD') {
         this.addShield(skill.config.shieldHp, skill.config.duration);
-      } else if (skill.type === 'AHRI_ORB') {
-        this.executeAhriOrb(skillKey, fireAngle);
-      } else if (skill.type === 'AHRI_CHARM') {
-        this.executeAhriCharm(skillKey, fireAngle);
-      } else if (skill.type === 'AHRI_RUSH') {
-        this.executeAhriRush(skillKey, targetX, targetY, fireAngle);
+      } else if (skill.type === 'YASUO_Q') {
+        this.executeYasuoQ(skillKey, fireAngle);
+      } else if (skill.type === 'YASUO_WINDWALL') {
+        this.executeYasuoWindWall(skillKey, targetX, targetY, fireAngle);
       } else if (skill.type === 'ZED_SHURIKEN') {
         this.executeZedShuriken(skillKey, fireAngle);
       } else if (skill.type === 'ZED_SHADOW') {
@@ -239,35 +235,54 @@ export default class Player extends BaseCharacter {
     }
   }
 
-  executeAhriOrb(skillKey, angle) {
+  executeYasuoQ(skillKey, angle) {
     const skillConfig = this.skills[skillKey].config;
-    const proj = new Projectile(this.scene, this.x, this.y, skillKey, skillConfig, this, this.heroId);
-    proj.isBoomerang = true;
-    proj.isReturning = false;
-    proj.maxRange = skillConfig.range || 450;
-    proj.startPoint = { x: this.x, y: this.y };
-    this.projectileGroup.add(proj);
-    proj.fire(angle);
-  }
+    this.yasuoQStacks = (this.yasuoQStacks || 0) + 1;
 
-  executeAhriCharm(skillKey, angle) {
-    const skillConfig = this.skills[skillKey].config;
-    const proj = new Projectile(this.scene, this.x, this.y, skillKey, skillConfig, this, this.heroId);
-    proj.isCharmProjectile = true;
-    proj.charmDuration = skillConfig.charmDuration || 1200;
-    this.projectileGroup.add(proj);
-    proj.fire(angle);
-  }
+    if (this.yasuoQStacks < 3) {
+      const thrustProj = new Projectile(this.scene, this.x, this.y, skillKey, {
+        damage: skillConfig.damage,
+        speed: skillConfig.speed,
+        isPiercing: false
+      }, this, this.heroId);
+      this.projectileGroup.add(thrustProj);
+      thrustProj.fire(angle);
+    } else {
+      this.yasuoQStacks = 0;
+      const tornadoProj = new Projectile(this.scene, this.x, this.y, skillKey, {
+        damage: (skillConfig.damage || 130) * 1.4,
+        speed: 550,
+        isPiercing: true,
+        rootDuration: 800
+      }, this, this.heroId);
+      tornadoProj.isTornado = true;
+      this.projectileGroup.add(tornadoProj);
+      tornadoProj.fire(angle);
 
-  executeAhriRush(skillKey, targetX, targetY, angle) {
-    const skillConfig = this.skills[skillKey].config;
-    this.executeDash(skillKey, targetX, targetY, angle);
-
-    const target = this.isBot ? this.scene.player : this.scene.bot;
-    if (target && target.active && target.hp > 0) {
-      const boltAngle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
-      this.shootProjectile('Q', boltAngle);
+      if (this.scene) {
+        showDamageText(this.scene, this.x, this.y - 20, 'TORNADO!', 'crit');
+      }
     }
+  }
+
+  executeYasuoWindWall(skillKey, targetX, targetY, angle) {
+    const skillConfig = this.skills[skillKey].config;
+    const wallWidth = skillConfig.wallWidth || 160;
+    const wallHeight = skillConfig.wallHeight || 28;
+    const spawnDist = 60;
+    const wallX = this.x + Math.cos(angle) * spawnDist;
+    const wallY = this.y + Math.sin(angle) * spawnDist;
+
+    if (this.scene && typeof this.scene.createWindWall === 'function') {
+      this.scene.createWindWall(wallX, wallY, angle, wallWidth, wallHeight, skillConfig.duration || 3000, this);
+    }
+  }
+
+  canUseSkill(skillKey, time) {
+    if (this.heroId === 'zed' && skillKey === 'E' && this.activeShadow && this.activeShadow.active) {
+      return true; // Allow instant recast to swap positions with shadow!
+    }
+    return super.canUseSkill(skillKey, time);
   }
 
   executeZedShuriken(skillKey, angle) {
@@ -281,6 +296,9 @@ export default class Player extends BaseCharacter {
   }
 
   executeZedShadow(skillKey, targetX, targetY) {
+    const now = this.scene.time.now;
+
+    // Recast E: Swap positions with Active Shadow Clone!
     if (this.activeShadow && this.activeShadow.active) {
       const oldPlayerX = this.x;
       const oldPlayerY = this.y;
@@ -291,13 +309,25 @@ export default class Player extends BaseCharacter {
       this.y = shadowY;
       if (this.body) this.body.reset(shadowX, shadowY);
 
-      this.activeShadow.setPosition(oldPlayerX, oldPlayerY);
+      if (this.scene) {
+        const burst1 = this.scene.add.circle(oldPlayerX, oldPlayerY, 30, 0x991b1b, 0.7);
+        this.scene.tweens.add({ targets: burst1, scale: 2, alpha: 0, duration: 300, onComplete: () => burst1.destroy() });
 
-      const burst = this.scene.add.circle(shadowX, shadowY, 30, 0x991b1b, 0.7);
-      this.scene.tweens.add({ targets: burst, scale: 2, alpha: 0, duration: 300, onComplete: () => burst.destroy() });
+        const burst2 = this.scene.add.circle(shadowX, shadowY, 30, 0x991b1b, 0.7);
+        this.scene.tweens.add({ targets: burst2, scale: 2, alpha: 0, duration: 300, onComplete: () => burst2.destroy() });
+      }
+
+      this.activeShadow.destroy();
+      this.activeShadow = null;
+
+      // Trigger full E cooldown after position swap
+      if (this.skills && this.skills.E) {
+        this.skills.E.lastUsed = now;
+      }
       return;
     }
 
+    // 1st Cast E: Place Shadow Clone
     const dist = Phaser.Math.Distance.Between(this.x, this.y, targetX, targetY);
     const maxDist = 280;
     const actualDist = Math.min(dist, maxDist);
@@ -306,15 +336,24 @@ export default class Player extends BaseCharacter {
     const shadowY = this.y + Math.sin(angle) * actualDist;
 
     const shadow = this.scene.add.sprite(shadowX, shadowY, this.texture.key);
-    shadow.setTint(0x333333);
+    shadow.setTint(0x222222);
     shadow.setAlpha(0.85);
     shadow.setDepth(9);
 
     this.activeShadow = shadow;
 
+    // Temporary 300ms delay so button isn't instantly double-pressed
+    if (this.skills && this.skills.E) {
+      this.skills.E.lastUsed = now - (this.skills.E.cooldown - 300);
+    }
+
+    // Shadow lasts 5 seconds
     this.scene.time.delayedCall(5000, () => {
       if (this.activeShadow === shadow) {
         this.activeShadow = null;
+        if (this.skills && this.skills.E) {
+          this.skills.E.lastUsed = this.scene.time.now;
+        }
       }
       if (shadow && shadow.active) shadow.destroy();
     });
@@ -322,13 +361,38 @@ export default class Player extends BaseCharacter {
 
   executeZedDeathMark(skillKey, targetX, targetY, angle) {
     const skillConfig = this.skills[skillKey].config;
-    this.executeDash(skillKey, targetX, targetY, angle);
-
     const target = this.isBot ? this.scene.player : this.scene.bot;
+    const castRange = skillConfig.castRange || 380;
+    const baseDamage = skillConfig.damage || 250;
+    const markDuration = skillConfig.markDuration || 5000;
+
     if (target && target.active && target.hp > 0) {
       const dist = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
-      if (dist < 180) {
-        target.applyDeathMark(skillConfig.damage || 480, skillConfig.markDelay || 2200);
+
+      if (dist <= castRange) {
+        // Teleport behind target
+        const behindAngle = Phaser.Math.Angle.Between(target.x, target.y, this.x, this.y);
+        const newX = target.x + Math.cos(behindAngle) * 45;
+        const newY = target.y + Math.sin(behindAngle) * 45;
+
+        if (this.scene) {
+          const burst1 = this.scene.add.circle(this.x, this.y, 35, 0x991b1b, 0.7);
+          this.scene.tweens.add({ targets: burst1, scale: 2, alpha: 0, duration: 300, onComplete: () => burst1.destroy() });
+
+          const burst2 = this.scene.add.circle(newX, newY, 40, 0xff0000, 0.7);
+          this.scene.tweens.add({ targets: burst2, scale: 2, alpha: 0, duration: 300, onComplete: () => burst2.destroy() });
+        }
+
+        this.x = newX;
+        this.y = newY;
+        if (this.body) this.body.reset(newX, newY);
+
+        // Apply Death Mark for 5s (Fixed Base DMG + 35% of stored DMG dealt during 5s)
+        target.applyDeathMark(baseDamage, markDuration);
+      } else {
+        if (this.scene) {
+          showDamageText(this.scene, this.x, this.y - 15, 'OUT OF RANGE', 'shield');
+        }
       }
     }
   }

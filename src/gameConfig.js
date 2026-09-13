@@ -126,21 +126,6 @@ export const GAME_CONFIG = {
         SPACE: { type: 'PROJECTILE', name: 'Super Mega Death Rocket', cooldown: 15000, config: { damage: 650, speed: 1000, isPiercing: false, isExplosive: true, explosionRadius: 100, channelTime: 500 } }
       }
     },
-    ahri: {
-      id: 'ahri',
-      name: 'Ahri',
-      title: 'The Nine-Tailed Fox',
-      color: 0xec4899,
-      projColor: 0xf472b6,
-      ultColor: 0xc084fc,
-      description: 'Mobile assassin mage with returning boomerang orb, charm CC, & spirit dashes.',
-      baseStats: { hp: 920, speed: 205, armor: 0, lifesteal: 0, critChance: 0, armorPen: 0 },
-      skills: {
-        Q: { type: 'AHRI_ORB', name: 'Orb of Deception', cooldown: 3500, config: { damage: 120, returnDamage: 100, speed: 650, range: 450 } },
-        E: { type: 'AHRI_CHARM', name: 'Charm', cooldown: 7500, config: { damage: 90, speed: 580, charmDuration: 1200 } },
-        SPACE: { type: 'AHRI_RUSH', name: 'Spirit Rush', cooldown: 14000, config: { charges: 3, dashDistance: 160, damage: 160 } }
-      }
-    },
     zed: {
       id: 'zed',
       name: 'Zed',
@@ -148,12 +133,12 @@ export const GAME_CONFIG = {
       color: 0x991b1b,
       projColor: 0xef4444,
       ultColor: 0x7f1d1d,
-      description: 'Shadow assassin using shadow clones to swap positions & dual razor shurikens.',
+      description: 'Shadow assassin swapping places with shadow clones & detonating Death Marks.',
       baseStats: { hp: 980, speed: 215, armor: 5, lifesteal: 0, critChance: 5, armorPen: 10 },
       skills: {
         Q: { type: 'ZED_SHURIKEN', name: 'Razor Shuriken', cooldown: 2500, config: { damage: 135, speed: 750, isPiercing: true } },
         E: { type: 'ZED_SHADOW', name: 'Living Shadow', cooldown: 8000, config: { maxDistance: 280 } },
-        SPACE: { type: 'ZED_DEATHMARK', name: 'Death Mark', cooldown: 16000, config: { damage: 480, markDelay: 2200 } }
+        SPACE: { type: 'ZED_DEATHMARK', name: 'Death Mark', cooldown: 15000, config: { damage: 250, markDuration: 5000, castRange: 380 } }
       }
     }
   }

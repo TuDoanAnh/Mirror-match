@@ -80,8 +80,8 @@ export default class GameScene extends Phaser.Scene {
     // Create entities at map spawn points
     this.player = new Player(this, 280, 512, false, this.playerColor);
     
-    // Bot Hero Selection: cycles through 5 champions per level
-    const botHeroes = ['ezreal', 'lux', 'jinx', 'ahri', 'zed'];
+    // Bot Hero Selection: cycles through 4 champions per level
+    const botHeroes = ['ezreal', 'lux', 'jinx', 'zed'];
     const chosenBotHero = botHeroes[(this.level - 1) % botHeroes.length];
     this.registry.set('selectedHero', chosenBotHero);
     this.bot = new EnemyBot(this, 1180, 512, this.level);
@@ -111,6 +111,15 @@ export default class GameScene extends Phaser.Scene {
     // Ensure player/bot collide with bounds (1536 x 1024)
     this.physics.world.setBounds(0, 0, 1536, 1024);
     
+    // Wind Wall Group setup for Yasuo
+    this.windWalls = this.physics.add.group();
+    this.physics.add.overlap(this.playerProjectiles, this.windWalls, (proj, wall) => {
+      if (proj && wall && proj.attacker !== wall.owner) proj.destroy();
+    });
+    this.physics.add.overlap(this.enemyProjectiles, this.windWalls, (proj, wall) => {
+      if (proj && wall && proj.attacker !== wall.owner) proj.destroy();
+    });
+
     // Creep Spawner for Level 4+
     if (this.level >= (GAME_CONFIG.CREEP_STATS.spawnMinLevel || 4)) {
       // Spawn initial 2 creeps
@@ -827,6 +836,34 @@ export default class GameScene extends Phaser.Scene {
         this.physics.resume();
       }
       this.isHitStopActive = false;
+    });
+  }
+
+  createWindWall(x, y, angle, width, height, duration = 3000, owner = null) {
+    if (!this.windWalls) {
+      this.windWalls = this.physics.add.group();
+    }
+
+    const wallGraphic = this.add.rectangle(x, y, width, height, 0x38bdf8, 0.65);
+    wallGraphic.setRotation(angle);
+    wallGraphic.setStrokeStyle(3, 0xffffff, 0.95);
+    wallGraphic.setDepth(12);
+
+    this.physics.add.existing(wallGraphic);
+    wallGraphic.owner = owner;
+
+    this.windWalls.add(wallGraphic);
+
+    this.tweens.add({
+      targets: wallGraphic,
+      alpha: { start: 0.75, end: 0.25 },
+      duration: 400,
+      yoyo: true,
+      repeat: -1
+    });
+
+    this.time.delayedCall(duration, () => {
+      if (wallGraphic && wallGraphic.active) wallGraphic.destroy();
     });
   }
 

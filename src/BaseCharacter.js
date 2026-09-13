@@ -338,17 +338,21 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
-  applyDeathMark(damage = 480, delay = 2200) {
+  applyDeathMark(baseDamage = 250, duration = 5000) {
     if (this.isStasis || this.hp <= 0) return;
+    this.isDeathMarked = true;
+    this.deathMarkBaseDamage = baseDamage;
+    this.deathMarkStoredDamage = 0;
+
     if (this.scene) {
-      showDamageText(this.scene, this.x, this.y - 15, 'DEATH MARK', 'crit');
+      showDamageText(this.scene, this.x, this.y - 15, 'DEATH MARKED', 'crit');
     }
 
-    const markIcon = this.scene.add.text(this.x, this.y - 45, '❌', { fontSize: '22px', fill: '#ff0000' }).setOrigin(0.5).setDepth(20);
+    const markIcon = this.scene.add.text(this.x, this.y - 45, '❌', { fontSize: '24px', fill: '#ff0000' }).setOrigin(0.5).setDepth(20);
     this.scene.tweens.add({
       targets: markIcon,
-      scale: 1.3,
-      duration: 400,
+      scale: 1.4,
+      duration: 350,
       yoyo: true,
       repeat: -1
     });
@@ -361,15 +365,25 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
       loop: true
     });
 
-    this.scene.time.delayedCall(delay, () => {
+    if (this.deathMarkTimer) this.deathMarkTimer.remove();
+    this.deathMarkTimer = this.scene.time.delayedCall(duration, () => {
       updateTimer.remove();
       if (markIcon && markIcon.active) markIcon.destroy();
-      if (this.active && this.hp > 0 && !this.isStasis) {
-        this.takeDamage(damage, true);
+
+      if (this.active && this.hp > 0 && !this.isStasis && this.isDeathMarked) {
+        const bonusDmg = Math.round((this.deathMarkStoredDamage || 0) * 0.35);
+        const totalDetonation = this.deathMarkBaseDamage + bonusDmg;
+
+        this.isDeathMarked = false;
+        this.takeDamage(totalDetonation, true);
+
         if (this.scene) {
-          const exp = this.scene.add.circle(this.x, this.y, 40, 0xff0000, 0.6);
-          this.scene.tweens.add({ targets: exp, scale: 2, alpha: 0, duration: 400, onComplete: () => exp.destroy() });
+          showDamageText(this.scene, this.x, this.y - 25, `${totalDetonation} DETONATED!`, 'crit');
+          const exp = this.scene.add.circle(this.x, this.y, 45, 0xff0000, 0.7);
+          this.scene.tweens.add({ targets: exp, scale: 2.2, alpha: 0, duration: 400, onComplete: () => exp.destroy() });
         }
+      } else {
+        this.isDeathMarked = false;
       }
     });
   }
@@ -378,6 +392,11 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     if (this.isStasis) return; // Completely invulnerable during Zhonya Golden Stasis!
 
     let remainingDamage = amount;
+
+    // Track stored damage dealt during Death Mark duration for detonation bonus
+    if (this.isDeathMarked && remainingDamage > 0) {
+      this.deathMarkStoredDamage = (this.deathMarkStoredDamage || 0) + remainingDamage;
+    }
 
     // Absorb into shield first if active
     if (this.shieldHp > 0) {
