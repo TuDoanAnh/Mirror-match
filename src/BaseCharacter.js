@@ -285,7 +285,98 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
+  applyCharm(duration = 1200, charmer = null) {
+    if (this.isStasis || this.hp <= 0) return;
+    this.isCharmed = true;
+    this.charmerTarget = charmer;
+
+    if (this.scene) {
+      showDamageText(this.scene, this.x, this.y - 15, 'CHARMED', 'root');
+    }
+
+    const heartIcon = this.scene.add.text(this.x, this.y - 45, '💖', { fontSize: '20px' }).setOrigin(0.5).setDepth(20);
+
+    const updateTimer = this.scene.time.addEvent({
+      delay: 20,
+      callback: () => {
+        if (!this.active || !this.isCharmed) return;
+        if (heartIcon && heartIcon.active) heartIcon.setPosition(this.x, this.y - 45);
+        if (this.charmerTarget && this.charmerTarget.active) {
+          const angle = Phaser.Math.Angle.Between(this.x, this.y, this.charmerTarget.x, this.charmerTarget.y);
+          this.setVelocity(Math.cos(angle) * (this.speed * 0.55), Math.sin(angle) * (this.speed * 0.55));
+        }
+      },
+      loop: true
+    });
+
+    if (this.charmTimer) this.charmTimer.remove();
+    this.charmTimer = this.scene.time.delayedCall(duration, () => {
+      this.isCharmed = false;
+      this.charmerTarget = null;
+      updateTimer.remove();
+      if (heartIcon && heartIcon.active) heartIcon.destroy();
+    });
+  }
+
+  applyStasis(duration = 2000) {
+    if (this.hp <= 0) return;
+    this.isStasis = true;
+    this.setVelocity(0, 0);
+
+    this.setTint(0xffd700); // Gold Stasis tint
+    if (this.scene) {
+      showDamageText(this.scene, this.x, this.y - 15, 'GOLDEN STASIS', 'shield');
+    }
+
+    const aura = this.scene.add.circle(this.x, this.y, 26, 0xffd700, 0.4);
+    aura.setStrokeStyle(3, 0xffffff);
+
+    this.scene.time.delayedCall(duration, () => {
+      this.isStasis = false;
+      if (this.active) this.clearTint();
+      if (aura && aura.active) aura.destroy();
+    });
+  }
+
+  applyDeathMark(damage = 480, delay = 2200) {
+    if (this.isStasis || this.hp <= 0) return;
+    if (this.scene) {
+      showDamageText(this.scene, this.x, this.y - 15, 'DEATH MARK', 'crit');
+    }
+
+    const markIcon = this.scene.add.text(this.x, this.y - 45, '❌', { fontSize: '22px', fill: '#ff0000' }).setOrigin(0.5).setDepth(20);
+    this.scene.tweens.add({
+      targets: markIcon,
+      scale: 1.3,
+      duration: 400,
+      yoyo: true,
+      repeat: -1
+    });
+
+    const updateTimer = this.scene.time.addEvent({
+      delay: 20,
+      callback: () => {
+        if (markIcon && markIcon.active) markIcon.setPosition(this.x, this.y - 45);
+      },
+      loop: true
+    });
+
+    this.scene.time.delayedCall(delay, () => {
+      updateTimer.remove();
+      if (markIcon && markIcon.active) markIcon.destroy();
+      if (this.active && this.hp > 0 && !this.isStasis) {
+        this.takeDamage(damage, true);
+        if (this.scene) {
+          const exp = this.scene.add.circle(this.x, this.y, 40, 0xff0000, 0.6);
+          this.scene.tweens.add({ targets: exp, scale: 2, alpha: 0, duration: 400, onComplete: () => exp.destroy() });
+        }
+      }
+    });
+  }
+
   takeDamage(amount, isCrit = false) {
+    if (this.isStasis) return; // Completely invulnerable during Zhonya Golden Stasis!
+
     let remainingDamage = amount;
 
     // Absorb into shield first if active

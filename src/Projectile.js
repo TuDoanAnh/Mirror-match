@@ -125,9 +125,28 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
   preUpdate(time, delta) {
     super.preUpdate(time, delta);
     
+    if (this.isBoomerang && !this.isReturning && this.startPoint) {
+      const traveled = Phaser.Math.Distance.Between(this.x, this.y, this.startPoint.x, this.startPoint.y);
+      if (traveled >= (this.maxRange || 450)) {
+        this.isReturning = true;
+      }
+    }
+
+    if (this.isReturning && this.attacker && this.attacker.active) {
+      const returnAngle = Phaser.Math.Angle.Between(this.x, this.y, this.attacker.x, this.attacker.y);
+      this.setRotation(returnAngle);
+      this.scene.physics.velocityFromRotation(returnAngle, this.speed, this.body.velocity);
+
+      const distToOwner = Phaser.Math.Distance.Between(this.x, this.y, this.attacker.x, this.attacker.y);
+      if (distToOwner < 30) {
+        this.destroy();
+        return;
+      }
+    }
+
     // Destroy if projectile leaves the screen bounds
-    const width = this.scene.scale ? this.scene.scale.width : (this.scene.cameras.main ? this.scene.cameras.main.width : 1024);
-    const height = this.scene.scale ? this.scene.scale.height : (this.scene.cameras.main ? this.scene.cameras.main.height : 768);
+    const width = 1536;
+    const height = 1024;
 
     if (
       this.x < 0 || 

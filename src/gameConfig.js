@@ -59,7 +59,14 @@ export const GAME_CONFIG = {
     { id: 'lordDominik', name: "Lord Dominik's Regards", statStr: '+35% Armor Pen, +45 ATK', cost: 3000, color: 0x0284c7, statsDict: { armorPen: 35, bonusDamage: 45 } },
     { id: 'thornmail', name: 'Thornmail', statStr: '+60 Armor, +250 HP', cost: 2700, color: 0x15803d, statsDict: { armor: 60, bonusHP: 250 } },
     { id: 'trinityForce', name: 'Trinity Force', statStr: '+300 HP, +40 ATK, +30 Speed, +10% CDR', cost: 3333, color: 0xeab308, statsDict: { bonusHP: 300, bonusDamage: 40, bonusSpeed: 30, cdr: 0.10 } },
-    { id: 'navori', name: 'Navori Quickblades', statStr: '+25% Crit, +60 ATK, +15% CDR', cost: 3400, color: 0xec4899, statsDict: { critChance: 25, bonusDamage: 60, cdr: 0.15 } }
+    { id: 'navori', name: 'Navori Quickblades', statStr: '+25% Crit, +60 ATK, +15% CDR', cost: 3400, color: 0xec4899, statsDict: { critChance: 25, bonusDamage: 60, cdr: 0.15 } },
+
+    // Active & Utility Items
+    { id: 'healthPotion', name: 'Health Potion', statStr: 'Restores 250 HP over 5s', cost: 50, color: 0xef4444, statsDict: { bonusHP: 50 } },
+    { id: 'zhonya', name: "Zhonya's Hourglass", statStr: 'Active [Key 1]: Golden Stasis (2s Invulnerable)', cost: 2800, color: 0xfacc15, statsDict: { bonusDamage: 55, cdr: 0.10 } },
+    { id: 'qss', name: 'Quicksilver Sash (QSS)', statStr: 'Active [Key 2]: Cleanse Root/Charm, +30 Armor', cost: 1300, color: 0x38bdf8, statsDict: { armor: 30 } },
+    { id: 'rylai', name: "Rylai's Crystal Scepter", statStr: 'Passive: Skillshots Slow 25% for 1.5s', cost: 2600, color: 0x0284c7, statsDict: { bonusHP: 250, bonusDamage: 30 } },
+    { id: 'rocketbelt', name: 'Hextech Rocketbelt', statStr: 'Active [Key 3]: Rocket Dash, +25 Speed', cost: 2600, color: 0xec4899, statsDict: { bonusHP: 300, bonusSpeed: 25 } }
   ],
   BOT_SCALING: {
     1: { speedMult: 1.0, hpMult: 1.0, armor: 0, armorPen: 0, critChance: 0, lifesteal: 0, dmgMult: 1.0, cdrMult: 1.0, projSpeedMult: 1.0 },
@@ -117,6 +124,36 @@ export const GAME_CONFIG = {
         Q: { type: 'SPREAD_SHOT', name: 'Fishbones Rockets', cooldown: 2000, config: { count: 3, spreadAngle: 0.25, damage: 70, speed: 650 } },
         E: { type: 'DASH', name: 'Zap / Speed Rush', cooldown: 8000, config: { dashDistance: 180 } },
         SPACE: { type: 'PROJECTILE', name: 'Super Mega Death Rocket', cooldown: 15000, config: { damage: 650, speed: 1000, isPiercing: false, isExplosive: true, explosionRadius: 100, channelTime: 500 } }
+      }
+    },
+    ahri: {
+      id: 'ahri',
+      name: 'Ahri',
+      title: 'The Nine-Tailed Fox',
+      color: 0xec4899,
+      projColor: 0xf472b6,
+      ultColor: 0xc084fc,
+      description: 'Mobile assassin mage with returning boomerang orb, charm CC, & spirit dashes.',
+      baseStats: { hp: 920, speed: 205, armor: 0, lifesteal: 0, critChance: 0, armorPen: 0 },
+      skills: {
+        Q: { type: 'AHRI_ORB', name: 'Orb of Deception', cooldown: 3500, config: { damage: 120, returnDamage: 100, speed: 650, range: 450 } },
+        E: { type: 'AHRI_CHARM', name: 'Charm', cooldown: 7500, config: { damage: 90, speed: 580, charmDuration: 1200 } },
+        SPACE: { type: 'AHRI_RUSH', name: 'Spirit Rush', cooldown: 14000, config: { charges: 3, dashDistance: 160, damage: 160 } }
+      }
+    },
+    zed: {
+      id: 'zed',
+      name: 'Zed',
+      title: 'The Master of Shadows',
+      color: 0x991b1b,
+      projColor: 0xef4444,
+      ultColor: 0x7f1d1d,
+      description: 'Shadow assassin using shadow clones to swap positions & dual razor shurikens.',
+      baseStats: { hp: 980, speed: 215, armor: 5, lifesteal: 0, critChance: 5, armorPen: 10 },
+      skills: {
+        Q: { type: 'ZED_SHURIKEN', name: 'Razor Shuriken', cooldown: 2500, config: { damage: 135, speed: 750, isPiercing: true } },
+        E: { type: 'ZED_SHADOW', name: 'Living Shadow', cooldown: 8000, config: { maxDistance: 280 } },
+        SPACE: { type: 'ZED_DEATHMARK', name: 'Death Mark', cooldown: 16000, config: { damage: 480, markDelay: 2200 } }
       }
     }
   }

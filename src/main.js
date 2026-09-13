@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import PreparationScene from './PreparationScene';
 import GameScene from './GameScene';
 import GameOverScene from './GameOverScene';
+import AugmentSelectScene from './AugmentSelectScene';
 import { GAME_CONFIG } from './gameConfig';
 import './style.css';
 
@@ -21,7 +22,7 @@ const config = {
       debug: false
     }
   },
-  scene: [PreparationScene, GameScene, GameOverScene]
+  scene: [PreparationScene, GameScene, GameOverScene, AugmentSelectScene]
 };
 
 export default new Phaser.Game(config);

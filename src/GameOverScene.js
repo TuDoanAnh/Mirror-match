@@ -155,7 +155,8 @@ export default class GameOverScene extends Phaser.Scene {
     const btnBg = this.add.rectangle(centerX, btnY, 280, 52, 0x1e293b).setInteractive({ useHandCursor: true });
     btnBg.setStrokeStyle(2, 0x38bdf8);
 
-    const btnTxt = this.add.text(centerX, btnY, "RETURN TO MENU (ENTER)", {
+    const btnLabel = isWin ? "CHOOSE AUGMENT (ENTER)" : "RETURN TO MENU (ENTER)";
+    const btnTxt = this.add.text(centerX, btnY, btnLabel, {
       fontSize: '18px',
       fill: '#ffffff',
       fontStyle: 'bold'
@@ -164,7 +165,11 @@ export default class GameOverScene extends Phaser.Scene {
     const onReturn = () => {
       this.cameras.main.fadeOut(300, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('PreparationScene');
+        if (isWin) {
+          this.scene.start('AugmentSelectScene', { nextLevel: this.level + 1 });
+        } else {
+          this.scene.start('PreparationScene');
+        }
       });
     };
 

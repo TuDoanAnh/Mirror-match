@@ -195,7 +195,7 @@ export default class PreparationScene extends Phaser.Scene {
     this.add.text(centerX, currentY, "HERO SELECT", { fontSize: '16px', fill: '#00ffff', fontStyle: 'bold' }).setOrigin(0.5);
     
     currentY += 32;
-    const heroes = ['ezreal', 'lux', 'jinx'];
+    const heroes = ['ezreal', 'lux', 'jinx', 'ahri', 'zed'];
     const currentHero = this.registry.get('selectedHero') || 'ezreal';
 
     const selectHeroById = (hId) => {
@@ -210,9 +210,13 @@ export default class PreparationScene extends Phaser.Scene {
       one: Phaser.Input.Keyboard.KeyCodes.ONE,
       two: Phaser.Input.Keyboard.KeyCodes.TWO,
       three: Phaser.Input.Keyboard.KeyCodes.THREE,
+      four: Phaser.Input.Keyboard.KeyCodes.FOUR,
+      five: Phaser.Input.Keyboard.KeyCodes.FIVE,
       numOne: Phaser.Input.Keyboard.KeyCodes.NUMPAD_ONE,
       numTwo: Phaser.Input.Keyboard.KeyCodes.NUMPAD_TWO,
-      numThree: Phaser.Input.Keyboard.KeyCodes.NUMPAD_THREE
+      numThree: Phaser.Input.Keyboard.KeyCodes.NUMPAD_THREE,
+      numFour: Phaser.Input.Keyboard.KeyCodes.NUMPAD_FOUR,
+      numFive: Phaser.Input.Keyboard.KeyCodes.NUMPAD_FIVE
     });
 
     keys.one.on('down', () => selectHeroById('ezreal'));
@@ -221,18 +225,27 @@ export default class PreparationScene extends Phaser.Scene {
     keys.numTwo.on('down', () => selectHeroById('lux'));
     keys.three.on('down', () => selectHeroById('jinx'));
     keys.numThree.on('down', () => selectHeroById('jinx'));
+    keys.four.on('down', () => selectHeroById('ahri'));
+    keys.numFour.on('down', () => selectHeroById('ahri'));
+    keys.five.on('down', () => selectHeroById('zed'));
+    keys.numFive.on('down', () => selectHeroById('zed'));
+
+    const btnWidth = 44;
+    const btnGap = 48;
+    const startBtnX = centerX - ((heroes.length - 1) * btnGap) / 2;
 
     heroes.forEach((hId, index) => {
       const heroData = GAME_CONFIG.CHARACTERS[hId];
-      const x = (centerX - 80) + (index * 80);
+      const x = startBtnX + (index * btnGap);
       const isSelected = hId === currentHero;
 
       const btnColor = isSelected ? heroData.color : 0x333333;
-      const btn = this.add.rectangle(x, currentY, 70, 28, btnColor).setInteractive({ useHandCursor: true });
+      const btn = this.add.rectangle(x, currentY, btnWidth, 26, btnColor).setInteractive({ useHandCursor: true });
       if (isSelected) btn.setStrokeStyle(2, 0xffffff);
 
       const txtColor = isSelected ? '#000000' : '#ffffff';
-      const txt = this.add.text(x, currentY, heroData.name, { fontSize: '12px', fill: txtColor, fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      const shortName = heroData.name.slice(0, 4);
+      const txt = this.add.text(x, currentY, shortName, { fontSize: '11px', fill: txtColor, fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
       btn.on('pointerdown', () => selectHeroById(hId));
       txt.on('pointerdown', () => selectHeroById(hId));
@@ -240,16 +253,20 @@ export default class PreparationScene extends Phaser.Scene {
 
     // Hero Avatar Graphic
     currentY += 45;
-    const selectedData = GAME_CONFIG.CHARACTERS[currentHero];
+    const selectedData = GAME_CONFIG.CHARACTERS[currentHero] || GAME_CONFIG.CHARACTERS.ezreal;
     
     this.add.circle(centerX, currentY, 24, 0xffffff, 0.25);
-    if (['ezreal', 'lux', 'jinx'].includes(currentHero)) {
+    if (['ezreal', 'lux', 'jinx', 'ahri', 'zed'].includes(currentHero)) {
       const sheetKey = `${currentHero}_spritesheet`;
       const idleKey = `${currentHero}_idle`;
-      const heroSprite = this.add.sprite(centerX, currentY, sheetKey, 0);
-      heroSprite.setScale(1.1);
-      if (this.anims.exists(idleKey)) {
-        heroSprite.play(idleKey);
+      if (this.textures.exists(sheetKey)) {
+        const heroSprite = this.add.sprite(centerX, currentY, sheetKey, 0);
+        heroSprite.setScale(1.1);
+        if (this.anims.exists(idleKey)) {
+          heroSprite.play(idleKey);
+        }
+      } else {
+        this.add.circle(centerX, currentY, 20, selectedData.color);
       }
     } else {
       this.add.circle(centerX, currentY, 20, selectedData.color);

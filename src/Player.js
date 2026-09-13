@@ -51,8 +51,49 @@ export default class Player extends BaseCharacter {
     }
 
     if (!isBot) {
-      this.keys = scene.input.keyboard.addKeys('W,A,S,D,SPACE');
+      this.keys = scene.input.keyboard.addKeys('W,A,S,D,SPACE,ONE,TWO,THREE');
+      this.keys.ONE.on('down', () => this.useActiveItem('zhonya'));
+      this.keys.TWO.on('down', () => this.useActiveItem('qss'));
+      this.keys.THREE.on('down', () => this.useActiveItem('rocketbelt'));
     }
+  }
+
+  useActiveItem(itemId) {
+    if (this.hp <= 0 || this.isStasis || this.isBot) return;
+    const inv = this.scene.registry.get('inventory') || [];
+    const hasItem = inv.some(item => item.id === itemId);
+    if (!hasItem) return;
+
+    if (itemId === 'zhonya') {
+      if (this.canUseActiveItem('zhonya', 30000)) {
+        this.applyStasis(2000);
+      }
+    } else if (itemId === 'qss') {
+      if (this.canUseActiveItem('qss', 20000)) {
+        this.isRooted = false;
+        this.isCharmed = false;
+        if (this.scene) {
+          showDamageText(this.scene, this.x, this.y - 15, 'CLEANSED', 'heal');
+        }
+      }
+    } else if (itemId === 'rocketbelt') {
+      if (this.canUseActiveItem('rocketbelt', 20000)) {
+        const ptr = this.scene.input.activePointer;
+        const angle = Phaser.Math.Angle.Between(this.x, this.y, ptr.worldX, ptr.worldY);
+        this.executeDash('E', ptr.worldX, ptr.worldY, angle);
+        this.shootSpreadProjectiles('Q', angle);
+      }
+    }
+  }
+
+  canUseActiveItem(itemId, cooldown = 20000) {
+    if (!this.activeCooldowns) this.activeCooldowns = {};
+    const now = this.scene.time.now;
+    if (now >= (this.activeCooldowns[itemId] || 0)) {
+      this.activeCooldowns[itemId] = now + cooldown;
+      return true;
+    }
+    return false;
   }
 
   update(time, delta) {
@@ -159,6 +200,18 @@ export default class Player extends BaseCharacter {
           this.executeDash(skillKey, targetX, targetY, fireAngle);
         } else if (skill.type === 'SHIELD') {
           this.addShield(skill.config.shieldHp, skill.config.duration);
+        } else if (skill.type === 'AHRI_ORB') {
+          this.executeAhriOrb(skillKey, fireAngle);
+        } else if (skill.type === 'AHRI_CHARM') {
+          this.executeAhriCharm(skillKey, fireAngle);
+        } else if (skill.type === 'AHRI_RUSH') {
+          this.executeAhriRush(skillKey, targetX, targetY, fireAngle);
+        } else if (skill.type === 'ZED_SHURIKEN') {
+          this.executeZedShuriken(skillKey, fireAngle);
+        } else if (skill.type === 'ZED_SHADOW') {
+          this.executeZedShadow(skillKey, targetX, targetY);
+        } else if (skill.type === 'ZED_DEATHMARK') {
+          this.executeZedDeathMark(skillKey, targetX, targetY, fireAngle);
         }
       });
     } else {
@@ -170,6 +223,112 @@ export default class Player extends BaseCharacter {
         this.executeDash(skillKey, targetX, targetY, fireAngle);
       } else if (skill.type === 'SHIELD') {
         this.addShield(skill.config.shieldHp, skill.config.duration);
+      } else if (skill.type === 'AHRI_ORB') {
+        this.executeAhriOrb(skillKey, fireAngle);
+      } else if (skill.type === 'AHRI_CHARM') {
+        this.executeAhriCharm(skillKey, fireAngle);
+      } else if (skill.type === 'AHRI_RUSH') {
+        this.executeAhriRush(skillKey, targetX, targetY, fireAngle);
+      } else if (skill.type === 'ZED_SHURIKEN') {
+        this.executeZedShuriken(skillKey, fireAngle);
+      } else if (skill.type === 'ZED_SHADOW') {
+        this.executeZedShadow(skillKey, targetX, targetY);
+      } else if (skill.type === 'ZED_DEATHMARK') {
+        this.executeZedDeathMark(skillKey, targetX, targetY, fireAngle);
+      }
+    }
+  }
+
+  executeAhriOrb(skillKey, angle) {
+    const skillConfig = this.skills[skillKey].config;
+    const proj = new Projectile(this.scene, this.x, this.y, skillKey, skillConfig, this, this.heroId);
+    proj.isBoomerang = true;
+    proj.isReturning = false;
+    proj.maxRange = skillConfig.range || 450;
+    proj.startPoint = { x: this.x, y: this.y };
+    this.projectileGroup.add(proj);
+    proj.fire(angle);
+  }
+
+  executeAhriCharm(skillKey, angle) {
+    const skillConfig = this.skills[skillKey].config;
+    const proj = new Projectile(this.scene, this.x, this.y, skillKey, skillConfig, this, this.heroId);
+    proj.isCharmProjectile = true;
+    proj.charmDuration = skillConfig.charmDuration || 1200;
+    this.projectileGroup.add(proj);
+    proj.fire(angle);
+  }
+
+  executeAhriRush(skillKey, targetX, targetY, angle) {
+    const skillConfig = this.skills[skillKey].config;
+    this.executeDash(skillKey, targetX, targetY, angle);
+
+    const target = this.isBot ? this.scene.player : this.scene.bot;
+    if (target && target.active && target.hp > 0) {
+      const boltAngle = Phaser.Math.Angle.Between(this.x, this.y, target.x, target.y);
+      this.shootProjectile('Q', boltAngle);
+    }
+  }
+
+  executeZedShuriken(skillKey, angle) {
+    this.shootProjectile(skillKey, angle);
+
+    if (this.activeShadow && this.activeShadow.active) {
+      const shadowProj = new Projectile(this.scene, this.activeShadow.x, this.activeShadow.y, skillKey, this.skills[skillKey].config, this, this.heroId);
+      this.projectileGroup.add(shadowProj);
+      shadowProj.fire(angle);
+    }
+  }
+
+  executeZedShadow(skillKey, targetX, targetY) {
+    if (this.activeShadow && this.activeShadow.active) {
+      const oldPlayerX = this.x;
+      const oldPlayerY = this.y;
+      const shadowX = this.activeShadow.x;
+      const shadowY = this.activeShadow.y;
+
+      this.x = shadowX;
+      this.y = shadowY;
+      if (this.body) this.body.reset(shadowX, shadowY);
+
+      this.activeShadow.setPosition(oldPlayerX, oldPlayerY);
+
+      const burst = this.scene.add.circle(shadowX, shadowY, 30, 0x991b1b, 0.7);
+      this.scene.tweens.add({ targets: burst, scale: 2, alpha: 0, duration: 300, onComplete: () => burst.destroy() });
+      return;
+    }
+
+    const dist = Phaser.Math.Distance.Between(this.x, this.y, targetX, targetY);
+    const maxDist = 280;
+    const actualDist = Math.min(dist, maxDist);
+    const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
+    const shadowX = this.x + Math.cos(angle) * actualDist;
+    const shadowY = this.y + Math.sin(angle) * actualDist;
+
+    const shadow = this.scene.add.sprite(shadowX, shadowY, this.texture.key);
+    shadow.setTint(0x333333);
+    shadow.setAlpha(0.85);
+    shadow.setDepth(9);
+
+    this.activeShadow = shadow;
+
+    this.scene.time.delayedCall(5000, () => {
+      if (this.activeShadow === shadow) {
+        this.activeShadow = null;
+      }
+      if (shadow && shadow.active) shadow.destroy();
+    });
+  }
+
+  executeZedDeathMark(skillKey, targetX, targetY, angle) {
+    const skillConfig = this.skills[skillKey].config;
+    this.executeDash(skillKey, targetX, targetY, angle);
+
+    const target = this.isBot ? this.scene.player : this.scene.bot;
+    if (target && target.active && target.hp > 0) {
+      const dist = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
+      if (dist < 180) {
+        target.applyDeathMark(skillConfig.damage || 480, skillConfig.markDelay || 2200);
       }
     }
   }

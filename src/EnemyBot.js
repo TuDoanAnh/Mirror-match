@@ -20,25 +20,29 @@ export default class EnemyBot extends Player {
 
   setLevel(level) {
     const scale = GAME_CONFIG.BOT_SCALING[level] || GAME_CONFIG.BOT_SCALING[1];
-    const ezrealData = GAME_CONFIG.CHARACTERS.ezreal;
+    const heroData = GAME_CONFIG.CHARACTERS[this.heroId] || GAME_CONFIG.CHARACTERS.ezreal;
 
-    this.speed = ezrealData.baseStats.speed * scale.speedMult;
-    this.maxHp = ezrealData.baseStats.hp * scale.hpMult;
+    this.speed = heroData.baseStats.speed * scale.speedMult;
+    this.maxHp = heroData.baseStats.hp * scale.hpMult;
     this.hp = this.maxHp;
     this.armor = scale.armor;
     this.armorPen = scale.armorPen;
     this.critChance = scale.critChance;
     this.lifesteal = scale.lifesteal;
 
-    this.skills.Q.config.damage = ezrealData.skills.Q.config.damage * scale.dmgMult;
-    this.skills.SPACE.config.damage = ezrealData.skills.SPACE.config.damage * scale.dmgMult;
-
-    this.skills.Q.cooldown = ezrealData.skills.Q.cooldown * scale.cdrMult;
-    this.skills.E.cooldown = ezrealData.skills.E.cooldown * scale.cdrMult;
-    this.skills.SPACE.cooldown = ezrealData.skills.SPACE.cooldown * scale.cdrMult;
-
-    this.skills.Q.config.speed = ezrealData.skills.Q.config.speed * scale.projSpeedMult;
-    this.skills.SPACE.config.speed = ezrealData.skills.SPACE.config.speed * scale.projSpeedMult;
+    if (this.skills.Q && this.skills.Q.config) {
+      this.skills.Q.config.damage = (heroData.skills.Q.config.damage || 100) * scale.dmgMult;
+      this.skills.Q.cooldown = heroData.skills.Q.cooldown * scale.cdrMult;
+      if (this.skills.Q.config.speed) this.skills.Q.config.speed *= scale.projSpeedMult;
+    }
+    if (this.skills.E) {
+      this.skills.E.cooldown = heroData.skills.E.cooldown * scale.cdrMult;
+    }
+    if (this.skills.SPACE && this.skills.SPACE.config) {
+      this.skills.SPACE.config.damage = (heroData.skills.SPACE.config.damage || 400) * scale.dmgMult;
+      this.skills.SPACE.cooldown = heroData.skills.SPACE.cooldown * scale.cdrMult;
+      if (this.skills.SPACE.config.speed) this.skills.SPACE.config.speed *= scale.projSpeedMult;
+    }
   }
 
   setTarget(target) {
