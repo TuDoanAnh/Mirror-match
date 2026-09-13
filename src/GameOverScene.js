@@ -25,15 +25,16 @@ export default class GameOverScene extends Phaser.Scene {
     let colorStr = "#ff0000";
     
     if (isWin) {
-      const goldEarned = this.level * GAME_CONFIG.ECONOMY.GOLD_PER_LEVEL_WIN;
-      let currentGold = this.registry.get('gold');
+      const rewardsTable = GAME_CONFIG.ECONOMY.LEVEL_WIN_REWARDS || {};
+      const goldEarned = rewardsTable[this.level] || (this.level * 500);
+      let currentGold = this.registry.get('gold') || 0;
       this.registry.set('gold', currentGold + goldEarned);
       
-      textStr = `VICTORY!\nEARNED ${goldEarned} GOLD`;
+      textStr = `VICTORY!\nEARNED +${goldEarned} GOLD`;
       colorStr = "#00ff00";
       
-      let unlocked = this.registry.get('unlockedLevel');
-      if (this.level === unlocked && unlocked < GAME_CONFIG.ECONOMY.MAX_LEVEL) {
+      let unlocked = this.registry.get('unlockedLevel') || 1;
+      if (this.level === unlocked && unlocked < (GAME_CONFIG.ECONOMY.MAX_LEVEL || 10)) {
         this.registry.set('unlockedLevel', unlocked + 1);
         textStr += `\nNEW LEVEL UNLOCKED!`;
       }

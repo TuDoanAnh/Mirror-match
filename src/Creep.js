@@ -298,28 +298,6 @@ export default class Creep extends BaseCharacter {
   }
 
   die() {
-    // Award gold reward to player
-    if (this.scene.registry.has('gold')) {
-      const currentGold = this.scene.registry.get('gold') || 0;
-      const newGold = currentGold + (this.goldReward || 30);
-      this.scene.registry.set('gold', newGold);
-
-      // Floating "+30G" text
-      const goldTxt = this.scene.add.text(this.x, this.y - 10, `+${this.goldReward}G`, {
-        fontSize: '16px',
-        fill: '#ffd700',
-        fontStyle: 'bold'
-      }).setOrigin(0.5);
-
-      this.scene.tweens.add({
-        targets: goldTxt,
-        y: this.y - 40,
-        alpha: 0,
-        duration: 800,
-        onComplete: () => goldTxt.destroy()
-      });
-    }
-
     super.die();
   }
 }
