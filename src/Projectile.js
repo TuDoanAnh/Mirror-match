@@ -24,10 +24,21 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
     const projColor = (type === 'SPACE') ? (heroData.ultColor || 0xffaa00) : (heroData.projColor || 0x00ffff);
     this.particleColor = projColor;
 
-    // Use Ezreal Skill Spritesheets if available for Ezreal / Jinx Q/Space skills
+    // Use Ezreal / Lux Skill Spritesheets if available
     const isEzrealOrFallback = (heroId === 'ezreal' || (heroId === 'jinx' && !scene.textures.exists('jinx_q_skill')));
+    const isLux = (heroId === 'lux');
 
-    if (this.type === 'Q' && scene.textures.exists('ezreal_q_skill') && isEzrealOrFallback) {
+    if (this.type === 'Q' && isLux && scene.textures.exists('lux_q_skill')) {
+      this.setTexture('lux_q_skill');
+      this.setScale(0.55);
+      this.setOrigin(0.5, 0.5);
+      this.body.setSize(48, 48);
+    } else if (this.type === 'SPACE' && isLux && scene.textures.exists('lux_space_beam')) {
+      this.setTexture('lux_space_beam');
+      this.setScale(0.6, 0.65);
+      this.setOrigin(0.05, 0.5); // Beam starts at character's position
+      this.body.setSize(1000, 100);
+    } else if (this.type === 'Q' && scene.textures.exists('ezreal_q_skill') && isEzrealOrFallback) {
       this.setTexture('ezreal_q_skill', 0);
       if (scene.anims.exists('ezreal_q_anim')) {
         this.play('ezreal_q_anim');

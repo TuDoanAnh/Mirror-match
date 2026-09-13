@@ -212,29 +212,30 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     this.isRooted = true;
     this.setVelocity(0, 0);
 
-    // Visual Binding Ring Effect
-    const rootRing = this.scene.add.circle(this.x, this.y, 22);
-    rootRing.setStrokeStyle(3, 0xffff00, 0.9);
-    rootRing.setDepth(15);
-    
-    const pulseTween = this.scene.tweens.add({
-      targets: rootRing,
-      scale: 1.25,
-      alpha: 0.6,
-      duration: 250,
-      repeat: -1,
-      yoyo: true
-    });
+    // Visual Light Binding Root Snare Effect
+    let rootEffect;
+    if (this.scene.textures.exists('lux_root_skill')) {
+      rootEffect = this.scene.add.sprite(this.x, this.y, 'lux_root_skill');
+      rootEffect.setDepth(15);
+      rootEffect.setScale(0.55);
+      if (this.scene.anims.exists('lux_root_anim')) {
+        rootEffect.play('lux_root_anim');
+      }
+    } else {
+      rootEffect = this.scene.add.circle(this.x, this.y, 22);
+      rootEffect.setStrokeStyle(3, 0xffff00, 0.9);
+      rootEffect.setDepth(15);
+    }
 
-    const updateRing = () => {
-      if (rootRing && rootRing.active) {
-        rootRing.setPosition(this.x, this.y);
+    const updatePosition = () => {
+      if (rootEffect && rootEffect.active) {
+        rootEffect.setPosition(this.x, this.y);
       }
     };
 
     const ringTimer = this.scene.time.addEvent({
       delay: 20,
-      callback: updateRing,
+      callback: updatePosition,
       loop: true
     });
 
@@ -242,8 +243,7 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     this.rootTimer = this.scene.time.delayedCall(duration, () => {
       this.isRooted = false;
       ringTimer.remove();
-      pulseTween.stop();
-      if (rootRing && rootRing.active) rootRing.destroy();
+      if (rootEffect && rootEffect.active) rootEffect.destroy();
     });
   }
 

@@ -367,38 +367,58 @@ export default class Player extends BaseCharacter {
       const laserEndX = laserStartX + Math.cos(fireAngle) * beamLength;
       const laserEndY = laserStartY + Math.sin(fireAngle) * beamLength;
 
-      // Multi-layer laser beam graphic
-      const beamGraphics = this.scene.add.graphics();
-      beamGraphics.setBlendMode('ADD');
+      // Multi-layer laser beam graphic / sprite
+      if (this.scene.textures.exists('lux_space_beam')) {
+        const beamSprite = this.scene.add.sprite(laserStartX, laserStartY, 'lux_space_beam');
+        beamSprite.setOrigin(0.05, 0.5);
+        beamSprite.setRotation(fireAngle);
+        beamSprite.setScale(1.1, 0.75);
+        beamSprite.setBlendMode('ADD');
+        beamSprite.setDepth(20);
 
-      // Outer glowing golden laser
-      beamGraphics.lineStyle(beamWidth, 0xffdd00, 0.9);
-      beamGraphics.beginPath();
-      beamGraphics.moveTo(laserStartX, laserStartY);
-      beamGraphics.lineTo(laserEndX, laserEndY);
-      beamGraphics.strokePath();
+        this.scene.tweens.add({
+          targets: beamSprite,
+          alpha: 0,
+          scaleY: 0.05,
+          duration: 450,
+          ease: 'Quad.easeOut',
+          onComplete: () => {
+            beamSprite.destroy();
+          }
+        });
+      } else {
+        const beamGraphics = this.scene.add.graphics();
+        beamGraphics.setBlendMode('ADD');
 
-      // Core white laser
-      beamGraphics.lineStyle(beamWidth * 0.4, 0xffffff, 1.0);
-      beamGraphics.beginPath();
-      beamGraphics.moveTo(laserStartX, laserStartY);
-      beamGraphics.lineTo(laserEndX, laserEndY);
-      beamGraphics.strokePath();
+        // Outer glowing golden laser
+        beamGraphics.lineStyle(beamWidth, 0xffdd00, 0.9);
+        beamGraphics.beginPath();
+        beamGraphics.moveTo(laserStartX, laserStartY);
+        beamGraphics.lineTo(laserEndX, laserEndY);
+        beamGraphics.strokePath();
 
-      // Flash circle at origin
-      const flashCircle = this.scene.add.circle(laserStartX, laserStartY, beamWidth * 0.8, 0xffffff);
-      flashCircle.setBlendMode('ADD');
+        // Core white laser
+        beamGraphics.lineStyle(beamWidth * 0.4, 0xffffff, 1.0);
+        beamGraphics.beginPath();
+        beamGraphics.moveTo(laserStartX, laserStartY);
+        beamGraphics.lineTo(laserEndX, laserEndY);
+        beamGraphics.strokePath();
 
-      this.scene.tweens.add({
-        targets: [beamGraphics, flashCircle],
-        alpha: 0,
-        duration: 350,
-        ease: 'Quad.easeOut',
-        onComplete: () => {
-          beamGraphics.destroy();
-          flashCircle.destroy();
-        }
-      });
+        // Flash circle at origin
+        const flashCircle = this.scene.add.circle(laserStartX, laserStartY, beamWidth * 0.8, 0xffffff);
+        flashCircle.setBlendMode('ADD');
+
+        this.scene.tweens.add({
+          targets: [beamGraphics, flashCircle],
+          alpha: 0,
+          duration: 350,
+          ease: 'Quad.easeOut',
+          onComplete: () => {
+            beamGraphics.destroy();
+            flashCircle.destroy();
+          }
+        });
+      }
 
       // Point to segment distance helper
       const pointToSegmentDist = (px, py, x1, y1, x2, y2) => {
