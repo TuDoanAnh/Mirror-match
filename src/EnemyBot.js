@@ -48,11 +48,7 @@ export default class EnemyBot extends Player {
   update(time, delta) {
     if (this.hp <= 0) return;
     
-    // HP Bar Follow
-    if (this.hpBar) {
-      this.hpBar.x = this.x - 25;
-      this.hpBar.y = this.y - 30;
-    }
+    super.update(time, delta);
 
     if (this.isChanneling || this.isRooted || !this.target || this.target.hp <= 0) {
       this.smoothSetVelocity(0, 0, 0.3);
