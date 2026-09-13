@@ -3,6 +3,7 @@ import EnemyBot from './EnemyBot';
 import { GAME_CONFIG } from './gameConfig';
 import { preloadLuxAssets, createLuxAnimations } from './luxAnimations';
 import { preloadEzrealSkillAssets, createEzrealSkillAnimations } from './ezrealSkillAnimations';
+import { preloadJinxAssets, createJinxAnimations } from './jinxAnimations';
 import { preloadCharacterSFX, playPreparationBGM, stopPreparationBGM } from './soundManager';
 
 export default class PreparationScene extends Phaser.Scene {
@@ -13,12 +14,14 @@ export default class PreparationScene extends Phaser.Scene {
   preload() {
     preloadLuxAssets(this);
     preloadEzrealSkillAssets(this);
+    preloadJinxAssets(this);
     preloadCharacterSFX(this);
   }
 
   create() {
     createLuxAnimations(this);
     createEzrealSkillAnimations(this);
+    createJinxAnimations(this);
     playPreparationBGM(this);
 
     // Registry initialization

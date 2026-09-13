@@ -5,6 +5,7 @@ import Creep from './Creep';
 import { GAME_CONFIG } from './gameConfig';
 import { preloadLuxAssets, createLuxAnimations } from './luxAnimations';
 import { preloadEzrealSkillAssets, createEzrealSkillAnimations } from './ezrealSkillAnimations';
+import { preloadJinxAssets, createJinxAnimations } from './jinxAnimations';
 import { preloadCharacterSFX, playHitSFX } from './soundManager';
 import mapImageUrl from './assets/image/Map.png';
 import { MAP_OBSTACLES } from './mapObstacles';
@@ -20,6 +21,7 @@ export default class GameScene extends Phaser.Scene {
   preload() {
     preloadLuxAssets(this);
     preloadEzrealSkillAssets(this);
+    preloadJinxAssets(this);
     preloadCharacterSFX(this);
     if (!this.textures.exists('battle_map')) {
       this.load.image('battle_map', mapImageUrl);
@@ -35,6 +37,7 @@ export default class GameScene extends Phaser.Scene {
   create() {
     createLuxAnimations(this);
     createEzrealSkillAnimations(this);
+    createJinxAnimations(this);
     this.isGameOver = false;
 
     // Map Image Background (1536 x 1024)
@@ -646,6 +649,17 @@ export default class GameScene extends Phaser.Scene {
     const radius = projectile.explosionRadius || 100;
     const attacker = projectile.attacker;
     const damage = projectile.damage;
+
+    // 0. Jinx Explosion Animated Sprite
+    if (this.textures.exists('jinx_explosion_spritesheet')) {
+      const expSprite = this.add.sprite(x, y, 'jinx_explosion_spritesheet');
+      expSprite.setDepth(20);
+      expSprite.setScale(radius / 90);
+      if (this.anims.exists('jinx_explosion_anim')) {
+        expSprite.play('jinx_explosion_anim');
+      }
+      expSprite.on('animationcomplete', () => expSprite.destroy());
+    }
 
     // 1. Fireball Visual Expansion
     const fireball = this.add.circle(x, y, 12, 0xff3300);
