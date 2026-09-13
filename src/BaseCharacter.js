@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from './gameConfig';
+import { showDamageText } from './FloatingDamage';
 
 export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, isBot = false, color = 0x0088ff, heroId = null) {
@@ -219,6 +220,10 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     this.shieldHp = (this.shieldHp || 0) + amount;
     this.updateHpBar();
 
+    if (amount > 0 && this.scene) {
+      showDamageText(this.scene, this.x, this.y - 15, `${amount} SHIELD`, 'shield');
+    }
+
     // Visual Shield Pulse Ring
     const shieldRing = this.scene.add.circle(this.x, this.y, 24);
     shieldRing.setStrokeStyle(3, 0xffff00);
@@ -240,6 +245,10 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
   applyRoot(duration = 1000) {
     this.isRooted = true;
     this.setVelocity(0, 0);
+
+    if (this.scene) {
+      showDamageText(this.scene, this.x, this.y - 15, 'ROOTED', 'root');
+    }
 
     // Visual Light Binding Root Snare Effect
     let rootEffect;
@@ -293,6 +302,10 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     this.hp = Math.max(0, this.hp - remainingDamage);
     this.updateHpBar();
 
+    if (amount > 0 && this.scene) {
+      showDamageText(this.scene, this.x, this.y - 15, amount, isCrit ? 'crit' : 'normal');
+    }
+
     this.setTint(isCrit ? 0xffa500 : 0xff0000); 
     this.scene.time.delayedCall(150, () => {
       if(this.active) this.clearTint();
@@ -316,6 +329,10 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     if (this.hp <= 0) return;
     this.hp = Math.min(this.maxHp, this.hp + amount);
     this.updateHpBar();
+
+    if (amount > 0 && this.scene) {
+      showDamageText(this.scene, this.x, this.y - 15, amount, 'heal');
+    }
     
     this.setTint(0x00ff00);
     this.scene.time.delayedCall(150, () => {

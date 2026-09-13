@@ -114,3 +114,25 @@ export function stopPreparationBGM(scene) {
     existing.stop();
   }
 }
+
+export function playBattleBGM(scene) {
+  if (!scene || !scene.sound) return;
+  if (!scene.cache.audio.exists('bg_prep_music')) return;
+
+  let existing = scene.sound.get('bg_prep_music');
+  if (!existing) {
+    existing = scene.sound.add('bg_prep_music', { loop: true, volume: 0.75 });
+  }
+  if (!existing.isPlaying) {
+    existing.play({ loop: true, volume: 0.75 });
+  }
+}
+
+export function stopBattleBGM(scene) {
+  if (!scene || !scene.sound) return;
+  const existing = scene.sound.get('bg_prep_music');
+  if (existing && existing.isPlaying) {
+    existing.stop();
+  }
+}
+

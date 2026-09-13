@@ -6,7 +6,7 @@ import { GAME_CONFIG } from './gameConfig';
 import { preloadLuxAssets, createLuxAnimations } from './luxAnimations';
 import { preloadEzrealSkillAssets, createEzrealSkillAnimations } from './ezrealSkillAnimations';
 import { preloadJinxAssets, createJinxAnimations } from './jinxAnimations';
-import { preloadCharacterSFX, playHitSFX } from './soundManager';
+import { preloadCharacterSFX, playHitSFX, playBattleBGM, stopBattleBGM } from './soundManager';
 import mapImageUrl from './assets/image/Map.png';
 import { MAP_OBSTACLES } from './mapObstacles';
 import { MAP_POLYGONS } from './mapPolygons';
@@ -32,6 +32,12 @@ export default class GameScene extends Phaser.Scene {
     this.playerColor = data.color || 0x0088ff;
     this.level = data.level || 1;
     this.isGameOver = false;
+    this.skillsFired = 0;
+    this.skillsHit = 0;
+    this.totalDamageDealt = 0;
+    this.totalDamageTaken = 0;
+    this.matchStartTime = 0;
+    this.isHitStopActive = false;
   }
 
   create() {
@@ -39,6 +45,8 @@ export default class GameScene extends Phaser.Scene {
     createEzrealSkillAnimations(this);
     createJinxAnimations(this);
     this.isGameOver = false;
+    this.matchStartTime = this.time.now;
+    playBattleBGM(this);
 
     // Map Image Background (1536 x 1024) with soft contrast tinting
     this.add.image(768, 512, 'battle_map').setDepth(-20).setTint(0xf0f0f0);
@@ -152,10 +160,49 @@ export default class GameScene extends Phaser.Scene {
     // Check Game Over
     if (!this.isGameOver && (this.player.hp <= 0 || this.bot.hp <= 0)) {
       this.isGameOver = true;
-      const result = this.player.hp > 0 ? 'win' : 'lose';
-      this.cameras.main.fadeOut(500, 0, 0, 0);
-      this.time.delayedCall(500, () => {
-        this.scene.start('GameOverScene', { result, level: this.level });
+      stopBattleBGM(this);
+      const isWin = this.player.hp > 0;
+      const result = isWin ? 'win' : 'lose';
+      const loser = isWin ? this.bot : this.player;
+
+      // Snappy Slow-Motion Finish & Fast Camera Zoom
+      this.time.timeScale = 0.35;
+      if (this.physics && this.physics.world) {
+        this.physics.world.timeScale = 2.86;
+      }
+
+      if (loser && loser.active) {
+        this.cameras.main.pan(loser.x, loser.y, 350, 'Power2');
+        this.cameras.main.zoomTo(1.25, 350, 'Power2');
+      }
+
+      this.cameras.main.shake(200, 0.015);
+
+      const durationSec = Math.max(1, Math.round((this.time.now - this.matchStartTime) / 1000));
+      const accuracy = this.skillsFired > 0 ? Math.round((this.skillsHit / this.skillsFired) * 100) : 100;
+
+      // Fast transition (180ms scaled = ~500ms real time)
+      this.time.delayedCall(180, () => {
+        this.cameras.main.fadeOut(250, 0, 0, 0);
+        this.time.delayedCall(100, () => {
+          this.time.timeScale = 1.0;
+          if (this.physics && this.physics.world) {
+            this.physics.world.timeScale = 1.0;
+          }
+          this.cameras.main.setZoom(1.0);
+          this.scene.start('GameOverScene', {
+            result,
+            level: this.level,
+            stats: {
+              skillsFired: this.skillsFired,
+              skillsHit: this.skillsHit,
+              accuracy,
+              durationSec,
+              damageDealt: Math.round(this.totalDamageDealt),
+              damageTaken: Math.round(this.totalDamageTaken)
+            }
+          });
+        });
       });
     }
   }
@@ -225,7 +272,7 @@ export default class GameScene extends Phaser.Scene {
     const bg = this.add.rectangle(130, 28, 230, 36, 0x0f172a, 0.95).setInteractive({ useHandCursor: true });
     bg.setStrokeStyle(2, 0x38bdf8);
 
-    const txt = this.add.text(130, 28, '🛠️ DEBUG COLLIDER (Phím B)', {
+    const txt = this.add.text(130, 28, '🛠️ DEBUG COLLIDER (Key B)', {
       fontSize: '11px',
       fill: '#38bdf8',
       fontStyle: 'bold'
@@ -239,7 +286,7 @@ export default class GameScene extends Phaser.Scene {
     const drawBtnBg = this.add.rectangle(330, 28, 155, 36, 0x1e1b4b, 0.95).setInteractive({ useHandCursor: true });
     drawBtnBg.setStrokeStyle(2, 0x818cf8);
 
-    const drawBtnTxt = this.add.text(330, 28, '➕ VẼ POLYGON MỚI', {
+    const drawBtnTxt = this.add.text(330, 28, '➕ DRAW NEW POLYGON', {
       fontSize: '11px',
       fill: '#a5b4fc',
       fontStyle: 'bold'
@@ -267,7 +314,7 @@ export default class GameScene extends Phaser.Scene {
     const undoBg = this.add.rectangle(650, 28, 95, 36, 0x7c2d12, 0.95).setInteractive({ useHandCursor: true });
     undoBg.setStrokeStyle(2, 0xf97316);
 
-    const undoTxt = this.add.text(650, 28, '↩️ HOÀN ĐIỂM', {
+    const undoTxt = this.add.text(650, 28, '↩️ UNDO POINT', {
       fontSize: '10px',
       fill: '#ffedd5',
       fontStyle: 'bold'
@@ -298,7 +345,7 @@ export default class GameScene extends Phaser.Scene {
       MAP_POLYGONS.push(this.activeDrawingPolygon);
 
       if (this.drawBtnBg) this.drawBtnBg.setFillStyle(0x065f46, 1);
-      if (this.drawBtnTxt) this.drawBtnTxt.setText('✅ XONG VẼ POLYGON');
+      if (this.drawBtnTxt) this.drawBtnTxt.setText('✅ FINISH DRAWING');
     } else {
       // Remove active polygon if it has fewer than 3 points
       if (this.activeDrawingPolygon && this.activeDrawingPolygon.points.length < 3) {
@@ -308,7 +355,7 @@ export default class GameScene extends Phaser.Scene {
       this.activeDrawingPolygon = null;
 
       if (this.drawBtnBg) this.drawBtnBg.setFillStyle(0x1e1b4b, 0.95);
-      if (this.drawBtnTxt) this.drawBtnTxt.setText('➕ VẼ POLYGON MỚI');
+      if (this.drawBtnTxt) this.drawBtnTxt.setText('➕ DRAW NEW POLYGON');
     }
 
     this.renderDebugOverlay();
@@ -334,7 +381,7 @@ export default class GameScene extends Phaser.Scene {
     this.isDebugMode = !this.isDebugMode;
 
     if (this.debugBtnText) {
-      this.debugBtnText.setText(this.isDebugMode ? '✅ DEBUG: ĐANG BẬT (KÉO/VẼ)' : '🛠️ DEBUG COLLIDER (Phím B)');
+      this.debugBtnText.setText(this.isDebugMode ? '✅ DEBUG: ON (DRAG/DRAW)' : '🛠️ DEBUG COLLIDER (Key B)');
       this.debugBtnText.setColor(this.isDebugMode ? '#4ade80' : '#38bdf8');
     }
 
@@ -533,7 +580,7 @@ export default class GameScene extends Phaser.Scene {
     const toastBg = this.add.rectangle(0, 0, 500, 42, 0x065f46, 0.95);
     toastBg.setStrokeStyle(2, 0x34d399);
 
-    const toastTxt = this.add.text(0, 0, '✅ Đã Copy Mã MAP_POLYGONS Vào Clipboard & Console!', {
+    const toastTxt = this.add.text(0, 0, '✅ MAP_POLYGONS Copied to Clipboard & Console!', {
       fontSize: '12px',
       fill: '#ffffff',
       fontStyle: 'bold'
@@ -612,6 +659,18 @@ export default class GameScene extends Phaser.Scene {
     // 3. Apply Damage
     entity.takeDamage(finalDamage, isCrit);
     playHitSFX(this, attacker ? attacker.heroId : 'ezreal');
+
+    // Track statistics & hit stop
+    if (attacker === this.player) {
+      this.skillsHit++;
+      this.totalDamageDealt += finalDamage;
+    } else if (entity === this.player) {
+      this.totalDamageTaken += finalDamage;
+    }
+
+    if (projectile.type === 'SPACE' || projectile.isExplosive || isCrit) {
+      this.triggerHitStop(45);
+    }
 
     // 4. Lifesteal Logic
     if (attacker && attacker.lifesteal > 0 && attacker.hp > 0) {
@@ -750,8 +809,25 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
+  triggerHitStop(durationMs = 50) {
+    if (this.isHitStopActive) return;
+    this.isHitStopActive = true;
+    if (this.physics && this.physics.world) {
+      this.physics.pause();
+    }
+    this.time.delayedCall(durationMs, () => {
+      if (this.physics && this.physics.world) {
+        this.physics.resume();
+      }
+      this.isHitStopActive = false;
+    });
+  }
+
   tryUsePlayerSkill(skillKey, time) {
     if (this.player.hp <= 0) return;
+    if (this.player.canUseSkill(skillKey, time)) {
+      this.skillsFired++;
+    }
     const ptr = this.input.activePointer;
     this.player.useSkill(skillKey, time, ptr.worldX, ptr.worldY);
   }
