@@ -131,6 +131,9 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     const vy = this.body ? this.body.velocity.y : 0;
     const currentSpeed = Math.sqrt(vx * vx + vy * vy);
 
+    // Heroes whose walk_right frames face left in the raw PNG require flipX(true) when moving right
+    const needsFlipRight = ['lux', 'jinx'].includes(prefix);
+
     if (currentSpeed > 10) {
       // Dynamically scale animation playback speed with movement speed
       const baseSpeed = this.speed || 200;
@@ -146,7 +149,7 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
             this.play(`${prefix}_walk_left`, true);
           }
         } else {
-          this.setFlipX(false);
+          this.setFlipX(needsFlipRight);
           if (this.anims.currentAnim?.key !== `${prefix}_walk_right`) {
             this.play(`${prefix}_walk_right`, true);
           }
