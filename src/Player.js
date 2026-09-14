@@ -42,7 +42,7 @@ export default class Player extends BaseCharacter {
       this.lifesteal += (stats.lifesteal || 0);
       this.critChance += (stats.critChance || 0);
       this.armorPen += (stats.armorPen || 0);
-      
+
       const cdrMult = Math.max(0.1, 1 - (stats.cdr || 0));
       Object.values(this.skills).forEach(skill => {
         if (skill.cooldown) skill.cooldown *= cdrMult;
@@ -216,6 +216,8 @@ export default class Player extends BaseCharacter {
           this.executeRivenE(skillKey, targetX, targetY, fireAngle);
         } else if (skill.type === 'RIVEN_WINDSLASH') {
           this.executeRivenWindSlash(skillKey, targetX, targetY, fireAngle);
+        } else if (skill.type === 'JINX_SPEED_BUFF') {
+          this.executeJinxSpeedBuff(skillKey);
         }
       });
     } else {
@@ -243,6 +245,8 @@ export default class Player extends BaseCharacter {
         this.executeRivenE(skillKey, targetX, targetY, fireAngle);
       } else if (skill.type === 'RIVEN_WINDSLASH') {
         this.executeRivenWindSlash(skillKey, targetX, targetY, fireAngle);
+      } else if (skill.type === 'JINX_SPEED_BUFF') {
+        this.executeJinxSpeedBuff(skillKey);
       }
     }
   }
@@ -303,7 +307,7 @@ export default class Player extends BaseCharacter {
   executeRivenQ(skillKey, targetX, targetY, angle) {
     const skillConfig = this.skills[skillKey].config;
     const damage = skillConfig.damage || 110;
-    
+
     this.rivenQCombo = (this.rivenQCombo || 0) + 1;
     const comboStep = this.rivenQCombo;
 
@@ -316,19 +320,55 @@ export default class Player extends BaseCharacter {
       this.executeDash(skillKey, targetX, targetY, angle);
 
       if (this.scene) {
-        const arcGraphics = this.scene.add.graphics();
-        arcGraphics.lineStyle(6, 0x10b981, 0.9);
-        arcGraphics.beginPath();
-        arcGraphics.arc(this.x, this.y, 75, angle - Math.PI / 3, angle + Math.PI / 3, false);
-        arcGraphics.strokePath();
+        // Multi-layered Crescent Slash Arc
+        const slashG = this.scene.add.graphics();
+        slashG.setPosition(this.x, this.y);
+
+        // 1. Filled arc sector
+        slashG.fillStyle(0x10b981, 0.35);
+        slashG.beginPath();
+        slashG.moveTo(0, 0);
+        slashG.arc(0, 0, 95, angle - Math.PI / 3, angle + Math.PI / 3, false);
+        slashG.closePath();
+        slashG.fillPath();
+
+        // 2. Thick Outer Emerald Arc
+        slashG.lineStyle(10, 0x10b981, 0.95);
+        slashG.beginPath();
+        slashG.arc(0, 0, 95, angle - Math.PI / 3, angle + Math.PI / 3, false);
+        slashG.strokePath();
+
+        // 3. Bright Core White Arc
+        slashG.lineStyle(4, 0xffffff, 1.0);
+        slashG.beginPath();
+        slashG.arc(0, 0, 90, angle - Math.PI / 3.5, angle + Math.PI / 3.5, false);
+        slashG.strokePath();
+
+        slashG.setBlendMode('ADD');
 
         this.scene.tweens.add({
-          targets: arcGraphics,
+          targets: slashG,
           alpha: 0,
-          scale: 1.25,
-          duration: 250,
-          onComplete: () => arcGraphics.destroy()
+          scale: 1.3,
+          duration: 220,
+          onComplete: () => slashG.destroy()
         });
+
+        // Slash Particle Burst
+        const pTex = this.scene.textures.exists('proj_particle') ? 'proj_particle' : this.texture.key;
+        const particles = this.scene.add.particles(this.x, this.y, pTex, {
+          speed: { min: 180, max: 350 },
+          angle: { min: Phaser.Math.RadToDeg(angle) - 45, max: Phaser.Math.RadToDeg(angle) + 45 },
+          scale: { start: 0.6, end: 0 },
+          tint: [0x10b981, 0x34d399, 0xffffff],
+          alpha: { start: 1, end: 0 },
+          blendMode: 'ADD',
+          lifespan: 250
+        });
+        particles.explode(12);
+
+        // Micro Camera Shake for impact
+        this.scene.cameras.main.shake(100, 0.003);
       }
 
       this.applyMeleeAreaDamage(this.x, this.y, angle, 120, Math.PI / 3, damage, false);
@@ -344,18 +384,54 @@ export default class Player extends BaseCharacter {
 
       if (this.scene) {
         import('./FloatingDamage').then(m => {
-          if (m.showDamageText) m.showDamageText(this.scene, this.x, this.y - 20, 'KNOCKUP SLAM!', 'crit');
-        }).catch(() => {});
-        
-        const shockwave = this.scene.add.circle(this.x, this.y, 40, 0x10b981, 0.6);
-        shockwave.setStrokeStyle(4, 0x34d399, 1);
+          if (m.showDamageText) m.showDamageText(this.scene, this.x, this.y - 25, 'KNOCKUP SLAM!', 'crit');
+        }).catch(() => { });
+
+        // Heavy Ground Slam Shockwave Ring
+        const shockwave = this.scene.add.circle(this.x, this.y, 45, 0x10b981, 0.7);
+        shockwave.setStrokeStyle(6, 0xffffff, 1);
+        shockwave.setBlendMode('ADD');
         this.scene.tweens.add({
           targets: shockwave,
-          scale: 3.2,
+          scale: 3.5,
           alpha: 0,
-          duration: 400,
+          duration: 380,
+          ease: 'Quad.easeOut',
           onComplete: () => shockwave.destroy()
         });
+
+        // 8 Energy Fissure Spikes outward
+        const fissures = this.scene.add.graphics();
+        fissures.setPosition(this.x, this.y);
+        fissures.lineStyle(4, 0x34d399, 0.95);
+        fissures.setBlendMode('ADD');
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 4) {
+          fissures.beginPath();
+          fissures.moveTo(0, 0);
+          fissures.lineTo(Math.cos(a) * 110, Math.sin(a) * 110);
+          fissures.strokePath();
+        }
+        this.scene.tweens.add({
+          targets: fissures,
+          alpha: 0,
+          scale: 1.3,
+          duration: 350,
+          onComplete: () => fissures.destroy()
+        });
+
+        // Ground Slam Particles
+        const pTex = this.scene.textures.exists('proj_particle') ? 'proj_particle' : this.texture.key;
+        const particles = this.scene.add.particles(this.x, this.y, pTex, {
+          speed: { min: 150, max: 320 },
+          scale: { start: 0.8, end: 0 },
+          tint: [0x10b981, 0x34d399, 0xffffff],
+          alpha: { start: 1, end: 0 },
+          blendMode: 'ADD',
+          lifespan: 350
+        });
+        particles.explode(20);
+
+        this.scene.cameras.main.shake(180, 0.008);
       }
 
       this.applyMeleeRadiusDamage(this.x, this.y, 130, damage * 1.4, true, true);
@@ -378,25 +454,67 @@ export default class Player extends BaseCharacter {
     const range = skillConfig.range || 360;
 
     if (this.scene) {
-      for (let i = -1; i <= 1; i++) {
-        const waveAngle = angle + (i * 0.25);
-        const waveGraphics = this.scene.add.graphics();
-        waveGraphics.lineStyle(8, 0x34d399, 0.95);
-        waveGraphics.beginPath();
-        waveGraphics.arc(this.x, this.y, 60, waveAngle - 0.2, waveAngle + 0.2, false);
-        waveGraphics.strokePath();
+      // 1. Cast Flash Aura around Riven
+      const auraCircle = this.scene.add.circle(this.x, this.y, 50, 0x10b981, 0.8);
+      auraCircle.setStrokeStyle(4, 0xffffff, 1);
+      auraCircle.setBlendMode('ADD');
+      this.scene.tweens.add({
+        targets: auraCircle,
+        scale: 2.2,
+        alpha: 0,
+        duration: 300,
+        onComplete: () => auraCircle.destroy()
+      });
 
+      // 2. Spawn 3 Crescent Energy Waves travelling in a 45° fan
+      const waveOffsets = [-0.22, 0, 0.22];
+      const startX = this.x;
+      const startY = this.y;
+
+      waveOffsets.forEach(offset => {
+        const waveAngle = angle + offset;
+        const waveG = this.scene.add.graphics();
+        waveG.setPosition(startX, startY);
+        waveG.setDepth(15);
+        waveG.setBlendMode('ADD');
+
+        // Draw Crescent Blade Wave
+        waveG.fillStyle(0x10b981, 0.4);
+        waveG.beginPath();
+        waveG.arc(0, 0, 70, waveAngle - 0.35, waveAngle + 0.35, false);
+        waveG.arc(0, 0, 50, waveAngle + 0.35, waveAngle - 0.35, true);
+        waveG.closePath();
+        waveG.fillPath();
+
+        waveG.lineStyle(8, 0x34d399, 1.0);
+        waveG.beginPath();
+        waveG.arc(0, 0, 70, waveAngle - 0.35, waveAngle + 0.35, false);
+        waveG.strokePath();
+
+        waveG.lineStyle(3, 0xffffff, 1.0);
+        waveG.beginPath();
+        waveG.arc(0, 0, 68, waveAngle - 0.3, waveAngle + 0.3, false);
+        waveG.strokePath();
+
+        const destX = startX + Math.cos(waveAngle) * range;
+        const destY = startY + Math.sin(waveAngle) * range;
+
+        // Move wave graphics outward to target range
         this.scene.tweens.add({
-          targets: waveGraphics,
-          x: Math.cos(waveAngle) * (range * 0.7),
-          y: Math.sin(waveAngle) * (range * 0.7),
-          alpha: 0,
-          scale: 2.2,
+          targets: waveG,
+          x: destX,
+          y: destY,
+          scaleX: 1.6,
+          scaleY: 1.6,
+          alpha: { start: 1, end: 0 },
           duration: 380,
           ease: 'Cubic.easeOut',
-          onComplete: () => waveGraphics.destroy()
+          onComplete: () => waveG.destroy()
         });
-      }
+      });
+
+      // Camera Shake for Ultimate
+      this.scene.cameras.main.shake(220, 0.009);
     }
 
     this.applyConeWindSlashDamage(this.x, this.y, angle, range, Math.PI / 5, baseDamage);
@@ -634,10 +752,10 @@ export default class Player extends BaseCharacter {
     const dashDist = skill.config ? skill.config.dashDistance : (skill.dashDistance || 150);
     const dist = Phaser.Math.Distance.Between(this.x, this.y, targetX, targetY);
     const actualDist = Math.min(dist, dashDist);
-    
+
     const startX = this.x;
     const startY = this.y;
-    
+
     const safePos = this.getSafeDashPosition(startX, startY, fireAngle, actualDist);
     this.x = safePos.x;
     this.y = safePos.y;
@@ -652,13 +770,13 @@ export default class Player extends BaseCharacter {
     for (let i = 0; i <= 4; i++) {
       const ghostX = Phaser.Math.Linear(startX, endX, i / 4);
       const ghostY = Phaser.Math.Linear(startY, endY, i / 4);
-      
+
       const ghost = this.scene.add.sprite(ghostX, ghostY, this.texture.key);
       ghost.setRotation(this.rotation);
       ghost.setTint(this.heroData.color || 0x00ffff);
       ghost.setBlendMode('ADD');
       ghost.alpha = 0.6;
-      
+
       this.scene.tweens.add({
         targets: ghost,
         alpha: 0,
@@ -679,10 +797,63 @@ export default class Player extends BaseCharacter {
     proj.fire(angle);
   }
 
+  executeJinxSpeedBuff(skillKey) {
+    const skillConfig = (this.skills[skillKey] && this.skills[skillKey].config) || {};
+    const speedBonus = skillConfig.speedBonus || 70;
+    const duration = skillConfig.duration || 4000;
+
+    if (this.isJinxSpeedBuffActive) return;
+    this.isJinxSpeedBuffActive = true;
+    this.isJinxEnraged = true;
+
+    this.speed += speedBonus;
+
+    if (this.scene) {
+      import('./FloatingDamage').then(m => {
+        if (m.showDamageText) m.showDamageText(this.scene, this.x, this.y - 20, 'GET EXCITED!', 'crit');
+      }).catch(() => { });
+
+      // Magenta/Pink speed aura ring following player for 4s
+      const auraCircle = this.scene.add.circle(this.x, this.y, 32, 0xff00ff, 0.45);
+      auraCircle.setStrokeStyle(3, 0xffffff, 0.9);
+      auraCircle.setBlendMode('ADD');
+
+      const auraTimer = this.scene.time.addEvent({
+        delay: 20,
+        callback: () => {
+          if (auraCircle && auraCircle.active) {
+            auraCircle.setPosition(this.x, this.y);
+          }
+        },
+        loop: true
+      });
+
+      this.scene.time.delayedCall(duration, () => {
+        this.speed = Math.max(150, this.speed - speedBonus);
+        this.isJinxSpeedBuffActive = false;
+        this.isJinxEnraged = false;
+        auraTimer.remove();
+        if (auraCircle && auraCircle.active) auraCircle.destroy();
+      });
+    } else {
+      this.scene.time.delayedCall(duration, () => {
+        this.speed = Math.max(150, this.speed - speedBonus);
+        this.isJinxSpeedBuffActive = false;
+        this.isJinxEnraged = false;
+      });
+    }
+  }
+
   shootSpreadProjectiles(skillKey, angle) {
     const skill = this.skills[skillKey];
-    const count = (skill.config && skill.config.count) || 3;
-    const spreadAngle = (skill.config && skill.config.spreadAngle) || 0.25;
+    let count = (skill.config && skill.config.count) || 3;
+    let spreadAngle = (skill.config && skill.config.spreadAngle) || 0.25;
+
+    // During Jinx E Speed Boost (isJinxEnraged), Q shoots 5 rockets instead of 3!
+    if (this.heroId === 'jinx' && this.isJinxEnraged) {
+      count = 5;
+      spreadAngle = 0.18;
+    }
 
     const startAngle = angle - (spreadAngle * (count - 1)) / 2;
 
@@ -709,7 +880,7 @@ export default class Player extends BaseCharacter {
 
     const beamLength = 2000;
     const indicator = this.scene.add.graphics();
-    
+
     // Charging aura ring at player position
     const auraCircle = this.scene.add.circle(this.x, this.y, 45);
     auraCircle.setStrokeStyle(3, 0xffdd00);

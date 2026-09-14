@@ -118,11 +118,11 @@ export const GAME_CONFIG = {
       color: 0xff00ff,
       projColor: 0xff0088,
       ultColor: 0xff0044,
-      description: 'Aggressive maniac firing 3-way rocket spreads & mega rockets.',
+      description: 'Aggressive maniac firing rocket spreads & hyper speed boosts.',
       baseStats: { hp: 950, speed: 210, armor: 0, lifesteal: 0, critChance: 5, armorPen: 0 },
       skills: {
         Q: { type: 'SPREAD_SHOT', name: 'Fishbones Rockets', cooldown: 2000, config: { count: 3, spreadAngle: 0.25, damage: 70, speed: 650 } },
-        E: { type: 'DASH', name: 'Zap / Speed Rush', cooldown: 8000, config: { dashDistance: 180 } },
+        E: { type: 'JINX_SPEED_BUFF', name: 'Get Excited! / Speed Boost', cooldown: 8000, config: { speedBonus: 120, duration: 4000 } },
         SPACE: { type: 'PROJECTILE', name: 'Super Mega Death Rocket', cooldown: 15000, config: { damage: 650, speed: 1000, isPiercing: false, isExplosive: true, explosionRadius: 100, channelTime: 500 } }
       }
     },

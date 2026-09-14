@@ -281,6 +281,12 @@ export default class EnemyBot extends Player {
       return;
     }
 
+    if (this.heroId === 'jinx') {
+      if (dist < 550 && Phaser.Math.Between(1, 100) > 85) {
+        this.useSkill('E', time, aimX, aimY);
+      }
+    }
+
     if (dist < 520 && Phaser.Math.Between(1, 100) > 90) {
       this.useSkill('Q', time, aimX, aimY);
     }
