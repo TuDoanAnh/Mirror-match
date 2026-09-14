@@ -131,7 +131,8 @@ export default class AugmentSelectScene extends Phaser.Scene {
           ease: 'Power2'
         });
         cardBg.setFillStyle(0x1e293b);
-        selectBtn.setFillStyle(Phaser.Display.Color.HexStringToColor(aug.color || '#38bdf8').color);
+        const hoverColor = typeof aug.color === 'string' ? Phaser.Display.Color.HexStringToColor(aug.color).color : (aug.color || 0x38bdf8);
+        selectBtn.setFillStyle(hoverColor);
       });
 
       cardBg.on('pointerout', () => {
