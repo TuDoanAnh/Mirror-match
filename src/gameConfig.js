@@ -80,6 +80,18 @@ export const GAME_CONFIG = {
     9: { speedMult: 1.5, hpMult: 3.5, armor: 130, armorPen: 35, critChance: 35, lifesteal: 25, dmgMult: 2.25, cdrMult: 0.55, projSpeedMult: 1.40 },
     10: { speedMult: 1.55, hpMult: 4.2, armor: 150, armorPen: 40, critChance: 40, lifesteal: 30, dmgMult: 2.50, cdrMult: 0.50, projSpeedMult: 1.50 }
   },
+  DEFAULT_BOT_HERO_BY_LEVEL: {
+    1: 'ezreal',
+    2: 'lux',
+    3: 'jinx',
+    4: 'zed',
+    5: 'riven',
+    6: 'ezreal',
+    7: 'lux',
+    8: 'jinx',
+    9: 'zed',
+    10: 'riven'
+  },
   CHARACTERS: {
     ezreal: {
       id: 'ezreal',
@@ -123,7 +135,7 @@ export const GAME_CONFIG = {
       skills: {
         Q: { type: 'SPREAD_SHOT', name: 'Fishbones Rockets', cooldown: 2000, config: { count: 3, spreadAngle: 0.25, damage: 70, speed: 650 } },
         E: { type: 'JINX_SPEED_BUFF', name: 'Get Excited! / Speed Boost', cooldown: 8000, config: { speedBonus: 60, duration: 4000 } },
-        SPACE: { type: 'PROJECTILE', name: 'Super Mega Death Rocket', cooldown: 15000, config: { damage: 650, speed: 1000, isPiercing: false, isExplosive: true, explosionRadius: 100, channelTime: 500 } }
+        SPACE: { type: 'PROJECTILE', name: 'Super Mega Death Rocket', cooldown: 15000, config: { damage: 650, speed: 1000, isPiercing: false, isExplosive: true, explosionRadius: 165, channelTime: 200 } }
       }
     },
     zed: {

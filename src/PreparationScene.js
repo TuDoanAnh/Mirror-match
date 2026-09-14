@@ -89,7 +89,7 @@ export default class PreparationScene extends Phaser.Scene {
     currentY += 30;
     this.add.text(centerX, currentY, "ENEMY STATUS", { fontSize: '20px', fill: '#ff5555', fontStyle: 'bold' }).setOrigin(0.5);
 
-    // Selected Level Text
+    // Selected Level & Bot Hero Text
     currentY += 28;
     const unlockedLevel = this.registry.get('unlockedLevel') || 1;
     let selectedLevel = this.registry.get('selectedLevel') || unlockedLevel;
@@ -98,7 +98,11 @@ export default class PreparationScene extends Phaser.Scene {
       this.registry.set('selectedLevel', selectedLevel);
     }
 
-    this.levelTitleText = this.add.text(centerX, currentY, `LEVEL ${selectedLevel} (EZREAL BOT)`, { fontSize: '13px', fill: '#ffff00', fontStyle: 'bold' }).setOrigin(0.5);
+    const defaultBotHero = GAME_CONFIG.DEFAULT_BOT_HERO_BY_LEVEL[selectedLevel] || 'ezreal';
+    const currentBotHero = this.registry.get('selectedBotHero') || defaultBotHero;
+    const botHeroData = GAME_CONFIG.CHARACTERS[currentBotHero] || GAME_CONFIG.CHARACTERS.ezreal;
+
+    this.levelTitleText = this.add.text(centerX, currentY, `LEVEL ${selectedLevel} (${botHeroData.name.toUpperCase()} BOT)`, { fontSize: '13px', fill: '#ffff00', fontStyle: 'bold' }).setOrigin(0.5);
 
     // Level Selector 1..10 (2 Rows of 5 Buttons)
     currentY += 35;
@@ -138,6 +142,7 @@ export default class PreparationScene extends Phaser.Scene {
 
         const selectLvl = () => {
           this.registry.set('selectedLevel', i);
+          this.registry.set('selectedBotHero', GAME_CONFIG.DEFAULT_BOT_HERO_BY_LEVEL[i] || 'ezreal');
           this.scene.restart();
         };
 
@@ -148,25 +153,58 @@ export default class PreparationScene extends Phaser.Scene {
       this.levelButtons.push(btnBox);
     }
 
-    currentY += 85;
+    // Bot Champion Selector Buttons
+    currentY += 72;
+    this.add.text(centerX, currentY, "BOT CHAMPION", { fontSize: '11px', fill: '#ff5555', fontStyle: 'bold' }).setOrigin(0.5);
+    currentY += 22;
+    const botHeroes = ['ezreal', 'lux', 'jinx', 'zed', 'riven'];
+    const botBtnWidth = 38;
+    const botBtnGap = 42;
+    const startBotBtnX = centerX - ((botHeroes.length - 1) * botBtnGap) / 2;
 
-    // Graphic (Ezreal Bot Sprite)
-    this.add.circle(centerX, currentY, 24, 0xffffff, 0.25);
-    const ezrealBotSprite = this.add.sprite(centerX, currentY, 'ezreal_spritesheet', 0);
-    ezrealBotSprite.setScale(1.1);
-    if (this.anims.exists('ezreal_idle')) {
-      ezrealBotSprite.play('ezreal_idle');
+    botHeroes.forEach((bId, idx) => {
+      const bData = GAME_CONFIG.CHARACTERS[bId] || GAME_CONFIG.CHARACTERS.ezreal;
+      const bx = startBotBtnX + (idx * botBtnGap);
+      const isBotSelected = bId === currentBotHero;
+
+      const bColor = isBotSelected ? bData.color : 0x222222;
+      const bBtn = this.add.rectangle(bx, currentY, botBtnWidth, 24, bColor).setInteractive({ useHandCursor: true });
+      if (isBotSelected) bBtn.setStrokeStyle(2, 0xffffff);
+
+      const bTxtColor = isBotSelected ? '#000000' : '#ffffff';
+      const bShort = bData.name.slice(0, 3).toUpperCase();
+      const bTxt = this.add.text(bx, currentY, bShort, { fontSize: '10px', fill: bTxtColor, fontStyle: 'bold' }).setOrigin(0.5);
+
+      const selectBot = () => {
+        this.registry.set('selectedBotHero', bId);
+        this.scene.restart();
+      };
+      bBtn.on('pointerdown', selectBot);
+    });
+
+    // Graphic (Bot Champion Sprite)
+    currentY += 38;
+    this.add.circle(centerX, currentY, 24, botHeroData.color || 0xffffff, 0.3);
+    const botSpriteKey = `${currentBotHero}_spritesheet`;
+    if (this.textures.exists(botSpriteKey)) {
+      const botSprite = this.add.sprite(centerX, currentY, botSpriteKey, 0);
+      botSprite.setScale(1.1);
+      const animKey = `${currentBotHero}_idle`;
+      if (this.anims.exists(animKey)) {
+        botSprite.play(animKey);
+      }
     }
 
     // Stats (2 Columns)
-    currentY += 40;
+    currentY += 38;
     
     const scale = GAME_CONFIG.BOT_SCALING[selectedLevel] || GAME_CONFIG.BOT_SCALING[1];
+    const qDamage = (botHeroData.skills.Q && botHeroData.skills.Q.config && botHeroData.skills.Q.config.damage) || 100;
     const enemyStats = {
-      maxHp: GAME_CONFIG.CHARACTERS.ezreal.baseStats.hp * scale.hpMult,
-      atk: GAME_CONFIG.CHARACTERS.ezreal.skills.Q.config.damage * scale.dmgMult,
+      maxHp: botHeroData.baseStats.hp * scale.hpMult,
+      atk: qDamage * scale.dmgMult,
       armor: scale.armor,
-      speed: GAME_CONFIG.CHARACTERS.ezreal.baseStats.speed * scale.speedMult,
+      speed: botHeroData.baseStats.speed * scale.speedMult,
       critChance: scale.critChance,
       cdr: Math.round((1 - scale.cdrMult) * 100),
       lifesteal: scale.lifesteal,

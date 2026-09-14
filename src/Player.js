@@ -8,15 +8,23 @@ import { MAP_POLYGONS } from './mapPolygons';
 import { isPointInAnyPolygon } from './polygonCollision';
 
 export default class Player extends BaseCharacter {
-  constructor(scene, x, y, isBot = false, color = 0x0088ff) {
-    const heroId = isBot ? 'ezreal' : (scene.registry.get('selectedHero') || 'ezreal');
+  constructor(scene, x, y, isBot = false, color = 0x0088ff, customHeroId = null) {
+    let heroId = 'ezreal';
+    if (customHeroId) {
+      heroId = customHeroId;
+    } else if (isBot) {
+      heroId = scene.registry.get('selectedBotHero') || 'ezreal';
+    } else {
+      heroId = scene.registry.get('selectedHero') || 'ezreal';
+    }
+
     const heroData = GAME_CONFIG.CHARACTERS[heroId] || GAME_CONFIG.CHARACTERS.ezreal;
 
-    super(scene, x, y, isBot, isBot ? 0xff0000 : heroData.color, heroId);
+    super(scene, x, y, isBot, isBot ? (heroData.color || 0xff0000) : (color || heroData.color), heroId);
 
     this.heroId = heroId;
     this.heroData = heroData;
-    this.setupHeroTexture(isBot ? 0xff0000 : heroData.color);
+    this.setupHeroTexture(isBot ? (heroData.color || 0xff0000) : heroData.color);
 
     // Load Base Stats from Hero Config
     this.maxHp = heroData.baseStats.hp;

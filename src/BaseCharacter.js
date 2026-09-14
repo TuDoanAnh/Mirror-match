@@ -97,10 +97,10 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
         this.play(idleKey);
       }
     } else {
-      const texKey = this.isBot ? 'bot_tex' : `player_tex_${color}`;
+      const texKey = this.isBot ? `bot_tex_${this.heroId}_${color}` : `player_tex_${this.heroId}_${color}`;
       if (!this.scene.textures.exists(texKey)) {
         const graphics = this.scene.make.graphics({ x: 0, y: 0, add: false });
-        graphics.fillStyle(this.isBot ? 0xff0000 : color, 1);
+        graphics.fillStyle(color || (this.isBot ? 0xef4444 : 0x0088ff), 1);
         graphics.lineStyle(2, 0xffffff, 1);
         graphics.beginPath();
         graphics.moveTo(32, 16);
@@ -111,7 +111,7 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
         graphics.fillPath();
         graphics.strokePath();
 
-        graphics.fillStyle(this.isBot ? 0xff5555 : 0x00ffff, 1);
+        graphics.fillStyle(this.isBot ? 0xffaaaa : 0x00ffff, 1);
         graphics.fillCircle(6, 16, 4);
 
         graphics.generateTexture(texKey, 32, 32);

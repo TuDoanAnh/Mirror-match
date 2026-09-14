@@ -81,12 +81,10 @@ export default class GameScene extends Phaser.Scene {
     // Create entities at map spawn points
     this.player = new Player(this, 280, 512, false, this.playerColor);
     
-    // Bot Hero Selection: cycles through 5 champions per level
-    const botHeroes = ['ezreal', 'lux', 'jinx', 'zed', 'riven'];
-    const chosenBotHero = botHeroes[(this.level - 1) % botHeroes.length];
-    this.registry.set('selectedHero', chosenBotHero);
-    this.bot = new EnemyBot(this, 1180, 512, this.level);
-    this.registry.set('selectedHero', this.player.heroId); // Restore player hero ID in registry
+    // Bot Hero Selection: uses selectedBotHero or default level bot hero
+    const defaultBot = GAME_CONFIG.DEFAULT_BOT_HERO_BY_LEVEL[this.level] || 'ezreal';
+    const chosenBotHero = this.registry.get('selectedBotHero') || defaultBot;
+    this.bot = new EnemyBot(this, 1180, 512, this.level, chosenBotHero);
 
     this.bot.setTarget(this.player);
 

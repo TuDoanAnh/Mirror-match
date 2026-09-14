@@ -6,8 +6,11 @@ import { MAP_POLYGONS } from './mapPolygons';
 import { isPointInAnyPolygon, isSegmentIntersectingAnyPolygon } from './polygonCollision';
 
 export default class EnemyBot extends Player {
-  constructor(scene, x, y, level = 1) {
-    super(scene, x, y, true); 
+  constructor(scene, x, y, level = 1, botHeroId = null) {
+    const defaultHero = GAME_CONFIG.DEFAULT_BOT_HERO_BY_LEVEL[level] || 'ezreal';
+    const finalHeroId = botHeroId || defaultHero;
+
+    super(scene, x, y, true, 0xff0000, finalHeroId); 
     
     this.target = null; 
     
@@ -210,9 +213,24 @@ export default class EnemyBot extends Player {
 
     const angleToPlayer = Phaser.Math.Angle.Between(this.x, this.y, this.target.x, this.target.y);
     
-    const isMelee = this.heroId === 'riven';
-    const minDistThreshold = isMelee ? 90 : 280;
-    const maxDistThreshold = isMelee ? 200 : 480;
+    let minDistThreshold = 280;
+    let maxDistThreshold = 480;
+
+    if (this.heroId === 'riven') {
+      minDistThreshold = 80;
+      maxDistThreshold = 200;
+    } else if (this.heroId === 'zed') {
+      minDistThreshold = 140;
+      maxDistThreshold = 300;
+    } else if (this.heroId === 'lux') {
+      minDistThreshold = 320;
+      maxDistThreshold = 520;
+    } else if (this.heroId === 'jinx') {
+      minDistThreshold = 260;
+      maxDistThreshold = 450;
+    }
+
+    const isMelee = (this.heroId === 'riven' || this.heroId === 'zed');
 
     // Radial component (in / out)
     let radialX = 0;
@@ -261,37 +279,91 @@ export default class EnemyBot extends Player {
     }
   }
 
-  // Cast skills intelligently
+  // Cast skills intelligently for all 5 champions
   updateSkillCasting(time, dist, aimX, aimY) {
+    const chance = Phaser.Math.Between(1, 100);
+
+    // 1. RIVEN AI (Melee Combo Brawler)
     if (this.heroId === 'riven') {
-      // Riven Melee AI logic
       if ((this.rivenQCombo || 0) > 0) {
         this.useSkill('Q', time, aimX, aimY);
-      } else if (dist < 220 && Phaser.Math.Between(1, 100) > 60) {
+      } else if (dist < 200 && chance > 55) {
         this.useSkill('Q', time, aimX, aimY);
       }
 
-      if (dist > 160 && dist < 450 && Phaser.Math.Between(1, 100) > 85) {
+      if (dist > 140 && dist < 420 && chance > 80) {
         this.useSkill('E', time, aimX, aimY);
       }
 
-      if (dist < 380 && Phaser.Math.Between(1, 100) > 90) {
+      if (dist < 380 && chance > 85) {
         this.useSkill('SPACE', time, aimX, aimY);
       }
       return;
     }
 
-    if (this.heroId === 'jinx') {
-      if (dist < 550 && Phaser.Math.Between(1, 100) > 85) {
+    // 2. ZED AI (Shadow Assassin)
+    if (this.heroId === 'zed') {
+      // Place Living Shadow near target if ready
+      if (dist < 400 && chance > 70 && !this.zedShadow) {
         this.useSkill('E', time, aimX, aimY);
       }
+      // Swap to shadow if active and far from target
+      if (this.zedShadow && dist > 180 && chance > 80) {
+        this.useSkill('E', time, aimX, aimY);
+      }
+      // Fire Shurikens
+      if (dist < 500 && chance > 60) {
+        this.useSkill('Q', time, aimX, aimY);
+      }
+      // Death Mark
+      if (dist < 280 && chance > 80) {
+        this.useSkill('SPACE', time, aimX, aimY);
+      }
+      return;
     }
 
-    if (dist < 520 && Phaser.Math.Between(1, 100) > 90) {
+    // 3. LUX AI (Ranged Burst Mage)
+    if (this.heroId === 'lux') {
+      // Light Binding Q (Root)
+      if (dist < 550 && chance > 65) {
+        this.useSkill('Q', time, aimX, aimY);
+      }
+      // Prismatic Barrier E (Shield) if low HP or in combat
+      if ((this.hp < this.maxHp * 0.75 || dist < 300) && chance > 75) {
+        this.useSkill('E', time, aimX, aimY);
+      }
+      // Final Spark Beam SPACE
+      if ((dist < 650 && (this.target.isRooted || chance > 90))) {
+        this.useSkill('SPACE', time, aimX, aimY);
+      }
+      return;
+    }
+
+    // 4. JINX AI (Aggressive Gunner)
+    if (this.heroId === 'jinx') {
+      // Get Excited E (Speed Boost)
+      if (dist < 550 && chance > 75) {
+        this.useSkill('E', time, aimX, aimY);
+      }
+      // Fishbones Rockets Q
+      if (dist < 520 && chance > 65) {
+        this.useSkill('Q', time, aimX, aimY);
+      }
+      // Super Mega Death Rocket SPACE
+      if ((dist < 700 || this.target.hp < this.target.maxHp * 0.35) && chance > 85) {
+        this.useSkill('SPACE', time, aimX, aimY);
+      }
+      return;
+    }
+
+    // 5. EZREAL AI (Ranged Kiter)
+    if (dist < 520 && chance > 65) {
       this.useSkill('Q', time, aimX, aimY);
     }
-
-    if (dist < 680 && Phaser.Math.Between(1, 100) > 97) {
+    if (dist < 180 && chance > 85) {
+      this.useSkill('E', time, aimX, aimY);
+    }
+    if (dist < 680 && chance > 88) {
       this.useSkill('SPACE', time, aimX, aimY);
     }
   }
