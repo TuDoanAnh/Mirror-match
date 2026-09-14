@@ -11,6 +11,7 @@ import mapImageUrl from './assets/image/Map.png';
 import { MAP_OBSTACLES } from './mapObstacles';
 import { MAP_POLYGONS } from './mapPolygons';
 import { handleCharacterPolygonCollision, isPointInPolygon } from './polygonCollision';
+import { ALL_AUGMENTS } from './AugmentManager';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -156,6 +157,7 @@ export default class GameScene extends Phaser.Scene {
       this.player.update(time, delta);
       handleCharacterPolygonCollision(this.player, MAP_POLYGONS);
       this.updateOcclusion(this.player);
+      this.checkBulletTimeDodge(time);
     }
     if (this.bot.hp > 0 && this.player.hp > 0) {
       this.bot.update(time, delta);
@@ -680,6 +682,9 @@ export default class GameScene extends Phaser.Scene {
     if (attacker === this.player) {
       this.skillsHit++;
       this.totalDamageDealt += finalDamage;
+      if (this.player && typeof this.player.onSkillshotHit === 'function') {
+        this.player.onSkillshotHit(entity);
+      }
     } else if (entity === this.player) {
       this.totalDamageTaken += finalDamage;
     }
@@ -885,6 +890,43 @@ export default class GameScene extends Phaser.Scene {
 
     this.uiContainer = this.add.container(768, 968);
     this.uiContainer.setDepth(100);
+
+    // Active Augments HUD Badges (Top-Left Corner)
+    const ownedAugs = this.registry.get('augments') || [];
+    if (ownedAugs.length > 0) {
+      const augHud = this.add.container(20, 20);
+      augHud.setScrollFactor(0);
+      augHud.setDepth(200);
+
+      const titleTxt = this.add.text(0, 0, "AUGMENTS:", {
+        fontSize: '10px',
+        fill: '#fde047',
+        fontStyle: 'bold'
+      });
+      augHud.add(titleTxt);
+
+      ownedAugs.forEach((aug, i) => {
+        const augData = typeof aug === 'string' ? ALL_AUGMENTS.find(a => a.id === aug) : aug;
+        if (!augData) return;
+
+        const x = i * 38;
+        const y = 14;
+
+        const box = this.add.rectangle(x + 14, y + 14, 30, 30, 0x0f172a, 0.9).setInteractive({ useHandCursor: true });
+        box.setStrokeStyle(1.5, augData.color || 0x38bdf8);
+
+        const icon = this.add.text(x + 14, y + 14, augData.icon || '⚡', { fontSize: '15px' }).setOrigin(0.5);
+
+        augHud.add([box, icon]);
+
+        box.on('pointerover', (ptr) => {
+          this.showAugmentTooltip(augData, ptr.worldX, ptr.worldY);
+        });
+        box.on('pointerout', () => {
+          this.hideAugmentTooltip();
+        });
+      });
+    }
 
     // Frame background (Sleek dark HUD panel)
     const bg = this.add.graphics();
@@ -1241,6 +1283,53 @@ export default class GameScene extends Phaser.Scene {
       gUlt.fillEllipse(40, 60, 40, 100);
       gUlt.generateTexture('proj_SPACE', 80, 120);
       gUlt.destroy();
+    }
+  }
+
+  checkBulletTimeDodge(time) {
+    if (!this.player || !this.player.active || !this.player.hasBulletTime) return;
+    if (time - (this.player.lastBulletTimeTrigger || 0) < 5000) return;
+
+    const enemyProjs = this.projectileGroup.getChildren();
+    enemyProjs.forEach(proj => {
+      if (proj.attacker === this.bot && proj.active) {
+        const dist = Phaser.Math.Distance.Between(proj.x, proj.y, this.player.x, this.player.y);
+        if (dist > 28 && dist < 75) {
+          this.player.triggerBulletTime(time);
+        }
+      }
+    });
+  }
+
+  showAugmentTooltip(augData, x, y) {
+    this.hideAugmentTooltip();
+
+    this.activeAugTooltip = this.add.container(x + 10, y + 10);
+    this.activeAugTooltip.setScrollFactor(0);
+    this.activeAugTooltip.setDepth(2500);
+
+    const bg = this.add.rectangle(0, 0, 220, 70, 0x090d16, 0.95).setOrigin(0);
+    bg.setStrokeStyle(1.5, augData.color || 0x38bdf8);
+
+    const title = this.add.text(10, 8, `${augData.icon} ${augData.name}`, {
+      fontSize: '13px',
+      fill: '#ffffff',
+      fontStyle: 'bold'
+    });
+
+    const desc = this.add.text(10, 28, augData.desc, {
+      fontSize: '11px',
+      fill: '#cbd5e1',
+      wordWrap: { width: 200 }
+    });
+
+    this.activeAugTooltip.add([bg, title, desc]);
+  }
+
+  hideAugmentTooltip() {
+    if (this.activeAugTooltip) {
+      this.activeAugTooltip.destroy();
+      this.activeAugTooltip = null;
     }
   }
 }

@@ -445,6 +445,23 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     this.hp = Math.max(0, this.hp - remainingDamage);
     this.updateHpBar();
 
+    // Adrenaline Rush Augment: HP < 25% resets cooldowns + 300 shield
+    if (this.hasAdrenaline && !this.adrenalineTriggered && this.hp > 0 && this.hp <= this.maxHp * 0.25) {
+      this.adrenalineTriggered = true;
+      if (this.skills) {
+        Object.keys(this.skills).forEach(k => {
+          this.skills[k].lastUsed = -999999;
+        });
+      }
+      this.addShield(300, 5000);
+      if (this.scene) {
+        showDamageText(this.scene, this.x, this.y - 30, 'ADRENALINE RUSH!', 'crit');
+        const flash = this.scene.add.circle(this.x, this.y, 45, 0xec4899, 0.8);
+        flash.setBlendMode('ADD');
+        this.scene.tweens.add({ targets: flash, scale: 2.5, alpha: 0, duration: 400, onComplete: () => flash.destroy() });
+      }
+    }
+
     if (amount > 0 && this.scene) {
       playHitSFX(this.scene, this.heroId);
       showDamageText(this.scene, this.x, this.y - 15, amount, isCrit ? 'crit' : 'normal');

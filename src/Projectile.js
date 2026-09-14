@@ -135,6 +135,14 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
         return;
       }
     }
+
+    // Mystic Split Augment: Split Q projectile after 350px into 2 diagonal bolts
+    if (this.type === 'Q' && !this.hasSplit && !this.isSplitChild && this.attacker && this.attacker.hasMysticSplit && this.startX !== undefined) {
+      const dist = Phaser.Math.Distance.Between(this.startX, this.startY, this.x, this.y);
+      if (dist >= 350) {
+        this.splitMysticProjectiles();
+      }
+    }
     
     if (this.isBoomerang && !this.isReturning && this.startPoint) {
       const traveled = Phaser.Math.Distance.Between(this.x, this.y, this.startPoint.x, this.startPoint.y);
@@ -166,6 +174,34 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
       this.y > height
     ) {
       this.destroy();
+    }
+  }
+
+  splitMysticProjectiles() {
+    this.hasSplit = true;
+    const currentAngle = this.rotation;
+    const angles = [currentAngle - 0.35, currentAngle + 0.35];
+
+    angles.forEach(ang => {
+      const childConfig = {
+        damage: Math.round(this.damage * 0.75),
+        speed: this.speed,
+        isPiercing: this.isPiercing,
+        maxRange: 450
+      };
+      const child = new Projectile(this.scene, this.x, this.y, this.type, childConfig, this.attacker, this.heroId);
+      child.isSplitChild = true;
+      child.hasSplit = true;
+      if (this.scene && this.scene.projectileGroup) {
+        this.scene.projectileGroup.add(child);
+      }
+      child.fire(ang);
+    });
+
+    if (this.scene) {
+      const flash = this.scene.add.circle(this.x, this.y, 25, 0x38bdf8, 0.8);
+      flash.setBlendMode('ADD');
+      this.scene.tweens.add({ targets: flash, scale: 2, alpha: 0, duration: 250, onComplete: () => flash.destroy() });
     }
   }
 

@@ -50,6 +50,29 @@ export default class Player extends BaseCharacter {
       });
     }
 
+    // Parse Owned Augments
+    this.ownedAugments = [];
+    if (!isBot && scene.registry.has('augments')) {
+      const augs = scene.registry.get('augments') || [];
+      this.ownedAugments = augs.map(a => a.id || a);
+    }
+
+    this.hasMysticSplit = this.ownedAugments.includes('mysticSplit');
+    this.hasArcaneMine = this.ownedAugments.includes('arcaneMine');
+    this.hasBulletTime = this.ownedAugments.includes('bulletTime');
+    this.hasAdrenaline = this.ownedAugments.includes('adrenaline');
+    this.hasStaticShock = this.ownedAugments.includes('staticShock');
+    this.hasGlassCannon = this.ownedAugments.includes('glassCannon');
+
+    if (this.hasGlassCannon) {
+      this.maxHp = Math.round(this.maxHp * 0.8);
+      this.hp = this.maxHp;
+    }
+
+    this.staticShockHits = 0;
+    this.adrenalineTriggered = false;
+    this.lastBulletTimeTrigger = 0;
+
     if (!isBot) {
       this.keys = scene.input.keyboard.addKeys('W,A,S,D,SPACE,ONE,TWO,THREE');
       this.keys.ONE.on('down', () => this.useActiveItem('zhonya'));
@@ -463,7 +486,8 @@ export default class Player extends BaseCharacter {
 
   executeRivenE(skillKey, targetX, targetY, angle) {
     const skillConfig = this.skills[skillKey].config;
-    this.executeDash(skillKey, targetX, targetY, angle);
+    if (this.scene) playSkillSFX(this.scene, 'riven', 'E');
+    if (this.hasArcaneMine) this.dropArcaneMine(this.x, this.y);
     this.addShield(skillConfig.shieldHp || 220, skillConfig.duration || 2500);
   }
 
@@ -831,6 +855,10 @@ export default class Player extends BaseCharacter {
     const startX = this.x;
     const startY = this.y;
 
+    if (this.hasArcaneMine) {
+      this.dropArcaneMine(startX, startY);
+    }
+
     const safePos = this.getSafeDashPosition(startX, startY, fireAngle, actualDist);
     this.x = safePos.x;
     this.y = safePos.y;
@@ -880,6 +908,8 @@ export default class Player extends BaseCharacter {
     if (this.isJinxSpeedBuffActive) return;
     this.isJinxSpeedBuffActive = true;
     this.isJinxEnraged = true;
+
+    if (this.hasArcaneMine) this.dropArcaneMine(this.x, this.y);
 
     this.speed += speedBonus;
 
@@ -1135,6 +1165,132 @@ export default class Player extends BaseCharacter {
           });
         }
       });
+    });
+  }
+
+  dropArcaneMine(x, y) {
+    if (!this.scene) return;
+    const mine = this.scene.add.circle(x, y, 16, 0xef4444, 0.85);
+    mine.setStrokeStyle(3, 0xffffff, 1);
+    mine.setBlendMode('ADD');
+    mine.setDepth(10);
+
+    this.scene.tweens.add({
+      targets: mine,
+      scale: 1.35,
+      duration: 400,
+      yoyo: true,
+      repeat: -1
+    });
+
+    const isBotMine = this.isBot;
+    const checkTimer = this.scene.time.addEvent({
+      delay: 50,
+      callback: () => {
+        if (!mine || !mine.active) {
+          checkTimer.remove();
+          return;
+        }
+
+        const enemies = isBotMine ? [this.scene.player] : [this.scene.bot];
+        enemies.forEach(target => {
+          if (target && target.active && target.hp > 0) {
+            const dist = Phaser.Math.Distance.Between(mine.x, mine.y, target.x, target.y);
+            if (dist <= 60) {
+              checkTimer.remove();
+              target.takeDamage(180, true);
+              if (this.scene) {
+                const exp = this.scene.add.circle(mine.x, mine.y, 60, 0xef4444, 0.8);
+                exp.setBlendMode('ADD');
+                this.scene.tweens.add({ targets: exp, scale: 2.2, alpha: 0, duration: 300, onComplete: () => exp.destroy() });
+                import('./FloatingDamage').then(m => {
+                  if (m.showDamageText) m.showDamageText(this.scene, mine.x, mine.y - 20, '180 MINE BOOM!', 'crit');
+                }).catch(() => {});
+              }
+              mine.destroy();
+            }
+          }
+        });
+      },
+      loop: true
+    });
+
+    this.scene.time.delayedCall(5000, () => {
+      checkTimer.remove();
+      if (mine && mine.active) {
+        const exp = this.scene.add.circle(mine.x, mine.y, 35, 0xef4444, 0.5);
+        this.scene.tweens.add({ targets: exp, scale: 1.5, alpha: 0, duration: 250, onComplete: () => exp.destroy() });
+        mine.destroy();
+      }
+    });
+  }
+
+  triggerBulletTime(time) {
+    this.lastBulletTimeTrigger = time;
+    const speedBonus = Math.round(this.speed * 0.4);
+    this.speed += speedBonus;
+
+    if (this.scene) {
+      import('./FloatingDamage').then(m => {
+        if (m.showDamageText) m.showDamageText(this.scene, this.x, this.y - 25, 'BULLET TIME! +40% SPEED', 'crit');
+      }).catch(() => {});
+
+      const speedAura = this.scene.add.circle(this.x, this.y, 25, 0xfacc15, 0.4);
+      speedAura.setStrokeStyle(3, 0xffffff, 1);
+      speedAura.setBlendMode('ADD');
+
+      const timer = this.scene.time.addEvent({
+        delay: 20,
+        callback: () => {
+          if (speedAura && speedAura.active) speedAura.setPosition(this.x, this.y);
+        },
+        loop: true
+      });
+
+      this.scene.time.delayedCall(3000, () => {
+        this.speed = Math.max(150, this.speed - speedBonus);
+        timer.remove();
+        if (speedAura && speedAura.active) speedAura.destroy();
+      });
+    }
+  }
+
+  onSkillshotHit(target) {
+    if (this.hasStaticShock) {
+      this.staticShockHits = (this.staticShockHits || 0) + 1;
+      if (this.staticShockHits >= 3) {
+        this.staticShockHits = 0;
+        this.triggerStaticShockNova();
+      }
+    }
+  }
+
+  triggerStaticShockNova() {
+    if (!this.scene) return;
+    const enemies = this.isBot ? [this.scene.player] : [this.scene.bot];
+
+    const nova = this.scene.add.circle(this.x, this.y, 30, 0xa855f7, 0.85);
+    nova.setStrokeStyle(5, 0xffffff, 1);
+    nova.setBlendMode('ADD');
+    this.scene.tweens.add({
+      targets: nova,
+      scale: 4,
+      alpha: 0,
+      duration: 350,
+      onComplete: () => nova.destroy()
+    });
+
+    import('./FloatingDamage').then(m => {
+      if (m.showDamageText) m.showDamageText(this.scene, this.x, this.y - 25, 'STATIC SHOCK NOVA!', 'crit');
+    }).catch(() => {});
+
+    enemies.forEach(target => {
+      if (target && target.active && target.hp > 0) {
+        const dist = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
+        if (dist <= 180) {
+          target.takeDamage(120, true);
+        }
+      }
     });
   }
 }

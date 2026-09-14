@@ -5,6 +5,7 @@ import { preloadLuxAssets, createLuxAnimations } from './luxAnimations';
 import { preloadEzrealSkillAssets, createEzrealSkillAnimations } from './ezrealSkillAnimations';
 import { preloadJinxAssets, createJinxAnimations } from './jinxAnimations';
 import { preloadCharacterSFX, playPreparationBGM, stopPreparationBGM } from './soundManager';
+import { ALL_AUGMENTS } from './AugmentManager';
 
 export default class PreparationScene extends Phaser.Scene {
   constructor() {
@@ -433,8 +434,12 @@ export default class PreparationScene extends Phaser.Scene {
       armPen: this.add.text(col2X, currentY + 54, `Arm Pen: ${stats.armorPen}%`, { fontSize: '13px', fill: '#aaaaaa' })
     };
 
+    // Active Augments Section
+    currentY += 80;
+    currentY = this.drawAugmentsSection(centerX, currentY);
+
     // Item Description Box
-    currentY += 105;
+    currentY += 25;
     this.descBox = this.add.rectangle(centerX, currentY + 28, 260, 85, 0x222222);
     this.descName = this.add.text(centerX, currentY, "SELECT AN ITEM", { fontSize: '16px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
     this.descStat = this.add.text(centerX, currentY + 26, "", { fontSize: '13px', fill: '#00ff00', align: 'center', wordWrap: { width: 240 } }).setOrigin(0.5);
@@ -632,5 +637,72 @@ export default class PreparationScene extends Phaser.Scene {
         slot.setStrokeStyle(1, 0x222222);
       }
     });
+  }
+
+  drawAugmentsSection(centerX, startY) {
+    const ownedAugs = this.registry.get('augments') || [];
+    if (ownedAugs.length === 0) return startY;
+
+    let currentY = startY;
+    this.add.text(centerX, currentY, "⚡ ACTIVE AUGMENTS", {
+      fontSize: '13px',
+      fill: '#fde047',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    currentY += 22;
+    const startX = centerX - ((ownedAugs.length - 1) * 22);
+
+    ownedAugs.forEach((aug, i) => {
+      const augData = typeof aug === 'string' ? ALL_AUGMENTS.find(a => a.id === aug) : aug;
+      if (!augData) return;
+
+      const x = startX + (i * 44);
+
+      const box = this.add.rectangle(x, currentY + 12, 34, 34, 0x0f172a).setInteractive({ useHandCursor: true });
+      box.setStrokeStyle(1.5, augData.color || 0x38bdf8);
+
+      const icon = this.add.text(x, currentY + 12, augData.icon || '⚡', { fontSize: '18px' }).setOrigin(0.5);
+
+      box.on('pointerover', (ptr) => {
+        this.showAugmentTooltip(augData, ptr.worldX, ptr.worldY);
+      });
+      box.on('pointerout', () => {
+        this.hideAugmentTooltip();
+      });
+    });
+
+    return currentY + 38;
+  }
+
+  showAugmentTooltip(augData, x, y) {
+    this.hideAugmentTooltip();
+
+    this.activeAugTooltip = this.add.container(x + 10, y + 10);
+    this.activeAugTooltip.setDepth(3000);
+
+    const bg = this.add.rectangle(0, 0, 220, 70, 0x090d16, 0.95).setOrigin(0);
+    bg.setStrokeStyle(1.5, augData.color || 0x38bdf8);
+
+    const title = this.add.text(10, 8, `${augData.icon} ${augData.name}`, {
+      fontSize: '13px',
+      fill: '#ffffff',
+      fontStyle: 'bold'
+    });
+
+    const desc = this.add.text(10, 28, augData.desc, {
+      fontSize: '11px',
+      fill: '#cbd5e1',
+      wordWrap: { width: 200 }
+    });
+
+    this.activeAugTooltip.add([bg, title, desc]);
+  }
+
+  hideAugmentTooltip() {
+    if (this.activeAugTooltip) {
+      this.activeAugTooltip.destroy();
+      this.activeAugTooltip = null;
+    }
   }
 }
