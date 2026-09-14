@@ -210,21 +210,25 @@ export default class EnemyBot extends Player {
 
     const angleToPlayer = Phaser.Math.Angle.Between(this.x, this.y, this.target.x, this.target.y);
     
+    const isMelee = this.heroId === 'riven';
+    const minDistThreshold = isMelee ? 90 : 280;
+    const maxDistThreshold = isMelee ? 200 : 480;
+
     // Radial component (in / out)
     let radialX = 0;
     let radialY = 0;
-    if (dist < 280) {
+    if (dist < minDistThreshold) {
       radialX = -Math.cos(angleToPlayer);
       radialY = -Math.sin(angleToPlayer);
-    } else if (dist > 480) {
+    } else if (dist > maxDistThreshold) {
       radialX = Math.cos(angleToPlayer);
       radialY = Math.sin(angleToPlayer);
     }
 
     // Tangential component (Orbiting around player)
     const perpAngle = angleToPlayer + (Math.PI / 2) * this.orbitDirection;
-    let tangX = Math.cos(perpAngle) * 0.85;
-    let tangY = Math.sin(perpAngle) * 0.85;
+    let tangX = Math.cos(perpAngle) * (isMelee ? 0.4 : 0.85);
+    let tangY = Math.sin(perpAngle) * (isMelee ? 0.4 : 0.85);
 
     // Creep Repulsion (Avoid getting crowded or blocked by creeps)
     if (this.scene.creeps) {
@@ -259,6 +263,24 @@ export default class EnemyBot extends Player {
 
   // Cast skills intelligently
   updateSkillCasting(time, dist, aimX, aimY) {
+    if (this.heroId === 'riven') {
+      // Riven Melee AI logic
+      if ((this.rivenQCombo || 0) > 0) {
+        this.useSkill('Q', time, aimX, aimY);
+      } else if (dist < 220 && Phaser.Math.Between(1, 100) > 60) {
+        this.useSkill('Q', time, aimX, aimY);
+      }
+
+      if (dist > 160 && dist < 450 && Phaser.Math.Between(1, 100) > 85) {
+        this.useSkill('E', time, aimX, aimY);
+      }
+
+      if (dist < 380 && Phaser.Math.Between(1, 100) > 90) {
+        this.useSkill('SPACE', time, aimX, aimY);
+      }
+      return;
+    }
+
     if (dist < 520 && Phaser.Math.Between(1, 100) > 90) {
       this.useSkill('Q', time, aimX, aimY);
     }

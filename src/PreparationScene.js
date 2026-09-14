@@ -195,7 +195,7 @@ export default class PreparationScene extends Phaser.Scene {
     this.add.text(centerX, currentY, "HERO SELECT", { fontSize: '16px', fill: '#00ffff', fontStyle: 'bold' }).setOrigin(0.5);
     
     currentY += 32;
-    const heroes = ['ezreal', 'lux', 'jinx', 'zed'];
+    const heroes = ['ezreal', 'lux', 'jinx', 'zed', 'riven'];
     const currentHero = this.registry.get('selectedHero') || 'ezreal';
 
     const selectHeroById = (hId) => {
@@ -211,10 +211,12 @@ export default class PreparationScene extends Phaser.Scene {
       two: Phaser.Input.Keyboard.KeyCodes.TWO,
       three: Phaser.Input.Keyboard.KeyCodes.THREE,
       four: Phaser.Input.Keyboard.KeyCodes.FOUR,
+      five: Phaser.Input.Keyboard.KeyCodes.FIVE,
       numOne: Phaser.Input.Keyboard.KeyCodes.NUMPAD_ONE,
       numTwo: Phaser.Input.Keyboard.KeyCodes.NUMPAD_TWO,
       numThree: Phaser.Input.Keyboard.KeyCodes.NUMPAD_THREE,
-      numFour: Phaser.Input.Keyboard.KeyCodes.NUMPAD_FOUR
+      numFour: Phaser.Input.Keyboard.KeyCodes.NUMPAD_FOUR,
+      numFive: Phaser.Input.Keyboard.KeyCodes.NUMPAD_FIVE
     });
 
     keys.one.on('down', () => selectHeroById('ezreal'));
@@ -225,9 +227,11 @@ export default class PreparationScene extends Phaser.Scene {
     keys.numThree.on('down', () => selectHeroById('jinx'));
     keys.four.on('down', () => selectHeroById('zed'));
     keys.numFour.on('down', () => selectHeroById('zed'));
+    keys.five.on('down', () => selectHeroById('riven'));
+    keys.numFive.on('down', () => selectHeroById('riven'));
 
-    const btnWidth = 44;
-    const btnGap = 48;
+    const btnWidth = 40;
+    const btnGap = 44;
     const startBtnX = centerX - ((heroes.length - 1) * btnGap) / 2;
 
     heroes.forEach((hId, index) => {

@@ -210,6 +210,12 @@ export default class Player extends BaseCharacter {
           this.executeZedShadow(skillKey, targetX, targetY);
         } else if (skill.type === 'ZED_DEATHMARK') {
           this.executeZedDeathMark(skillKey, targetX, targetY, fireAngle);
+        } else if (skill.type === 'RIVEN_Q') {
+          this.executeRivenQ(skillKey, targetX, targetY, fireAngle);
+        } else if (skill.type === 'RIVEN_E') {
+          this.executeRivenE(skillKey, targetX, targetY, fireAngle);
+        } else if (skill.type === 'RIVEN_WINDSLASH') {
+          this.executeRivenWindSlash(skillKey, targetX, targetY, fireAngle);
         }
       });
     } else {
@@ -231,6 +237,12 @@ export default class Player extends BaseCharacter {
         this.executeZedShadow(skillKey, targetX, targetY);
       } else if (skill.type === 'ZED_DEATHMARK') {
         this.executeZedDeathMark(skillKey, targetX, targetY, fireAngle);
+      } else if (skill.type === 'RIVEN_Q') {
+        this.executeRivenQ(skillKey, targetX, targetY, fireAngle);
+      } else if (skill.type === 'RIVEN_E') {
+        this.executeRivenE(skillKey, targetX, targetY, fireAngle);
+      } else if (skill.type === 'RIVEN_WINDSLASH') {
+        this.executeRivenWindSlash(skillKey, targetX, targetY, fireAngle);
       }
     }
   }
@@ -282,7 +294,177 @@ export default class Player extends BaseCharacter {
     if (this.heroId === 'zed' && skillKey === 'E' && this.activeShadow && this.activeShadow.active) {
       return true; // Allow instant recast to swap positions with shadow!
     }
+    if (this.heroId === 'riven' && skillKey === 'Q' && (this.rivenQCombo || 0) > 0 && (this.rivenQCombo || 0) < 3) {
+      return true; // Allow instant recast during Q combo!
+    }
     return super.canUseSkill(skillKey, time);
+  }
+
+  executeRivenQ(skillKey, targetX, targetY, angle) {
+    const skillConfig = this.skills[skillKey].config;
+    const damage = skillConfig.damage || 110;
+    
+    this.rivenQCombo = (this.rivenQCombo || 0) + 1;
+    const comboStep = this.rivenQCombo;
+
+    if (this.rivenQTimer) this.rivenQTimer.remove();
+    this.rivenQTimer = this.scene.time.delayedCall(3500, () => {
+      this.rivenQCombo = 0;
+    });
+
+    if (comboStep < 3) {
+      this.executeDash(skillKey, targetX, targetY, angle);
+
+      if (this.scene) {
+        const arcGraphics = this.scene.add.graphics();
+        arcGraphics.lineStyle(6, 0x10b981, 0.9);
+        arcGraphics.beginPath();
+        arcGraphics.arc(this.x, this.y, 75, angle - Math.PI / 3, angle + Math.PI / 3, false);
+        arcGraphics.strokePath();
+
+        this.scene.tweens.add({
+          targets: arcGraphics,
+          alpha: 0,
+          scale: 1.25,
+          duration: 250,
+          onComplete: () => arcGraphics.destroy()
+        });
+      }
+
+      this.applyMeleeAreaDamage(this.x, this.y, angle, 120, Math.PI / 3, damage, false);
+
+      if (this.skills && this.skills.Q) {
+        this.skills.Q.lastUsed = this.scene.time.now - (this.skills.Q.cooldown - 400);
+      }
+    } else {
+      this.rivenQCombo = 0;
+      if (this.rivenQTimer) this.rivenQTimer.remove();
+
+      this.executeDash(skillKey, targetX, targetY, angle);
+
+      if (this.scene) {
+        import('./FloatingDamage').then(m => {
+          if (m.showDamageText) m.showDamageText(this.scene, this.x, this.y - 20, 'KNOCKUP SLAM!', 'crit');
+        }).catch(() => {});
+        
+        const shockwave = this.scene.add.circle(this.x, this.y, 40, 0x10b981, 0.6);
+        shockwave.setStrokeStyle(4, 0x34d399, 1);
+        this.scene.tweens.add({
+          targets: shockwave,
+          scale: 3.2,
+          alpha: 0,
+          duration: 400,
+          onComplete: () => shockwave.destroy()
+        });
+      }
+
+      this.applyMeleeRadiusDamage(this.x, this.y, 130, damage * 1.4, true, true);
+
+      if (this.skills && this.skills.Q) {
+        this.skills.Q.lastUsed = this.scene.time.now;
+      }
+    }
+  }
+
+  executeRivenE(skillKey, targetX, targetY, angle) {
+    const skillConfig = this.skills[skillKey].config;
+    this.executeDash(skillKey, targetX, targetY, angle);
+    this.addShield(skillConfig.shieldHp || 220, skillConfig.duration || 2500);
+  }
+
+  executeRivenWindSlash(skillKey, targetX, targetY, angle) {
+    const skillConfig = this.skills[skillKey].config;
+    const baseDamage = skillConfig.damage || 480;
+    const range = skillConfig.range || 360;
+
+    if (this.scene) {
+      for (let i = -1; i <= 1; i++) {
+        const waveAngle = angle + (i * 0.25);
+        const waveGraphics = this.scene.add.graphics();
+        waveGraphics.lineStyle(8, 0x34d399, 0.95);
+        waveGraphics.beginPath();
+        waveGraphics.arc(this.x, this.y, 60, waveAngle - 0.2, waveAngle + 0.2, false);
+        waveGraphics.strokePath();
+
+        this.scene.tweens.add({
+          targets: waveGraphics,
+          x: Math.cos(waveAngle) * (range * 0.7),
+          y: Math.sin(waveAngle) * (range * 0.7),
+          alpha: 0,
+          scale: 2.2,
+          duration: 380,
+          ease: 'Cubic.easeOut',
+          onComplete: () => waveGraphics.destroy()
+        });
+      }
+    }
+
+    this.applyConeWindSlashDamage(this.x, this.y, angle, range, Math.PI / 5, baseDamage);
+  }
+
+  getOpponentTargets() {
+    const targets = [];
+    if (!this.isBot) {
+      if (this.scene.bot && this.scene.bot.active && this.scene.bot.hp > 0) {
+        targets.push(this.scene.bot);
+      }
+      if (this.scene.creeps) {
+        this.scene.creeps.getChildren().forEach(c => {
+          if (c.active && c.hp > 0) targets.push(c);
+        });
+      }
+    } else {
+      if (this.scene.player && this.scene.player.active && this.scene.player.hp > 0) {
+        targets.push(this.scene.player);
+      }
+    }
+    return targets;
+  }
+
+  applyMeleeAreaDamage(originX, originY, faceAngle, maxDist, halfArc, damage, isCrit = false) {
+    const targets = this.getOpponentTargets();
+    targets.forEach(target => {
+      const dist = Phaser.Math.Distance.Between(originX, originY, target.x, target.y);
+      if (dist <= maxDist) {
+        const angleToTarget = Phaser.Math.Angle.Between(originX, originY, target.x, target.y);
+        let angleDiff = Math.abs(Phaser.Math.Angle.Normalize(angleToTarget - faceAngle));
+        if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
+        if (angleDiff <= halfArc) {
+          target.takeDamage(damage, isCrit);
+        }
+      }
+    });
+  }
+
+  applyMeleeRadiusDamage(originX, originY, radius, damage, isCrit = false, doKnockup = false) {
+    const targets = this.getOpponentTargets();
+    targets.forEach(target => {
+      const dist = Phaser.Math.Distance.Between(originX, originY, target.x, target.y);
+      if (dist <= radius) {
+        target.takeDamage(damage, isCrit);
+        if (doKnockup && typeof target.applyKnockup === 'function') {
+          target.applyKnockup(600);
+        }
+      }
+    });
+  }
+
+  applyConeWindSlashDamage(originX, originY, faceAngle, maxRange, halfArc, baseDamage) {
+    const targets = this.getOpponentTargets();
+    targets.forEach(target => {
+      const dist = Phaser.Math.Distance.Between(originX, originY, target.x, target.y);
+      if (dist <= maxRange) {
+        const angleToTarget = Phaser.Math.Angle.Between(originX, originY, target.x, target.y);
+        let angleDiff = Math.abs(Phaser.Math.Angle.Normalize(angleToTarget - faceAngle));
+        if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
+
+        if (angleDiff <= halfArc) {
+          const missingHpRatio = Math.max(0, 1 - (target.hp / target.maxHp));
+          const finalDamage = Math.round(baseDamage * (1 + missingHpRatio * 1.2));
+          target.takeDamage(finalDamage, true);
+        }
+      }
+    });
   }
 
   executeZedShuriken(skillKey, angle) {

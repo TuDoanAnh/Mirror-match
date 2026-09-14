@@ -35,8 +35,8 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     this.shadow.setDepth(4);
 
     // Glowing Hero Base Ring Indicator
-    if (['ezreal', 'lux', 'jinx'].includes(this.heroId)) {
-      const ringColor = this.isBot ? 0xff2255 : 0x00e5ff;
+    if (['ezreal', 'lux', 'jinx', 'riven'].includes(this.heroId)) {
+      const ringColor = this.isBot ? 0xff2255 : (this.heroId === 'riven' ? 0x10b981 : 0x00e5ff);
       this.baseRing = scene.add.ellipse(x, y + 18, 34, 14);
       this.baseRing.setStrokeStyle(2, ringColor, 0.85);
       this.baseRing.setDepth(5);
@@ -239,6 +239,33 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     this.shieldTimer = this.scene.time.delayedCall(duration, () => {
       this.shieldHp = 0;
       this.updateHpBar();
+    });
+  }
+
+  applyKnockup(duration = 600) {
+    if (this.isStasis || this.hp <= 0) return;
+    this.isRooted = true;
+    this.setVelocity(0, 0);
+
+    if (this.scene) {
+      showDamageText(this.scene, this.x, this.y - 15, 'KNOCKED UP!', 'crit');
+    }
+
+    const startY = this.y;
+    this.scene.tweens.add({
+      targets: this,
+      y: startY - 24,
+      duration: duration / 2,
+      yoyo: true,
+      ease: 'Quad.easeOut',
+      onComplete: () => {
+        if (this.body) this.body.reset(this.x, startY);
+      }
+    });
+
+    if (this.rootTimer) this.rootTimer.remove();
+    this.rootTimer = this.scene.time.delayedCall(duration, () => {
+      this.isRooted = false;
     });
   }
 
