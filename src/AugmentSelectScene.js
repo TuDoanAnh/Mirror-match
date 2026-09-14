@@ -9,18 +9,19 @@ export default class AugmentSelectScene extends Phaser.Scene {
 
   init(data) {
     this.nextLevel = data.nextLevel || 1;
+    this.freeRerolls = 1; // 1 Free reroll per round victory
   }
 
   create() {
     const width = GAME_CONFIG.CANVAS.WIDTH;
     const height = GAME_CONFIG.CANVAS.HEIGHT;
-    const centerX = width / 2;
-    const centerY = height / 2;
+    this.centerX = width / 2;
+    this.centerY = height / 2;
 
     this.add.rectangle(0, 0, width, height, 0x090d16, 0.94).setOrigin(0);
 
     // Title Header
-    this.add.text(centerX, 120, "CHOOSE AN AUGMENT", {
+    this.add.text(this.centerX, 100, "CHOOSE AN AUGMENT", {
       fontSize: '42px',
       fill: '#fde047',
       fontStyle: 'bold',
@@ -28,10 +29,34 @@ export default class AugmentSelectScene extends Phaser.Scene {
       strokeThickness: 3
     }).setOrigin(0.5);
 
-    this.add.text(centerX, 170, "Enhance your skillshot abilities for the upcoming battles", {
+    this.add.text(this.centerX, 150, "Enhance your skillshot abilities for the upcoming battles", {
       fontSize: '15px',
       fill: '#94a3b8'
     }).setOrigin(0.5);
+
+    // Current Gold Header Display
+    this.gold = this.registry.get('gold') || 500;
+    this.goldText = this.add.text(this.centerX, 185, `💰 GOLD: ${this.gold}G`, {
+      fontSize: '16px',
+      fill: '#fbbf24',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    this.cardContainers = [];
+    this.rollNewAugments();
+    this.createRerollButton();
+
+    this.cameras.main.fadeIn(400, 0, 0, 0);
+  }
+
+  rollNewAugments() {
+    // Clear previous card containers if rerolling
+    if (this.cardContainers) {
+      this.cardContainers.forEach(c => {
+        if (c && c.active) c.destroy();
+      });
+    }
+    this.cardContainers = [];
 
     const owned = this.registry.get('augments') || [];
     const augments = getRandomAugments(3, owned);
@@ -39,11 +64,11 @@ export default class AugmentSelectScene extends Phaser.Scene {
     const cardWidth = 240;
     const cardHeight = 320;
     const cardGap = 270;
-    const startX = centerX - cardGap;
+    const startX = this.centerX - cardGap;
 
     augments.forEach((aug, index) => {
       const cardX = startX + (index * cardGap);
-      const cardY = centerY + 30;
+      const cardY = this.centerY + 30;
 
       // Container for card elements
       const container = this.add.container(cardX, cardY);
@@ -84,6 +109,17 @@ export default class AugmentSelectScene extends Phaser.Scene {
       }).setOrigin(0.5);
 
       container.add([cardBg, iconBg, iconTxt, nameTxt, descTxt, selectBtn, selectTxt]);
+
+      // Pop in animation for cards
+      container.setScale(0.8);
+      container.alpha = 0;
+      this.tweens.add({
+        targets: container,
+        scale: 1,
+        alpha: 1,
+        duration: 250 + (index * 70),
+        ease: 'Back.easeOut'
+      });
 
       // Card Hover Tweens (absolute Y positioning with killTweensOf)
       cardBg.on('pointerover', () => {
@@ -129,8 +165,71 @@ export default class AugmentSelectScene extends Phaser.Scene {
       };
 
       cardBg.on('pointerdown', onSelect);
+      this.cardContainers.push(container);
     });
+  }
 
-    this.cameras.main.fadeIn(400, 0, 0, 0);
+  createRerollButton() {
+    const rerollY = GAME_CONFIG.CANVAS.HEIGHT - 75;
+
+    this.rerollBtnBg = this.add.rectangle(this.centerX, rerollY, 280, 48, 0x1e1b4b).setInteractive({ useHandCursor: true });
+    this.rerollBtnBg.setStrokeStyle(2, 0x818cf8);
+
+    this.rerollBtnTxt = this.add.text(this.centerX, rerollY, "", {
+      fontSize: '15px',
+      fill: '#a5b4fc',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    this.updateRerollButtonUI();
+
+    this.rerollBtnBg.on('pointerover', () => {
+      this.tweens.add({ targets: [this.rerollBtnBg, this.rerollBtnTxt], scale: 1.06, duration: 120 });
+    });
+    this.rerollBtnBg.on('pointerout', () => {
+      this.tweens.add({ targets: [this.rerollBtnBg, this.rerollBtnTxt], scale: 1.0, duration: 120 });
+    });
+    this.rerollBtnBg.on('pointerdown', () => this.handleReroll());
+
+    // Keyboard shortcut (R key)
+    this.input.keyboard.on('keydown-R', () => this.handleReroll());
+  }
+
+  updateRerollButtonUI() {
+    const cost = 50;
+    if (this.freeRerolls > 0) {
+      this.rerollBtnTxt.setText(`🎲 REROLL (FREE - ${this.freeRerolls} LEFT) [R]`);
+      this.rerollBtnBg.setFillStyle(0x065f46, 0.95);
+      this.rerollBtnBg.setStrokeStyle(2, 0x34d399);
+      this.rerollBtnTxt.setColor('#6ee7b7');
+    } else if (this.gold >= cost) {
+      this.rerollBtnTxt.setText(`🎲 REROLL (${cost}G) [R]`);
+      this.rerollBtnBg.setFillStyle(0x312e81, 0.95);
+      this.rerollBtnBg.setStrokeStyle(2, 0x818cf8);
+      this.rerollBtnTxt.setColor('#a5b4fc');
+    } else {
+      this.rerollBtnTxt.setText(`🎲 REROLL (${cost}G - NEED GOLD)`);
+      this.rerollBtnBg.setFillStyle(0x334155, 0.6);
+      this.rerollBtnBg.setStrokeStyle(2, 0x64748b);
+      this.rerollBtnTxt.setColor('#94a3b8');
+    }
+  }
+
+  handleReroll() {
+    const cost = 50;
+    if (this.freeRerolls > 0) {
+      this.freeRerolls--;
+      this.rollNewAugments();
+      this.updateRerollButtonUI();
+    } else if (this.gold >= cost) {
+      this.gold -= cost;
+      this.registry.set('gold', this.gold);
+      this.goldText.setText(`💰 GOLD: ${this.gold}G`);
+      this.rollNewAugments();
+      this.updateRerollButtonUI();
+    } else {
+      // Shake camera if insufficient gold
+      this.cameras.main.shake(150, 0.005);
+    }
   }
 }
