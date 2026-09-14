@@ -301,6 +301,23 @@ export default class Player extends BaseCharacter {
     if (this.heroId === 'riven' && skillKey === 'Q' && (this.rivenQCombo || 0) > 0 && (this.rivenQCombo || 0) < 3) {
       return true; // Allow instant recast during Q combo!
     }
+
+    if (this.heroId === 'zed' && skillKey === 'SPACE') {
+      const target = this.isBot ? this.scene.player : this.scene.bot;
+      const castRange = (this.skills.SPACE && this.skills.SPACE.config && this.skills.SPACE.config.castRange) || 280;
+      if (!target || !target.active || target.hp <= 0) return false;
+
+      const dist = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
+      if (dist > castRange) {
+        if (!this.isBot && this.scene) {
+          import('./FloatingDamage').then(m => {
+            if (m.showDamageText) m.showDamageText(this.scene, this.x, this.y - 15, 'OUT OF RANGE', 'shield');
+          }).catch(() => {});
+        }
+        return false; // Out of range! Do NOT cast, do NOT consume cooldown!
+      }
+    }
+
     return super.canUseSkill(skillKey, time);
   }
 
@@ -315,6 +332,8 @@ export default class Player extends BaseCharacter {
     this.rivenQTimer = this.scene.time.delayedCall(3500, () => {
       this.rivenQCombo = 0;
     });
+
+    playSkillSFX(this.scene, 'riven', 'Q', { comboStep });
 
     if (comboStep < 3) {
       this.executeDash(skillKey, targetX, targetY, angle);
@@ -610,6 +629,8 @@ export default class Player extends BaseCharacter {
       if (this.body) this.body.reset(shadowX, shadowY);
 
       if (this.scene) {
+        playSkillSFX(this.scene, 'zed', 'E', { isSwap: true });
+
         const burst1 = this.scene.add.circle(oldPlayerX, oldPlayerY, 30, 0x991b1b, 0.7);
         this.scene.tweens.add({ targets: burst1, scale: 2, alpha: 0, duration: 300, onComplete: () => burst1.destroy() });
 
@@ -632,8 +653,13 @@ export default class Player extends BaseCharacter {
     const maxDist = 280;
     const actualDist = Math.min(dist, maxDist);
     const angle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
-    const shadowX = this.x + Math.cos(angle) * actualDist;
-    const shadowY = this.y + Math.sin(angle) * actualDist;
+    const rawShadowX = this.x + Math.cos(angle) * actualDist;
+    const rawShadowY = this.y + Math.sin(angle) * actualDist;
+
+    // Shift shadow if inside obstacle to nearest unblocked safe position
+    const safePos = this.findNearestUnblockedPosition(rawShadowX, rawShadowY, this.x, this.y);
+    const shadowX = safePos.x;
+    const shadowY = safePos.y;
 
     const shadow = this.scene.add.sprite(shadowX, shadowY, this.texture.key);
     shadow.setTint(0x222222);
@@ -662,9 +688,9 @@ export default class Player extends BaseCharacter {
   executeZedDeathMark(skillKey, targetX, targetY, angle) {
     const skillConfig = this.skills[skillKey].config;
     const target = this.isBot ? this.scene.player : this.scene.bot;
-    const castRange = skillConfig.castRange || 380;
+    const castRange = skillConfig.castRange || 280;
     const baseDamage = skillConfig.damage || 250;
-    const markDuration = skillConfig.markDuration || 5000;
+    const markDuration = skillConfig.markDuration || 4150;
 
     if (target && target.active && target.hp > 0) {
       const dist = Phaser.Math.Distance.Between(this.x, this.y, target.x, target.y);
@@ -695,6 +721,55 @@ export default class Player extends BaseCharacter {
         }
       }
     }
+  }
+
+  isPositionBlocked(x, y, margin = 28) {
+    if (x < 190 || x > 1230 || y < 130 || y > 880) return true;
+    if (isPointInAnyPolygon(x, y, MAP_POLYGONS)) return true;
+
+    for (let j = 0; j < MAP_OBSTACLES.length; j++) {
+      const obs = MAP_OBSTACLES[j];
+      if (obs.isPassable) continue;
+
+      const left = obs.x - obs.w / 2 - margin;
+      const right = obs.x + obs.w / 2 + margin;
+      const top = obs.y - obs.h / 2 - margin;
+      const bottom = obs.y + obs.h / 2 + margin;
+
+      if (x >= left && x <= right && y >= top && y <= bottom) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  findNearestUnblockedPosition(targetX, targetY, startX, startY) {
+    if (!this.isPositionBlocked(targetX, targetY)) {
+      return { x: targetX, y: targetY };
+    }
+
+    const angle = Phaser.Math.Angle.Between(targetX, targetY, startX, startY);
+    const maxRetractDist = Phaser.Math.Distance.Between(targetX, targetY, startX, startY);
+
+    for (let r = 8; r <= maxRetractDist; r += 8) {
+      const testX = targetX + Math.cos(angle) * r;
+      const testY = targetY + Math.sin(angle) * r;
+      if (!this.isPositionBlocked(testX, testY)) {
+        return { x: testX, y: testY };
+      }
+    }
+
+    for (let radius = 15; radius <= 150; radius += 15) {
+      for (let a = 0; a < Math.PI * 2; a += Math.PI / 6) {
+        const testX = targetX + Math.cos(a) * radius;
+        const testY = targetY + Math.sin(a) * radius;
+        if (!this.isPositionBlocked(testX, testY)) {
+          return { x: testX, y: testY };
+        }
+      }
+    }
+
+    return { x: startX, y: startY };
   }
 
   getSafeDashPosition(startX, startY, fireAngle, maxDist) {
@@ -799,7 +874,7 @@ export default class Player extends BaseCharacter {
 
   executeJinxSpeedBuff(skillKey) {
     const skillConfig = (this.skills[skillKey] && this.skills[skillKey].config) || {};
-    const speedBonus = skillConfig.speedBonus || 70;
+    const speedBonus = skillConfig.speedBonus || 60;
     const duration = skillConfig.duration || 4000;
 
     if (this.isJinxSpeedBuffActive) return;
@@ -809,13 +884,15 @@ export default class Player extends BaseCharacter {
     this.speed += speedBonus;
 
     if (this.scene) {
+      playSkillSFX(this.scene, 'jinx', 'E');
+
       import('./FloatingDamage').then(m => {
         if (m.showDamageText) m.showDamageText(this.scene, this.x, this.y - 20, 'GET EXCITED!', 'crit');
       }).catch(() => { });
 
-      // Magenta/Pink speed aura ring following player for 4s
-      const auraCircle = this.scene.add.circle(this.x, this.y, 32, 0xff00ff, 0.45);
-      auraCircle.setStrokeStyle(3, 0xffffff, 0.9);
+      // Magenta/Pink speed aura ring following player for 4s (smaller size: radius 18, alpha 0.3)
+      const auraCircle = this.scene.add.circle(this.x, this.y, 18, 0xff00ff, 0.3);
+      auraCircle.setStrokeStyle(2, 0xffffff, 0.8);
       auraCircle.setBlendMode('ADD');
 
       const auraTimer = this.scene.time.addEvent({

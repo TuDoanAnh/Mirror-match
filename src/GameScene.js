@@ -6,7 +6,7 @@ import { GAME_CONFIG } from './gameConfig';
 import { preloadLuxAssets, createLuxAnimations } from './luxAnimations';
 import { preloadEzrealSkillAssets, createEzrealSkillAnimations } from './ezrealSkillAnimations';
 import { preloadJinxAssets, createJinxAnimations } from './jinxAnimations';
-import { preloadCharacterSFX, playHitSFX, playBattleBGM, stopBattleBGM } from './soundManager';
+import { preloadCharacterSFX, playHitSFX, playCustomSFX, playBattleBGM, stopBattleBGM } from './soundManager';
 import mapImageUrl from './assets/image/Map.png';
 import { MAP_OBSTACLES } from './mapObstacles';
 import { MAP_POLYGONS } from './mapPolygons';
@@ -80,8 +80,8 @@ export default class GameScene extends Phaser.Scene {
     // Create entities at map spawn points
     this.player = new Player(this, 280, 512, false, this.playerColor);
     
-    // Bot Hero Selection: cycles through 4 champions per level
-    const botHeroes = ['ezreal', 'lux', 'jinx', 'zed'];
+    // Bot Hero Selection: cycles through 5 champions per level
+    const botHeroes = ['ezreal', 'lux', 'jinx', 'zed', 'riven'];
     const chosenBotHero = botHeroes[(this.level - 1) % botHeroes.length];
     this.registry.set('selectedHero', chosenBotHero);
     this.bot = new EnemyBot(this, 1180, 512, this.level);
@@ -727,6 +727,7 @@ export default class GameScene extends Phaser.Scene {
 
     // 0. Jinx Explosion Animated Sprite
     if (this.textures.exists('jinx_explosion_spritesheet')) {
+      playCustomSFX(this, 'jinx_sfx_RHit', 2.0);
       const expSprite = this.add.sprite(x, y, 'jinx_explosion_spritesheet');
       expSprite.setDepth(20);
       expSprite.setScale(radius / 90);

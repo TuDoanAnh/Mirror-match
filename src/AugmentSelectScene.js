@@ -45,50 +45,67 @@ export default class AugmentSelectScene extends Phaser.Scene {
       const cardX = startX + (index * cardGap);
       const cardY = centerY + 30;
 
-      // Card Container & Background
-      const cardBg = this.add.rectangle(cardX, cardY, cardWidth, cardHeight, 0x0f172a).setInteractive({ useHandCursor: true });
+      // Container for card elements
+      const container = this.add.container(cardX, cardY);
+
+      // Card Background (interactive)
+      const cardBg = this.add.rectangle(0, 0, cardWidth, cardHeight, 0x0f172a).setInteractive({ useHandCursor: true });
       cardBg.setStrokeStyle(3, aug.color || 0x38bdf8, 0.9);
 
       // Icon Circle
-      const iconBg = this.add.circle(cardX, cardY - 80, 36, aug.color || 0x38bdf8, 0.2);
+      const iconBg = this.add.circle(0, -80, 36, aug.color || 0x38bdf8, 0.2);
       iconBg.setStrokeStyle(2, aug.color || 0x38bdf8);
 
-      const iconTxt = this.add.text(cardX, cardY - 80, aug.icon, { fontSize: '32px' }).setOrigin(0.5);
+      const iconTxt = this.add.text(0, -80, aug.icon, { fontSize: '32px' }).setOrigin(0.5);
 
       // Augment Name
-      const nameTxt = this.add.text(cardX, cardY - 15, aug.name, {
+      const nameTxt = this.add.text(0, -15, aug.name, {
         fontSize: '18px',
         fill: '#ffffff',
         fontStyle: 'bold'
       }).setOrigin(0.5);
 
       // Description Box
-      const descTxt = this.add.text(cardX, cardY + 45, aug.desc, {
+      const descTxt = this.add.text(0, 45, aug.desc, {
         fontSize: '13px',
         fill: '#cbd5e1',
         align: 'center',
         wordWrap: { width: 200 }
       }).setOrigin(0.5, 0);
 
-      // Select Button
-      const selectBtn = this.add.rectangle(cardX, cardY + 120, 160, 36, 0x1e293b).setInteractive({ useHandCursor: true });
+      // Select Button Visual
+      const selectBtn = this.add.rectangle(0, 120, 160, 36, 0x1e293b);
       selectBtn.setStrokeStyle(1.5, aug.color || 0x38bdf8);
 
-      const selectTxt = this.add.text(cardX, cardY + 120, "SELECT", {
+      const selectTxt = this.add.text(0, 120, "SELECT", {
         fontSize: '14px',
         fill: '#ffffff',
         fontStyle: 'bold'
       }).setOrigin(0.5);
 
-      // Card Hover Tweens
+      container.add([cardBg, iconBg, iconTxt, nameTxt, descTxt, selectBtn, selectTxt]);
+
+      // Card Hover Tweens (absolute Y positioning with killTweensOf)
       cardBg.on('pointerover', () => {
-        this.tweens.add({ targets: [cardBg, iconBg, iconTxt, nameTxt, descTxt, selectBtn, selectTxt], y: '-=12', duration: 150, ease: 'Power2' });
+        this.tweens.killTweensOf(container);
+        this.tweens.add({
+          targets: container,
+          y: cardY - 12,
+          duration: 150,
+          ease: 'Power2'
+        });
         cardBg.setFillStyle(0x1e293b);
         selectBtn.setFillStyle(Phaser.Display.Color.HexStringToColor(aug.color || '#38bdf8').color);
       });
 
       cardBg.on('pointerout', () => {
-        this.tweens.add({ targets: [cardBg, iconBg, iconTxt, nameTxt, descTxt, selectBtn, selectTxt], y: '+=12', duration: 150, ease: 'Power2' });
+        this.tweens.killTweensOf(container);
+        this.tweens.add({
+          targets: container,
+          y: cardY,
+          duration: 150,
+          ease: 'Power2'
+        });
         cardBg.setFillStyle(0x0f172a);
         selectBtn.setFillStyle(0x1e293b);
       });
@@ -112,7 +129,6 @@ export default class AugmentSelectScene extends Phaser.Scene {
       };
 
       cardBg.on('pointerdown', onSelect);
-      selectBtn.on('pointerdown', onSelect);
     });
 
     this.cameras.main.fadeIn(400, 0, 0, 0);

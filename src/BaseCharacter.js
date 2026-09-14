@@ -1,17 +1,18 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from './gameConfig';
 import { showDamageText } from './FloatingDamage';
+import { playHitSFX, playCustomSFX, playZedDeathMarkSFX } from './soundManager';
 
 export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, isBot = false, color = 0x0088ff, heroId = null) {
-    super(scene, x, y, ''); 
+    super(scene, x, y, '');
 
     scene.add.existing(this);
     scene.physics.add.existing(this);
 
     this.isBot = isBot;
     this.heroId = heroId;
-    
+
     // Default Base Stats from GAME_CONFIG
     const baseStats = GAME_CONFIG.BASE_STATS || { HP: 1000, SPEED: 200, ARMOR: 0, LIFESTEAL: 0, CRIT_CHANCE: 0, ARMOR_PEN: 0 };
     this.maxHp = baseStats.HP || 1000;
@@ -19,7 +20,7 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     this.shieldHp = 0;
     this.speed = baseStats.SPEED || 200;
     this.aimAngle = 0;
-    
+
     this.armor = baseStats.ARMOR || 0;
     this.lifesteal = baseStats.LIFESTEAL || 0;
     this.critChance = baseStats.CRIT_CHANCE || 0;
@@ -109,10 +110,10 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
         graphics.closePath();
         graphics.fillPath();
         graphics.strokePath();
-        
+
         graphics.fillStyle(this.isBot ? 0xff5555 : 0x00ffff, 1);
         graphics.fillCircle(6, 16, 4);
-        
+
         graphics.generateTexture(texKey, 32, 32);
         graphics.destroy();
       }
@@ -195,7 +196,7 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     if (!this.canUseSkill(skillKey, time)) return false;
 
     this.skills[skillKey].lastUsed = time;
-    
+
     const fireAngle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
     if (!['ezreal', 'lux', 'jinx'].includes(this.heroId)) {
       this.setRotation(fireAngle);
@@ -208,13 +209,13 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     } else if (skillKey === 'SPACE') {
       this.executeSpace(targetX, targetY, fireAngle);
     }
-    
+
     return true;
   }
 
-  executeQ(targetX, targetY, fireAngle) {}
-  executeE(targetX, targetY, fireAngle) {}
-  executeSpace(targetX, targetY, fireAngle) {}
+  executeQ(targetX, targetY, fireAngle) { }
+  executeE(targetX, targetY, fireAngle) { }
+  executeSpace(targetX, targetY, fireAngle) { }
 
   addShield(amount, duration = 3000) {
     this.shieldHp = (this.shieldHp || 0) + amount;
@@ -365,13 +366,18 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
-  applyDeathMark(baseDamage = 250, duration = 5000) {
+  applyDeathMark(baseDamage = 250, duration = 4150) {
     if (this.isStasis || this.hp <= 0) return;
     this.isDeathMarked = true;
     this.deathMarkBaseDamage = baseDamage;
     this.deathMarkStoredDamage = 0;
 
+    if (this.deathMarkSFX && this.deathMarkSFX.isPlaying) {
+      this.deathMarkSFX.stop();
+    }
+
     if (this.scene) {
+      this.deathMarkSFX = playZedDeathMarkSFX(this.scene, 5125);
       showDamageText(this.scene, this.x, this.y - 15, 'DEATH MARKED', 'crit');
     }
 
@@ -440,12 +446,13 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     this.updateHpBar();
 
     if (amount > 0 && this.scene) {
+      playHitSFX(this.scene, this.heroId);
       showDamageText(this.scene, this.x, this.y - 15, amount, isCrit ? 'crit' : 'normal');
     }
 
-    this.setTint(isCrit ? 0xffa500 : 0xff0000); 
+    this.setTint(isCrit ? 0xffa500 : 0xff0000);
     this.scene.time.delayedCall(150, () => {
-      if(this.active) this.clearTint();
+      if (this.active) this.clearTint();
     });
 
     const hurtKey = `${this.heroId}_hurt`;
@@ -470,10 +477,10 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     if (amount > 0 && this.scene) {
       showDamageText(this.scene, this.x, this.y - 15, amount, 'heal');
     }
-    
+
     this.setTint(0x00ff00);
     this.scene.time.delayedCall(150, () => {
-      if(this.active) this.clearTint();
+      if (this.active) this.clearTint();
     });
   }
 
@@ -514,7 +521,7 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     if (this.baseRing) this.baseRing.destroy();
     if (this.hpBar) this.hpBar.destroy();
     this.disableBody(true, true);
-    
+
     // Shockwave ring
     const ring = this.scene.add.circle(this.x, this.y, 16);
     ring.setStrokeStyle(4, this.isBot ? 0xff0000 : 0x0088ff);
