@@ -19,6 +19,7 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
     this.rootDuration = config.rootDuration || 0;
     this.isExplosive = config.isExplosive || false;
     this.explosionRadius = config.explosionRadius || 90;
+    this.maxRange = config.maxRange || 0;
 
     const heroData = GAME_CONFIG.CHARACTERS[heroId] || GAME_CONFIG.CHARACTERS.ezreal;
     const projColor = (type === 'SPACE') ? (heroData.ultColor || 0xffaa00) : (heroData.projColor || 0x00ffff);
@@ -103,6 +104,8 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
   }
 
   fire(angle) {
+    this.startX = this.x;
+    this.startY = this.y;
     this.setRotation(angle);
     this.scene.physics.velocityFromRotation(angle, this.speed, this.body.velocity);
 
@@ -124,6 +127,14 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
 
   preUpdate(time, delta) {
     super.preUpdate(time, delta);
+
+    if (this.maxRange > 0 && !this.isBoomerang && this.startX !== undefined) {
+      const traveled = Phaser.Math.Distance.Between(this.startX, this.startY, this.x, this.y);
+      if (traveled >= this.maxRange) {
+        this.destroy();
+        return;
+      }
+    }
     
     if (this.isBoomerang && !this.isReturning && this.startPoint) {
       const traveled = Phaser.Math.Distance.Between(this.x, this.y, this.startPoint.x, this.startPoint.y);

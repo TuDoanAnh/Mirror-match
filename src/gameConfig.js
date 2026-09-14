@@ -136,7 +136,7 @@ export const GAME_CONFIG = {
       description: 'Shadow assassin swapping places with shadow clones & detonating Death Marks.',
       baseStats: { hp: 980, speed: 215, armor: 5, lifesteal: 0, critChance: 5, armorPen: 10 },
       skills: {
-        Q: { type: 'ZED_SHURIKEN', name: 'Razor Shuriken', cooldown: 2500, config: { damage: 135, speed: 750, isPiercing: true } },
+        Q: { type: 'ZED_SHURIKEN', name: 'Razor Shuriken', cooldown: 2500, config: { damage: 135, speed: 750, isPiercing: true, maxRange: 550 } },
         E: { type: 'ZED_SHADOW', name: 'Living Shadow', cooldown: 8000, config: { maxDistance: 280 } },
         SPACE: { type: 'ZED_DEATHMARK', name: 'Death Mark', cooldown: 15000, config: { damage: 250, markDuration: 5000, castRange: 380 } }
       }
