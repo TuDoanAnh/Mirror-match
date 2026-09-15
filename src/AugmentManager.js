@@ -4,14 +4,44 @@ export const ALL_AUGMENTS = [
     name: 'Mystic Split',
     desc: 'Skillshot Q splits into 2 diagonal bolts after traveling 350px.',
     icon: '⚡',
-    color: 0x38bdf8
+    color: 0x38bdf8,
+    incompatibleHeroes: ['riven'] // Riven Q is a 3-step melee slash combo, NOT a projectile
   },
   {
     id: 'arcaneMine',
     name: 'Arcane Mine',
     desc: 'Dash E leaves an explosive mine at your departure point.',
     icon: '💣',
-    color: 0xef4444
+    color: 0xef4444,
+    applicableHeroes: ['ezreal', 'zed'] // Only champions with Dash/Teleport E skills
+  },
+  {
+    id: 'bladeFury',
+    name: 'Blade Resonance',
+    desc: 'Hitting enemies with skills grants +25% Speed & 15% Lifesteal for 4s.',
+    icon: '⚔️',
+    color: 0xf59e0b
+  },
+  {
+    id: 'giantSlayer',
+    name: 'Giant Slayer',
+    desc: 'Deal +30% bonus damage against enemies with higher max HP.',
+    icon: '🏹',
+    color: 0x10b981
+  },
+  {
+    id: 'vampiricSoul',
+    name: 'Vampiric Soul',
+    desc: 'Gain 18% Spell Vamp & heal for 15% of all skill damage dealt.',
+    icon: '🩸',
+    color: 0xec4899
+  },
+  {
+    id: 'runicShield',
+    name: 'Runic Valor',
+    desc: 'Using E or Shield skills grants +30% Speed & +150 extra Shield.',
+    icon: '🛡️',
+    color: 0x6366f1
   },
   {
     id: 'bulletTime',
@@ -43,11 +73,22 @@ export const ALL_AUGMENTS = [
   }
 ];
 
-export function getRandomAugments(count = 3, ownedAugments = []) {
+export function getRandomAugments(count = 3, ownedAugments = [], heroId = 'ezreal') {
   const ownedIds = ownedAugments.map(a => a.id || a);
-  const available = ALL_AUGMENTS.filter(a => !ownedIds.includes(a.id));
-  
-  // Shuffle available
+  const available = ALL_AUGMENTS.filter(a => {
+    // 1. Filter out already owned augments
+    if (ownedIds.includes(a.id)) return false;
+
+    // 2. Filter out explicitly incompatible heroes
+    if (a.incompatibleHeroes && a.incompatibleHeroes.includes(heroId)) return false;
+
+    // 3. Filter allowed applicable heroes (if applicableHeroes specified)
+    if (a.applicableHeroes && !a.applicableHeroes.includes(heroId)) return false;
+
+    return true;
+  });
+
+  // Shuffle available augments
   const shuffled = [...available].sort(() => 0.5 - Math.random());
   return shuffled.slice(0, count);
 }

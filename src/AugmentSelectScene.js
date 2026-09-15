@@ -59,7 +59,8 @@ export default class AugmentSelectScene extends Phaser.Scene {
     this.cardContainers = [];
 
     const owned = this.registry.get('augments') || [];
-    const augments = getRandomAugments(3, owned);
+    const heroId = this.registry.get('selectedHero') || 'ezreal';
+    const augments = getRandomAugments(3, owned, heroId);
 
     const cardWidth = 240;
     const cardHeight = 320;

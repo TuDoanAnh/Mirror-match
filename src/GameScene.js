@@ -679,7 +679,11 @@ export default class GameScene extends Phaser.Scene {
     const finalDamage = baseDamage * (100 / (100 + effectiveArmor));
 
     // 3. Apply Damage
-    entity.takeDamage(finalDamage, isCrit);
+    if (attacker && typeof attacker.applyDamageToTarget === 'function') {
+      attacker.applyDamageToTarget(entity, finalDamage, isCrit);
+    } else {
+      entity.takeDamage(finalDamage, isCrit);
+    }
     playHitSFX(this, attacker ? attacker.heroId : 'ezreal');
 
     // Track statistics & hit stop

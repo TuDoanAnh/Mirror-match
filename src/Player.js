@@ -71,6 +71,10 @@ export default class Player extends BaseCharacter {
     this.hasAdrenaline = this.ownedAugments.includes('adrenaline');
     this.hasStaticShock = this.ownedAugments.includes('staticShock');
     this.hasGlassCannon = this.ownedAugments.includes('glassCannon');
+    this.hasBladeFury = this.ownedAugments.includes('bladeFury');
+    this.hasGiantSlayer = this.ownedAugments.includes('giantSlayer');
+    this.hasVampiricSoul = this.ownedAugments.includes('vampiricSoul');
+    this.hasRunicShield = this.ownedAugments.includes('runicShield');
 
     if (this.hasGlassCannon) {
       this.maxHp = Math.round(this.maxHp * 0.8);
@@ -86,6 +90,44 @@ export default class Player extends BaseCharacter {
       this.keys.ONE.on('down', () => this.useActiveItem('zhonya'));
       this.keys.TWO.on('down', () => this.useActiveItem('qss'));
       this.keys.THREE.on('down', () => this.useActiveItem('rocketbelt'));
+    }
+  }
+
+  addShield(amount, duration = 3000) {
+    let finalAmount = amount;
+    if (this.hasRunicShield) {
+      finalAmount += 150;
+      this.applySpeedBoost(1.30, 3000);
+      if (this.scene) {
+        import('./FloatingDamage').then(m => {
+          if (m.showDamageText) m.showDamageText(this.scene, this.x, this.y - 25, 'RUNIC VALOR!', 'heal');
+        }).catch(() => {});
+      }
+    }
+    super.addShield(finalAmount, duration);
+  }
+
+  applyDamageToTarget(target, rawDamage, isCrit = false) {
+    if (!target || typeof target.takeDamage !== 'function') return;
+
+    let finalDamage = rawDamage;
+
+    // Giant Slayer Augment: Deal +30% bonus damage if target has higher max HP
+    if (this.hasGiantSlayer && target.maxHp > this.maxHp) {
+      finalDamage = Math.round(finalDamage * 1.30);
+    }
+
+    // Apply damage to target
+    target.takeDamage(finalDamage, isCrit);
+
+    // Vampiric Soul Augment: Heal for 18% of damage dealt
+    if (this.hasVampiricSoul && this.hp > 0 && finalDamage > 0) {
+      this.heal(Math.round(finalDamage * 0.18));
+    }
+
+    // Blade Resonance Augment: Skill hit grants +25% Speed for 4s
+    if (this.hasBladeFury && typeof this.applySpeedBoost === 'function') {
+      this.applySpeedBoost(1.25, 4000);
     }
   }
 
@@ -689,7 +731,7 @@ export default class Player extends BaseCharacter {
         let angleDiff = Math.abs(Phaser.Math.Angle.Normalize(angleToTarget - faceAngle));
         if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
         if (angleDiff <= halfArc) {
-          target.takeDamage(damage, isCrit);
+          this.applyDamageToTarget(target, damage, isCrit);
         }
       }
     });
@@ -700,7 +742,7 @@ export default class Player extends BaseCharacter {
     targets.forEach(target => {
       const dist = Phaser.Math.Distance.Between(originX, originY, target.x, target.y);
       if (dist <= radius) {
-        target.takeDamage(damage, isCrit);
+        this.applyDamageToTarget(target, damage, isCrit);
         if (doKnockup && typeof target.applyKnockup === 'function') {
           target.applyKnockup(600);
         }
@@ -720,7 +762,7 @@ export default class Player extends BaseCharacter {
         if (angleDiff <= halfArc) {
           const missingHpRatio = Math.max(0, 1 - (target.hp / target.maxHp));
           const finalDamage = Math.round(baseDamage * (1 + missingHpRatio * 1.2));
-          target.takeDamage(finalDamage, true);
+          this.applyDamageToTarget(target, finalDamage, true);
         }
       }
     });
