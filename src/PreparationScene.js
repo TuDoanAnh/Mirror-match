@@ -4,6 +4,8 @@ import { GAME_CONFIG } from './gameConfig';
 import { preloadLuxAssets, createLuxAnimations } from './luxAnimations';
 import { preloadEzrealSkillAssets, createEzrealSkillAnimations } from './ezrealSkillAnimations';
 import { preloadJinxAssets, createJinxAnimations } from './jinxAnimations';
+import { preloadZedSkillAssets, createZedSkillAnimations } from './zedAnimations';
+import { preloadRivenSkillAssets, createRivenSkillAnimations } from './rivenAnimations';
 import { preloadCharacterSFX, playPreparationBGM, stopPreparationBGM } from './soundManager';
 import { ALL_AUGMENTS } from './AugmentManager';
 
@@ -16,6 +18,8 @@ export default class PreparationScene extends Phaser.Scene {
     preloadLuxAssets(this);
     preloadEzrealSkillAssets(this);
     preloadJinxAssets(this);
+    preloadZedSkillAssets(this);
+    preloadRivenSkillAssets(this);
     preloadCharacterSFX(this);
   }
 
@@ -23,6 +27,8 @@ export default class PreparationScene extends Phaser.Scene {
     createLuxAnimations(this);
     createEzrealSkillAnimations(this);
     createJinxAnimations(this);
+    createZedSkillAnimations(this);
+    createRivenSkillAnimations(this);
     playPreparationBGM(this);
 
     // Registry initialization

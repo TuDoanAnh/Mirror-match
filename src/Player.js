@@ -179,7 +179,12 @@ export default class Player extends BaseCharacter {
     // Play skill SFX
     playSkillSFX(this.scene, this.heroId, skillKey);
 
-    const channelTime = (skill.config && skill.config.channelTime) || 0;
+    let channelTime = (skill.config && skill.config.channelTime) || 0;
+
+    // Riven Q3 Cast Time: 0.5s (500ms) windup for 3rd step of Q combo!
+    if (this.heroId === 'riven' && skillKey === 'Q' && (this.rivenQCombo || 0) === 2) {
+      channelTime = 500;
+    }
 
     if (skill.type === 'LUX_BEAM') {
       this.executeLuxBeam(skillKey, targetX, targetY, fireAngle);
@@ -192,24 +197,35 @@ export default class Player extends BaseCharacter {
       this.setRotation(0);
 
       // Charging aura ring at player position
-      const auraCircle = this.scene.add.circle(this.x, this.y, 40);
-      auraCircle.setStrokeStyle(3, this.heroData.color || 0xffaa00);
+      const auraColor = (this.heroId === 'riven') ? 0x10b981 : (this.heroData.color || 0xffaa00);
+      const auraCircle = this.scene.add.circle(this.x, this.y, 45, auraColor, 0.8);
+      auraCircle.setStrokeStyle(4, 0xffffff, 1);
       auraCircle.setBlendMode('ADD');
 
       const auraTween = this.scene.tweens.add({
         targets: auraCircle,
-        scale: 0.1,
-        alpha: { start: 1, end: 0.2 },
+        scale: { start: 0.2, end: 2.4 },
+        alpha: { start: 1, end: 0 },
         duration: channelTime,
         ease: 'Linear'
       });
 
+      // Show windup text notification
+      if (this.scene) {
+        import('./FloatingDamage').then(m => {
+          if (m.showDamageText) {
+            const label = (this.heroId === 'riven' && skillKey === 'Q') ? 'SLAM WINDUP (0.5s)...' : 'WIND SLASH (0.5s)...';
+            m.showDamageText(this.scene, this.x, this.y - 30, label, 'crit');
+          }
+        }).catch(() => {});
+      }
+
       // Targeting sight line
       const indicator = this.scene.add.graphics();
-      const beamLength = 1000;
+      const beamLength = (skill.config && skill.config.range) || 360;
       const curEndX = this.x + Math.cos(fireAngle) * beamLength;
       const curEndY = this.y + Math.sin(fireAngle) * beamLength;
-      indicator.lineStyle(2, this.heroData.color || 0xffaa00, 0.6);
+      indicator.lineStyle(3, auraColor, 0.85);
       indicator.beginPath();
       indicator.moveTo(this.x, this.y);
       indicator.lineTo(curEndX, curEndY);
@@ -547,50 +563,95 @@ export default class Player extends BaseCharacter {
 
       // 2. Spawn 3 Crescent Energy Waves travelling in a 40° fan
       const waveOffsets = [-0.28, 0, 0.28];
+      const waveTexKeys = ['riven_r_wave1', 'riven_r_wave2', 'riven_r_wave3'];
       const startX = this.x;
       const startY = this.y;
 
-      waveOffsets.forEach(offset => {
+      waveOffsets.forEach((offset, idx) => {
         const waveAngle = angle + offset;
-        const waveG = this.scene.add.graphics();
-        waveG.setPosition(startX, startY);
-        waveG.setRotation(waveAngle);
-        waveG.setDepth(15);
-        waveG.setBlendMode('ADD');
-
-        // Draw Crescent Blade Wave locally pointing right (0 rad)
-        waveG.fillStyle(0x10b981, 0.5);
-        waveG.beginPath();
-        waveG.arc(0, 0, 80, -0.42, 0.42, false);
-        waveG.arc(0, 0, 55, 0.42, -0.42, true);
-        waveG.closePath();
-        waveG.fillPath();
-
-        waveG.lineStyle(9, 0x34d399, 1.0);
-        waveG.beginPath();
-        waveG.arc(0, 0, 80, -0.42, 0.42, false);
-        waveG.strokePath();
-
-        waveG.lineStyle(4, 0xffffff, 1.0);
-        waveG.beginPath();
-        waveG.arc(0, 0, 76, -0.38, 0.38, false);
-        waveG.strokePath();
+        const texKey = waveTexKeys[idx % waveTexKeys.length];
 
         const destX = startX + Math.cos(waveAngle) * range;
         const destY = startY + Math.sin(waveAngle) * range;
 
-        // Move wave graphics outward to target range along waveAngle
-        this.scene.tweens.add({
-          targets: waveG,
-          x: destX,
-          y: destY,
-          scaleX: 1.7,
-          scaleY: 1.7,
-          alpha: { start: 1, end: 0 },
-          duration: 400,
-          ease: 'Cubic.easeOut',
-          onComplete: () => waveG.destroy()
-        });
+        if (this.scene.textures.exists(texKey)) {
+          // Layer 1: Solid crisp core texture (NORMAL blend mode, crystal clear contrast)
+          const coreSprite = this.scene.add.sprite(startX, startY, texKey);
+          coreSprite.setRotation(waveAngle);
+          coreSprite.setDepth(15);
+          coreSprite.setBlendMode('NORMAL');
+          coreSprite.setScale(0.12);
+
+          // Layer 2: Radiant emerald energy aura (ADD blend mode, glowing rim)
+          const glowSprite = this.scene.add.sprite(startX, startY, texKey);
+          glowSprite.setRotation(waveAngle);
+          glowSprite.setDepth(16);
+          glowSprite.setBlendMode('ADD');
+          glowSprite.setTint(0x34d399);
+          glowSprite.setScale(0.13);
+
+          this.scene.tweens.add({
+            targets: [coreSprite, glowSprite],
+            x: destX,
+            y: destY,
+            scaleX: 0.22,
+            scaleY: 0.22,
+            duration: 420,
+            ease: 'Cubic.easeOut'
+          });
+
+          this.scene.tweens.add({
+            targets: coreSprite,
+            alpha: { start: 1.0, end: 0.2 },
+            duration: 420,
+            ease: 'Cubic.easeOut',
+            onComplete: () => coreSprite.destroy()
+          });
+
+          this.scene.tweens.add({
+            targets: glowSprite,
+            alpha: { start: 0.85, end: 0 },
+            duration: 420,
+            ease: 'Cubic.easeOut',
+            onComplete: () => glowSprite.destroy()
+          });
+        } else {
+          // Dynamic graphics fallback if texture doesn't exist
+          const waveG = this.scene.add.graphics();
+          waveG.setPosition(startX, startY);
+          waveG.setRotation(waveAngle);
+          waveG.setDepth(15);
+          waveG.setBlendMode('ADD');
+
+          waveG.fillStyle(0x10b981, 0.5);
+          waveG.beginPath();
+          waveG.arc(0, 0, 80, -0.42, 0.42, false);
+          waveG.arc(0, 0, 55, 0.42, -0.42, true);
+          waveG.closePath();
+          waveG.fillPath();
+
+          waveG.lineStyle(9, 0x34d399, 1.0);
+          waveG.beginPath();
+          waveG.arc(0, 0, 80, -0.42, 0.42, false);
+          waveG.strokePath();
+
+          waveG.lineStyle(4, 0xffffff, 1.0);
+          waveG.beginPath();
+          waveG.arc(0, 0, 76, -0.38, 0.38, false);
+          waveG.strokePath();
+
+          this.scene.tweens.add({
+            targets: waveG,
+            x: destX,
+            y: destY,
+            scaleX: 1.7,
+            scaleY: 1.7,
+            alpha: { start: 1, end: 0 },
+            duration: 400,
+            ease: 'Cubic.easeOut',
+            onComplete: () => waveG.destroy()
+          });
+        }
       });
 
       // Camera Shake for Ultimate

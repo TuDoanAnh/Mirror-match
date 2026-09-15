@@ -25,12 +25,21 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
     const projColor = (type === 'SPACE') ? (heroData.ultColor || 0xffaa00) : (heroData.projColor || 0x00ffff);
     this.particleColor = projColor;
 
-    // Use Ezreal / Lux Skill Spritesheets if available
+    // Use Ezreal / Lux / Jinx / Zed Skill Spritesheets if available
     const isEzrealOrFallback = (heroId === 'ezreal');
     const isLux = (heroId === 'lux');
     const isJinx = (heroId === 'jinx');
+    const isZed = (heroId === 'zed');
 
-    if (this.type === 'Q' && isLux && scene.textures.exists('lux_q_skill')) {
+    if (this.type === 'Q' && isZed && scene.textures.exists('zed_q_skill')) {
+      this.setTexture('zed_q_skill', 0);
+      if (scene.anims.exists('zed_q_anim')) {
+        this.play('zed_q_anim');
+      }
+      this.setScale(0.22);
+      this.setOrigin(0.5, 0.5);
+      this.body.setSize(32, 32);
+    } else if (this.type === 'Q' && isLux && scene.textures.exists('lux_q_skill')) {
       this.setTexture('lux_q_skill');
       this.setScale(0.55);
       this.setOrigin(0.5, 0.5);

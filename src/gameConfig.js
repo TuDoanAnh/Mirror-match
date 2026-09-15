@@ -165,7 +165,7 @@ export const GAME_CONFIG = {
       skills: {
         Q: { type: 'RIVEN_Q', name: 'Broken Wings', cooldown: 4000, config: { damage: 110, dashDistance: 110, slashArc: 110, knockupDuration: 600 } },
         E: { type: 'RIVEN_E', name: 'Valor', cooldown: 6000, config: { dashDistance: 160, shieldHp: 220, duration: 2500 } },
-        SPACE: { type: 'RIVEN_WINDSLASH', name: 'Wind Slash', cooldown: 14000, config: { damage: 480, range: 360, angleWidth: 60, channelTime: 250 } }
+        SPACE: { type: 'RIVEN_WINDSLASH', name: 'Wind Slash', cooldown: 14000, config: { damage: 480, range: 360, angleWidth: 60, channelTime: 500 } }
       }
     }
   }

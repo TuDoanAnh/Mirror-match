@@ -6,6 +6,8 @@ import { GAME_CONFIG } from './gameConfig';
 import { preloadLuxAssets, createLuxAnimations } from './luxAnimations';
 import { preloadEzrealSkillAssets, createEzrealSkillAnimations } from './ezrealSkillAnimations';
 import { preloadJinxAssets, createJinxAnimations } from './jinxAnimations';
+import { preloadZedSkillAssets, createZedSkillAnimations } from './zedAnimations';
+import { preloadRivenSkillAssets, createRivenSkillAnimations } from './rivenAnimations';
 import { preloadCharacterSFX, playHitSFX, playCustomSFX, playBattleBGM, stopBattleBGM } from './soundManager';
 import mapImageUrl from './assets/image/Map.png';
 import { MAP_OBSTACLES } from './mapObstacles';
@@ -23,6 +25,8 @@ export default class GameScene extends Phaser.Scene {
     preloadLuxAssets(this);
     preloadEzrealSkillAssets(this);
     preloadJinxAssets(this);
+    preloadZedSkillAssets(this);
+    preloadRivenSkillAssets(this);
     preloadCharacterSFX(this);
     if (!this.textures.exists('battle_map')) {
       this.load.image('battle_map', mapImageUrl);
@@ -45,6 +49,8 @@ export default class GameScene extends Phaser.Scene {
     createLuxAnimations(this);
     createEzrealSkillAnimations(this);
     createJinxAnimations(this);
+    createZedSkillAnimations(this);
+    createRivenSkillAnimations(this);
     this.isGameOver = false;
     this.matchStartTime = this.time.now;
     playBattleBGM(this);
