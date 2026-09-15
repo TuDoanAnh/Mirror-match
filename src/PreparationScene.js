@@ -295,7 +295,7 @@ export default class PreparationScene extends Phaser.Scene {
     const selectedData = GAME_CONFIG.CHARACTERS[currentHero] || GAME_CONFIG.CHARACTERS.ezreal;
     
     this.add.circle(centerX, currentY, 24, 0xffffff, 0.25);
-    if (['ezreal', 'lux', 'jinx', 'ahri', 'zed'].includes(currentHero)) {
+    if (['ezreal', 'lux', 'jinx', 'zed', 'riven'].includes(currentHero)) {
       const sheetKey = `${currentHero}_spritesheet`;
       const idleKey = `${currentHero}_idle`;
       if (this.textures.exists(sheetKey)) {

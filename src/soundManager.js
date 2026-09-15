@@ -113,7 +113,7 @@ export const HERO_VOLUME_MULTIPLIERS = {
   ezreal: 0.4,
   lux: 0.7,
   zed: 2.0,
-  riven: 1.5,
+  riven: 1.3,
   jinx: 2.0
 };
 

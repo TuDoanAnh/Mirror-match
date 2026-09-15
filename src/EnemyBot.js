@@ -283,20 +283,34 @@ export default class EnemyBot extends Player {
   updateSkillCasting(time, dist, aimX, aimY) {
     const chance = Phaser.Math.Between(1, 100);
 
-    // 1. RIVEN AI (Melee Combo Brawler)
+    // 1. RIVEN AI (Smart Combo Brawler & Gap-Closer)
     if (this.heroId === 'riven') {
-      if ((this.rivenQCombo || 0) > 0) {
-        this.useSkill('Q', time, aimX, aimY);
-      } else if (dist < 200 && chance > 55) {
-        this.useSkill('Q', time, aimX, aimY);
+      const qCombo = this.rivenQCombo || 0;
+      const lastQTime = this.lastRivenQStepTime || 0;
+
+      // Real-time aim coordinates at player position
+      const realTargetX = this.target.x;
+      const realTargetY = this.target.y;
+
+      // Ongoing Q Combo (Q2 or Q3): Recast Q directly aiming at target's current location!
+      if (qCombo > 0 && qCombo < 3) {
+        if (time >= lastQTime + 480) { // 480ms pacing between combo steps
+          this.useSkill('Q', time, realTargetX, realTargetY);
+        }
+      }
+      // Initiate Q1: Use Q to gap-close & charge target if in range (80px .. 480px)
+      else if (dist > 80 && dist < 480 && chance > 35) {
+        this.useSkill('Q', time, realTargetX, realTargetY);
       }
 
-      if (dist > 140 && dist < 420 && chance > 80) {
-        this.useSkill('E', time, aimX, aimY);
+      // E Valor Dash: Use E to gap-close or shield when engaging
+      if (dist > 120 && dist < 450 && chance > 60) {
+        this.useSkill('E', time, realTargetX, realTargetY);
       }
 
-      if (dist < 380 && chance > 85) {
-        this.useSkill('SPACE', time, aimX, aimY);
+      // Space Wind Slash Ultimate: Fire 3-wave fan finisher if target in range (< 420px)
+      if (dist < 420 && (this.target.isRooted || this.target.hp < this.target.maxHp * 0.6 || chance > 75)) {
+        this.useSkill('SPACE', time, realTargetX, realTargetY);
       }
       return;
     }

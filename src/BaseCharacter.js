@@ -3,6 +3,18 @@ import { GAME_CONFIG } from './gameConfig';
 import { showDamageText } from './FloatingDamage';
 import { playHitSFX, playCustomSFX, playZedDeathMarkSFX } from './soundManager';
 
+export function getParticleTexture(scene) {
+  if (!scene || !scene.textures) return 'proj_particle';
+  if (!scene.textures.exists('proj_particle')) {
+    const g = scene.make.graphics({ x: 0, y: 0, add: false });
+    g.fillStyle(0xffffff, 1);
+    g.fillCircle(8, 8, 8);
+    g.generateTexture('proj_particle', 16, 16);
+    g.destroy();
+  }
+  return 'proj_particle';
+}
+
 export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
   constructor(scene, x, y, isBot = false, color = 0x0088ff, heroId = null) {
     super(scene, x, y, '');
@@ -36,8 +48,8 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     this.shadow.setDepth(4);
 
     // Glowing Hero Base Ring Indicator
-    if (['ezreal', 'lux', 'jinx', 'riven'].includes(this.heroId)) {
-      const ringColor = this.isBot ? 0xff2255 : (this.heroId === 'riven' ? 0x10b981 : 0x00e5ff);
+    if (['ezreal', 'lux', 'jinx', 'riven', 'zed'].includes(this.heroId)) {
+      const ringColor = this.isBot ? 0xff2255 : (this.heroId === 'riven' ? 0x10b981 : (this.heroId === 'zed' ? 0xef4444 : 0x00e5ff));
       this.baseRing = scene.add.ellipse(x, y + 18, 34, 14);
       this.baseRing.setStrokeStyle(2, ringColor, 0.85);
       this.baseRing.setDepth(5);
@@ -84,60 +96,38 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
   }
 
   setupHeroTexture(color = 0x0088ff) {
-    if (['ezreal', 'lux', 'jinx'].includes(this.heroId)) {
-      const sheetKey = `${this.heroId}_spritesheet`;
-      if (this.scene.textures.exists(sheetKey)) {
-        this.setTexture(sheetKey, 0);
-      }
+    let sheetKey = `${this.heroId}_spritesheet`;
+    if (!this.scene.textures.exists(sheetKey)) {
+      sheetKey = (this.heroId === 'riven') ? 'ezreal_spritesheet' : 'lux_spritesheet';
+    }
+
+    if (this.scene.textures.exists(sheetKey)) {
+      this.setTexture(sheetKey, 0);
       this.setOrigin(0.5, 0.6);
       this.body.setCircle(16, 8, 12);
       this.setScale(1.1);
-      const idleKey = `${this.heroId}_idle`;
+      this.clearTint();
+
+      const animPrefix = ['ezreal', 'lux', 'jinx', 'riven', 'zed'].includes(this.heroId) ? this.heroId : 'ezreal';
+      const idleKey = `${animPrefix}_idle`;
       if (this.scene.anims && this.scene.anims.exists(idleKey)) {
         this.play(idleKey);
       }
-    } else {
-      const texKey = this.isBot ? `bot_tex_${this.heroId}_${color}` : `player_tex_${this.heroId}_${color}`;
-      if (!this.scene.textures.exists(texKey)) {
-        const graphics = this.scene.make.graphics({ x: 0, y: 0, add: false });
-        graphics.fillStyle(color || (this.isBot ? 0xef4444 : 0x0088ff), 1);
-        graphics.lineStyle(2, 0xffffff, 1);
-        graphics.beginPath();
-        graphics.moveTo(32, 16);
-        graphics.lineTo(0, 32);
-        graphics.lineTo(8, 16);
-        graphics.lineTo(0, 0);
-        graphics.closePath();
-        graphics.fillPath();
-        graphics.strokePath();
-
-        graphics.fillStyle(this.isBot ? 0xffaaaa : 0x00ffff, 1);
-        graphics.fillCircle(6, 16, 4);
-
-        graphics.generateTexture(texKey, 32, 32);
-        graphics.destroy();
-      }
-
-      this.setTexture(texKey);
-      this.setOrigin(0.5, 0.5);
-      this.body.setCircle(16);
     }
   }
 
   updateAnimation() {
-    if (!['ezreal', 'lux', 'jinx', 'creep'].includes(this.heroId) || !this.active || this.hp <= 0) return;
+    if (!this.active || this.hp <= 0) return;
     if (this.isHurtAnimating) return;
 
-    const prefix = this.heroId;
+    const animPrefix = ['ezreal', 'lux', 'jinx', 'riven', 'zed'].includes(this.heroId) ? this.heroId : 'ezreal';
     const vx = this.body ? this.body.velocity.x : 0;
     const vy = this.body ? this.body.velocity.y : 0;
     const currentSpeed = Math.sqrt(vx * vx + vy * vy);
 
-    // Heroes whose walk_right frames face left in the raw PNG require flipX(true) when moving right
-    const needsFlipRight = ['lux', 'jinx'].includes(prefix);
+    const needsFlipRight = ['lux', 'jinx'].includes(animPrefix);
 
     if (currentSpeed > 10) {
-      // Dynamically scale animation playback speed with movement speed
       const baseSpeed = this.speed || 200;
       const animScale = Math.min(2.8, Math.max(0.6, currentSpeed / baseSpeed));
       if (this.anims) {
@@ -147,24 +137,24 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
       if (Math.abs(vx) >= Math.abs(vy)) {
         if (vx < 0) {
           this.setFlipX(false);
-          if (this.anims.currentAnim?.key !== `${prefix}_walk_left`) {
-            this.play(`${prefix}_walk_left`, true);
+          if (this.anims.currentAnim?.key !== `${animPrefix}_walk_left`) {
+            this.play(`${animPrefix}_walk_left`, true);
           }
         } else {
           this.setFlipX(needsFlipRight);
-          if (this.anims.currentAnim?.key !== `${prefix}_walk_right`) {
-            this.play(`${prefix}_walk_right`, true);
+          if (this.anims.currentAnim?.key !== `${animPrefix}_walk_right`) {
+            this.play(`${animPrefix}_walk_right`, true);
           }
         }
       } else {
         this.setFlipX(false);
         if (vy < 0) {
-          if (this.anims.currentAnim?.key !== `${prefix}_walk_up`) {
-            this.play(`${prefix}_walk_up`, true);
+          if (this.anims.currentAnim?.key !== `${animPrefix}_walk_up`) {
+            this.play(`${animPrefix}_walk_up`, true);
           }
         } else {
-          if (this.anims.currentAnim?.key !== `${prefix}_walk_down`) {
-            this.play(`${prefix}_walk_down`, true);
+          if (this.anims.currentAnim?.key !== `${animPrefix}_walk_down`) {
+            this.play(`${animPrefix}_walk_down`, true);
           }
         }
       }
@@ -173,8 +163,8 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
       if (this.anims) {
         this.anims.timeScale = 1.0;
       }
-      if (this.anims.currentAnim?.key !== `${prefix}_idle`) {
-        this.play(`${prefix}_idle`, true);
+      if (this.anims.currentAnim?.key !== `${animPrefix}_idle`) {
+        this.play(`${animPrefix}_idle`, true);
       }
     }
   }
@@ -182,7 +172,6 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
   handleAim(targetX, targetY) {
     if (this.isChanneling) return;
     this.aimAngle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
-    // Animated top-down characters keep 0 rotation (use directional animations)
     this.setRotation(0);
   }
 
@@ -198,9 +187,7 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     this.skills[skillKey].lastUsed = time;
 
     const fireAngle = Phaser.Math.Angle.Between(this.x, this.y, targetX, targetY);
-    if (!['ezreal', 'lux', 'jinx'].includes(this.heroId)) {
-      this.setRotation(fireAngle);
-    }
+    this.setRotation(0);
 
     if (skillKey === 'Q') {
       this.executeQ(targetX, targetY, fireAngle);
@@ -473,7 +460,7 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     });
 
     const hurtKey = `${this.heroId}_hurt`;
-    if (['ezreal', 'lux', 'jinx'].includes(this.heroId) && this.scene.anims && this.scene.anims.exists(hurtKey)) {
+    if (['ezreal', 'lux', 'jinx', 'riven', 'zed'].includes(this.heroId) && this.scene.anims && this.scene.anims.exists(hurtKey)) {
       this.isHurtAnimating = true;
       this.play(hurtKey);
       this.once(`animationcomplete-${hurtKey}`, () => {
@@ -551,7 +538,8 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
       onComplete: () => ring.destroy()
     });
 
-    const particles = this.scene.add.particles(this.x, this.y, this.texture.key, {
+    const pTex = getParticleTexture(this.scene);
+    const particles = this.scene.add.particles(this.x, this.y, pTex, {
       speed: { min: 100, max: 300 },
       scale: { start: 1, end: 0 },
       blendMode: 'ADD',

@@ -2,11 +2,15 @@ import luxSpritesheetUrl from './assets/image/lux_spritesheet.png';
 import ezrealSpritesheetUrl from './assets/image/ezreal_spritesheet.png';
 import jinxSpritesheetUrl from './assets/image/jinx_spritesheet.png';
 import creepSpritesheetUrl from './assets/image/creep_spritesheet.png';
+import rivenSpritesheetUrl from './assets/image/riven_spritesheet.png';
+import zedSpritesheetUrl from './assets/image/zed_spritesheet.png';
 
 const HERO_URLS = {
   lux: luxSpritesheetUrl,
   ezreal: ezrealSpritesheetUrl,
   jinx: jinxSpritesheetUrl,
+  riven: rivenSpritesheetUrl,
+  zed: zedSpritesheetUrl,
   creep: creepSpritesheetUrl
 };
 
@@ -25,7 +29,7 @@ export function preloadCharacterAssets(scene) {
 export function createCharacterAnimations(scene) {
   if (!scene.anims) return;
 
-  const heroes = ['ezreal', 'lux', 'jinx'];
+  const heroes = ['ezreal', 'lux', 'jinx', 'riven', 'zed'];
   heroes.forEach(heroId => {
     const keyPrefix = heroId;
     const sheetKey = `${heroId}_spritesheet`;

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import BaseCharacter from './BaseCharacter';
+import BaseCharacter, { getParticleTexture } from './BaseCharacter';
 import Projectile from './Projectile';
 import { GAME_CONFIG } from './gameConfig';
 import { playSkillSFX } from './soundManager';
@@ -189,7 +189,7 @@ export default class Player extends BaseCharacter {
     if (channelTime > 0) {
       this.isChanneling = true;
       this.setVelocity(0, 0);
-      this.setRotation(fireAngle);
+      this.setRotation(0);
 
       // Charging aura ring at player position
       const auraCircle = this.scene.add.circle(this.x, this.y, 40);
@@ -330,7 +330,7 @@ export default class Player extends BaseCharacter {
       return true; // Allow instant recast to swap positions with shadow!
     }
     if (this.heroId === 'riven' && skillKey === 'Q' && (this.rivenQCombo || 0) > 0 && (this.rivenQCombo || 0) < 3) {
-      return true; // Allow instant recast during Q combo!
+      return time >= ((this.lastRivenQStepTime || 0) + 450); // Require 450ms between Q combo steps!
     }
 
     if (this.heroId === 'zed' && skillKey === 'SPACE') {
@@ -357,6 +357,7 @@ export default class Player extends BaseCharacter {
     const damage = skillConfig.damage || 110;
 
     this.rivenQCombo = (this.rivenQCombo || 0) + 1;
+    this.lastRivenQStepTime = this.scene ? this.scene.time.now : Date.now();
     const comboStep = this.rivenQCombo;
 
     if (this.rivenQTimer) this.rivenQTimer.remove();
@@ -366,46 +367,72 @@ export default class Player extends BaseCharacter {
 
     playSkillSFX(this.scene, 'riven', 'Q', { comboStep });
 
+    // Orient character sprite facing direction & reset rotation
+    this.setRotation(0);
+    if (Math.abs(Math.cos(angle)) >= Math.abs(Math.sin(angle))) {
+      if (Math.cos(angle) < 0) {
+        this.setFlipX(false);
+        if (this.anims && this.anims.exists('riven_walk_left')) this.play('riven_walk_left', true);
+      } else {
+        this.setFlipX(false);
+        if (this.anims && this.anims.exists('riven_walk_right')) this.play('riven_walk_right', true);
+      }
+    } else {
+      this.setFlipX(false);
+      if (Math.sin(angle) < 0) {
+        if (this.anims && this.anims.exists('riven_walk_up')) this.play('riven_walk_up', true);
+      } else {
+        if (this.anims && this.anims.exists('riven_walk_down')) this.play('riven_walk_down', true);
+      }
+    }
+
     if (comboStep < 3) {
       this.executeDash(skillKey, targetX, targetY, angle);
 
       if (this.scene) {
-        // Multi-layered Crescent Slash Arc
+        // Multi-layered Crescent Slash Arc pointing along 'angle'
         const slashG = this.scene.add.graphics();
         slashG.setPosition(this.x, this.y);
+        slashG.setRotation(angle);
+        slashG.setDepth(15);
+        slashG.setBlendMode('ADD');
 
-        // 1. Filled arc sector
-        slashG.fillStyle(0x10b981, 0.35);
+        // 1. Filled arc sector locally pointing right (0 rad)
+        slashG.fillStyle(0x10b981, 0.45);
         slashG.beginPath();
         slashG.moveTo(0, 0);
-        slashG.arc(0, 0, 95, angle - Math.PI / 3, angle + Math.PI / 3, false);
+        slashG.arc(0, 0, 110, -Math.PI / 3, Math.PI / 3, false);
         slashG.closePath();
         slashG.fillPath();
 
         // 2. Thick Outer Emerald Arc
-        slashG.lineStyle(10, 0x10b981, 0.95);
+        slashG.lineStyle(12, 0x10b981, 0.95);
         slashG.beginPath();
-        slashG.arc(0, 0, 95, angle - Math.PI / 3, angle + Math.PI / 3, false);
+        slashG.arc(0, 0, 110, -Math.PI / 3, Math.PI / 3, false);
         slashG.strokePath();
 
         // 3. Bright Core White Arc
-        slashG.lineStyle(4, 0xffffff, 1.0);
+        slashG.lineStyle(5, 0xffffff, 1.0);
         slashG.beginPath();
-        slashG.arc(0, 0, 90, angle - Math.PI / 3.5, angle + Math.PI / 3.5, false);
+        slashG.arc(0, 0, 105, -Math.PI / 3.5, Math.PI / 3.5, false);
         slashG.strokePath();
 
-        slashG.setBlendMode('ADD');
+        const dashForwardX = this.x + Math.cos(angle) * 45;
+        const dashForwardY = this.y + Math.sin(angle) * 45;
 
         this.scene.tweens.add({
           targets: slashG,
+          x: dashForwardX,
+          y: dashForwardY,
           alpha: 0,
-          scale: 1.3,
-          duration: 220,
+          scale: 1.4,
+          duration: 250,
+          ease: 'Quad.easeOut',
           onComplete: () => slashG.destroy()
         });
 
         // Slash Particle Burst
-        const pTex = this.scene.textures.exists('proj_particle') ? 'proj_particle' : this.texture.key;
+        const pTex = getParticleTexture(this.scene);
         const particles = this.scene.add.particles(this.x, this.y, pTex, {
           speed: { min: 180, max: 350 },
           angle: { min: Phaser.Math.RadToDeg(angle) - 45, max: Phaser.Math.RadToDeg(angle) + 45 },
@@ -470,7 +497,7 @@ export default class Player extends BaseCharacter {
         });
 
         // Ground Slam Particles
-        const pTex = this.scene.textures.exists('proj_particle') ? 'proj_particle' : this.texture.key;
+        const pTex = getParticleTexture(this.scene);
         const particles = this.scene.add.particles(this.x, this.y, pTex, {
           speed: { min: 150, max: 320 },
           scale: { start: 0.8, end: 0 },
@@ -500,6 +527,7 @@ export default class Player extends BaseCharacter {
   }
 
   executeRivenWindSlash(skillKey, targetX, targetY, angle) {
+    this.setRotation(0);
     const skillConfig = this.skills[skillKey].config;
     const baseDamage = skillConfig.damage || 480;
     const range = skillConfig.range || 360;
@@ -517,8 +545,8 @@ export default class Player extends BaseCharacter {
         onComplete: () => auraCircle.destroy()
       });
 
-      // 2. Spawn 3 Crescent Energy Waves travelling in a 45° fan
-      const waveOffsets = [-0.22, 0, 0.22];
+      // 2. Spawn 3 Crescent Energy Waves travelling in a 40° fan
+      const waveOffsets = [-0.28, 0, 0.28];
       const startX = this.x;
       const startY = this.y;
 
@@ -526,39 +554,40 @@ export default class Player extends BaseCharacter {
         const waveAngle = angle + offset;
         const waveG = this.scene.add.graphics();
         waveG.setPosition(startX, startY);
+        waveG.setRotation(waveAngle);
         waveG.setDepth(15);
         waveG.setBlendMode('ADD');
 
-        // Draw Crescent Blade Wave
-        waveG.fillStyle(0x10b981, 0.4);
+        // Draw Crescent Blade Wave locally pointing right (0 rad)
+        waveG.fillStyle(0x10b981, 0.5);
         waveG.beginPath();
-        waveG.arc(0, 0, 70, waveAngle - 0.35, waveAngle + 0.35, false);
-        waveG.arc(0, 0, 50, waveAngle + 0.35, waveAngle - 0.35, true);
+        waveG.arc(0, 0, 80, -0.42, 0.42, false);
+        waveG.arc(0, 0, 55, 0.42, -0.42, true);
         waveG.closePath();
         waveG.fillPath();
 
-        waveG.lineStyle(8, 0x34d399, 1.0);
+        waveG.lineStyle(9, 0x34d399, 1.0);
         waveG.beginPath();
-        waveG.arc(0, 0, 70, waveAngle - 0.35, waveAngle + 0.35, false);
+        waveG.arc(0, 0, 80, -0.42, 0.42, false);
         waveG.strokePath();
 
-        waveG.lineStyle(3, 0xffffff, 1.0);
+        waveG.lineStyle(4, 0xffffff, 1.0);
         waveG.beginPath();
-        waveG.arc(0, 0, 68, waveAngle - 0.3, waveAngle + 0.3, false);
+        waveG.arc(0, 0, 76, -0.38, 0.38, false);
         waveG.strokePath();
 
         const destX = startX + Math.cos(waveAngle) * range;
         const destY = startY + Math.sin(waveAngle) * range;
 
-        // Move wave graphics outward to target range
+        // Move wave graphics outward to target range along waveAngle
         this.scene.tweens.add({
           targets: waveG,
           x: destX,
           y: destY,
-          scaleX: 1.6,
-          scaleY: 1.6,
+          scaleX: 1.7,
+          scaleY: 1.7,
           alpha: { start: 1, end: 0 },
-          duration: 380,
+          duration: 400,
           ease: 'Cubic.easeOut',
           onComplete: () => waveG.destroy()
         });
@@ -693,7 +722,8 @@ export default class Player extends BaseCharacter {
     const shadowX = safePos.x;
     const shadowY = safePos.y;
 
-    const shadow = this.scene.add.sprite(shadowX, shadowY, this.texture.key);
+    const currentFrame = (this.frame && this.frame.name !== undefined) ? this.frame.name : 0;
+    const shadow = this.scene.add.sprite(shadowX, shadowY, this.texture.key, currentFrame);
     shadow.setTint(0x222222);
     shadow.setAlpha(0.85);
     shadow.setDepth(9);
@@ -805,8 +835,8 @@ export default class Player extends BaseCharacter {
   }
 
   getSafeDashPosition(startX, startY, fireAngle, maxDist) {
-    let safeX = startX;
-    let safeY = startY;
+    let safeX = Phaser.Math.Clamp(startX, 190, 1230);
+    let safeY = Phaser.Math.Clamp(startY, 130, 880);
     const stepSize = 8;
     const totalSteps = Math.floor(maxDist / stepSize);
 
@@ -854,7 +884,7 @@ export default class Player extends BaseCharacter {
     return { x: safeX, y: safeY };
   }
 
-  executeDash(skillKey, targetX, targetY, fireAngle) {
+  executeDash(skillKey, targetX, targetY, fireAngle, dashDuration = 120, showTrail = true) {
     const skill = this.skills[skillKey];
     const dashDist = skill.config ? skill.config.dashDistance : (skill.dashDistance || 150);
     const dist = Phaser.Math.Distance.Between(this.x, this.y, targetX, targetY);
@@ -868,33 +898,56 @@ export default class Player extends BaseCharacter {
     }
 
     const safePos = this.getSafeDashPosition(startX, startY, fireAngle, actualDist);
-    this.x = safePos.x;
-    this.y = safePos.y;
-    if (this.body) {
-      this.body.reset(this.x, this.y);
+    const endX = safePos.x;
+    const endY = safePos.y;
+
+    const isInstant = (this.heroId === 'ezreal');
+
+    if (isInstant || !this.scene) {
+      this.x = endX;
+      this.y = endY;
+      if (this.body) this.body.reset(endX, endY);
+    } else {
+      this.scene.tweens.add({
+        targets: this,
+        x: endX,
+        y: endY,
+        duration: dashDuration,
+        ease: 'Cubic.easeOut',
+        onUpdate: () => {
+          if (this.body) this.body.reset(this.x, this.y);
+        },
+        onComplete: () => {
+          if (this.body) this.body.reset(this.x, this.y);
+        }
+      });
     }
 
-    const endX = this.x;
-    const endY = this.y;
+    const isRivenE = (this.heroId === 'riven' && skillKey === 'E');
 
-    // Create 4 ghost afterimages along the dash path
-    for (let i = 0; i <= 4; i++) {
-      const ghostX = Phaser.Math.Linear(startX, endX, i / 4);
-      const ghostY = Phaser.Math.Linear(startY, endY, i / 4);
+    const currentFrame = (this.frame && this.frame.name !== undefined) ? this.frame.name : 0;
 
-      const ghost = this.scene.add.sprite(ghostX, ghostY, this.texture.key);
-      ghost.setRotation(this.rotation);
-      ghost.setTint(this.heroData.color || 0x00ffff);
-      ghost.setBlendMode('ADD');
-      ghost.alpha = 0.6;
+    // Create 5 ghost afterimages along the dash path (Disabled for Riven E)
+    if (showTrail && !isRivenE) {
+      for (let i = 0; i <= 5; i++) {
+        const ghostX = Phaser.Math.Linear(startX, endX, i / 5);
+        const ghostY = Phaser.Math.Linear(startY, endY, i / 5);
 
-      this.scene.tweens.add({
-        targets: ghost,
-        alpha: 0,
-        scale: 1.3,
-        duration: 200 + (i * 50),
-        onComplete: () => ghost.destroy()
-      });
+        const ghost = this.scene.add.sprite(ghostX, ghostY, this.texture.key, currentFrame);
+        ghost.setRotation(this.rotation);
+        ghost.setTint(this.heroData.color || 0x10b981);
+        ghost.setBlendMode('ADD');
+        ghost.setDepth(12);
+        ghost.alpha = 0.75;
+
+        this.scene.tweens.add({
+          targets: ghost,
+          alpha: 0,
+          scale: 1.25,
+          duration: 220 + (i * 40),
+          onComplete: () => ghost.destroy()
+        });
+      }
     }
   }
 
@@ -991,7 +1044,7 @@ export default class Player extends BaseCharacter {
 
     this.isChanneling = true;
     this.setVelocity(0, 0);
-    this.setRotation(fireAngle);
+    this.setRotation(0);
 
     const beamLength = 2000;
     const indicator = this.scene.add.graphics();
