@@ -8,6 +8,7 @@ import { preloadZedSkillAssets, createZedSkillAnimations } from './zedAnimations
 import { preloadRivenSkillAssets, createRivenSkillAnimations } from './rivenAnimations';
 import { preloadCharacterSFX, playPreparationBGM, stopPreparationBGM } from './soundManager';
 import { ALL_AUGMENTS } from './AugmentManager';
+import { preloadShopItemAssets } from './shopItemLoader';
 
 export default class PreparationScene extends Phaser.Scene {
   constructor() {
@@ -20,6 +21,7 @@ export default class PreparationScene extends Phaser.Scene {
     preloadJinxAssets(this);
     preloadZedSkillAssets(this);
     preloadRivenSkillAssets(this);
+    preloadShopItemAssets(this);
     preloadCharacterSFX(this);
   }
 
@@ -355,34 +357,45 @@ export default class PreparationScene extends Phaser.Scene {
 
     this.shopItems = GAME_CONFIG.SHOP_ITEMS;
 
-    // Grid properties for 15 items (3 cols x 5 rows)
-    currentY += 55;
+    // Grid properties for 20 items (3 cols x 7 rows)
+    currentY += 45;
     let row = 0;
     let col = 0;
     const paddingX = 85;
-    const paddingY = 86;
-    
+    const paddingY = 72;
+
     this.itemButtons = [];
 
     this.shopItems.forEach((item, index) => {
       const x = (centerX - 85) + (col * paddingX);
       const y = currentY + (row * paddingY);
 
-      const box = this.add.rectangle(x, y, 56, 56, item.color).setInteractive({ useHandCursor: true });
-      box.setStrokeStyle(1.5, 0xffffff, 0.6);
+      const itemContainer = this.add.container(x, y);
 
-      // Short item initials or name
-      const nameParts = item.name.split(' ');
-      const shortName = nameParts.length > 1 ? `${nameParts[0][0]}${nameParts[1][0]}` : item.name.slice(0, 3);
-      this.add.text(x, y - 8, shortName, { fontSize: '13px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+      const box = this.add.rectangle(0, 0, 56, 56, 0x0f172a).setInteractive({ useHandCursor: true });
+      box.setStrokeStyle(1.5, item.color || 0x38bdf8, 0.9);
 
-      const priceText = this.add.text(x, y + 16, `${item.cost}G`, { fontSize: '11px', fill: '#ffff00', fontStyle: 'bold' }).setOrigin(0.5);
+      const itemKey = `item_${item.id}`;
+      const icon = this.add.image(0, -3, itemKey);
+      icon.setDisplaySize(44, 44);
+
+      const priceText = this.add.text(0, 17, `${item.cost}G`, {
+        fontSize: '11px',
+        fill: '#facc15',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 2
+      }).setOrigin(0.5);
+
+      itemContainer.add([box, icon, priceText]);
 
       box.on('pointerover', () => {
-        this.tweens.add({ targets: [box, priceText], scale: 1.12, duration: 150, ease: 'Power2' });
+        this.tweens.killTweensOf(itemContainer);
+        this.tweens.add({ targets: itemContainer, scale: 1.12, duration: 120, ease: 'Power2' });
       });
       box.on('pointerout', () => {
-        this.tweens.add({ targets: [box, priceText], scale: 1.0, duration: 150, ease: 'Power2' });
+        this.tweens.killTweensOf(itemContainer);
+        this.tweens.add({ targets: itemContainer, scale: 1.0, duration: 120, ease: 'Power2' });
       });
 
       box.on('pointerdown', () => {
@@ -423,22 +436,34 @@ export default class PreparationScene extends Phaser.Scene {
     // Inventory Slots (2 rows of 3 slots)
     currentY += 38;
     this.inventorySlots = [];
+    this.inventorySlotIcons = [];
+
     for (let i = 0; i < 6; i++) {
       const col = i % 3;
       const row = Math.floor(i / 3);
       const x = (centerX - 60) + (col * 60);
       const y = currentY + (row * 60);
-      
-      const slotBg = this.add.rectangle(x, y, 50, 50, 0x333333).setInteractive({ useHandCursor: true });
-      
+
+      const slotContainer = this.add.container(x, y);
+
+      const slotBg = this.add.rectangle(0, 0, 50, 50, 0x1e293b).setInteractive({ useHandCursor: true });
+      slotBg.setStrokeStyle(1.5, 0x334155);
+
+      const slotIcon = this.add.image(0, 0, 'item_doransBlade').setVisible(false);
+      slotIcon.setDisplaySize(42, 42);
+
+      slotContainer.add([slotBg, slotIcon]);
+
       slotBg.on('pointerover', () => {
         const inv = this.registry.get('inventory');
         if (i < inv.length) {
-          this.tweens.add({ targets: slotBg, scale: 1.1, duration: 100, ease: 'Power2' });
+          this.tweens.killTweensOf(slotContainer);
+          this.tweens.add({ targets: slotContainer, scale: 1.1, duration: 100, ease: 'Power2' });
         }
       });
       slotBg.on('pointerout', () => {
-        this.tweens.add({ targets: slotBg, scale: 1.0, duration: 100, ease: 'Power2' });
+        this.tweens.killTweensOf(slotContainer);
+        this.tweens.add({ targets: slotContainer, scale: 1.0, duration: 100, ease: 'Power2' });
       });
       slotBg.on('pointerdown', () => {
         const inv = this.registry.get('inventory');
@@ -451,6 +476,7 @@ export default class PreparationScene extends Phaser.Scene {
       });
 
       this.inventorySlots.push(slotBg);
+      this.inventorySlotIcons.push(slotIcon);
     }
 
     // Player Stats Title
@@ -484,10 +510,14 @@ export default class PreparationScene extends Phaser.Scene {
 
     // Item Description Box
     currentY += 25;
-    this.descBox = this.add.rectangle(centerX, currentY + 28, 260, 85, 0x222222);
-    this.descName = this.add.text(centerX, currentY, "SELECT AN ITEM", { fontSize: '16px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
-    this.descStat = this.add.text(centerX, currentY + 26, "", { fontSize: '13px', fill: '#00ff00', align: 'center', wordWrap: { width: 240 } }).setOrigin(0.5);
-    this.descCost = this.add.text(centerX, currentY + 52, "", { fontSize: '15px', fill: '#ffff00', fontStyle: 'bold' }).setOrigin(0.5);
+    this.descBox = this.add.rectangle(centerX, currentY + 28, 260, 85, 0x0f172a);
+    this.descBox.setStrokeStyle(1.5, 0x334155);
+    this.descIcon = this.add.image(centerX - 95, currentY + 28, 'item_doransBlade').setVisible(false);
+    this.descIcon.setDisplaySize(54, 54);
+
+    this.descName = this.add.text(centerX + 15, currentY + 2, "SELECT AN ITEM", { fontSize: '15px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+    this.descStat = this.add.text(centerX + 15, currentY + 26, "", { fontSize: '12px', fill: '#34d399', align: 'center', wordWrap: { width: 170 } }).setOrigin(0.5);
+    this.descCost = this.add.text(centerX + 15, currentY + 52, "", { fontSize: '14px', fill: '#facc15', fontStyle: 'bold' }).setOrigin(0.5);
 
     // BUY & SELL Buttons
     currentY += 105;
@@ -542,6 +572,12 @@ export default class PreparationScene extends Phaser.Scene {
       this.descCost.setText(`Buy: ${this.selectedItem.cost}G`);
       this.descCost.setColor('#ffff00');
 
+      if (this.descIcon) {
+        this.descIcon.setTexture(`item_${this.selectedItem.id}`);
+        this.descIcon.setDisplaySize(54, 54);
+        this.descIcon.setVisible(true);
+      }
+
       this.buyBtnBg.setFillStyle(0x0055ff);
       this.sellBtnBg.setFillStyle(0x555555);
     } else if (this.selectedInventoryIndex !== null) {
@@ -556,6 +592,12 @@ export default class PreparationScene extends Phaser.Scene {
         this.descCost.setText(`Sell: +${sellPrice}G (${Math.round(GAME_CONFIG.ECONOMY.SELL_REFUND_RATIO * 100)}%)`);
         this.descCost.setColor('#ffaa00');
 
+        if (this.descIcon) {
+          this.descIcon.setTexture(`item_${item.id}`);
+          this.descIcon.setDisplaySize(54, 54);
+          this.descIcon.setVisible(true);
+        }
+
         this.buyBtnBg.setFillStyle(0x555555);
         this.sellBtnBg.setFillStyle(0xd35400);
       }
@@ -563,6 +605,7 @@ export default class PreparationScene extends Phaser.Scene {
       this.descName.setText("SELECT AN ITEM");
       this.descStat.setText("");
       this.descCost.setText("");
+      if (this.descIcon) this.descIcon.setVisible(false);
 
       this.buyBtnBg.setFillStyle(0x555555);
       this.sellBtnBg.setFillStyle(0x555555);
@@ -667,18 +710,29 @@ export default class PreparationScene extends Phaser.Scene {
   }
 
   updateInventoryView() {
-    const inv = this.registry.get('inventory');
+    const inv = this.registry.get('inventory') || [];
     this.inventorySlots.forEach((slot, index) => {
+      const slotIcon = this.inventorySlotIcons ? this.inventorySlotIcons[index] : null;
       if (index < inv.length) {
-        slot.setFillStyle(inv[index].color);
+        const item = inv[index];
+        const frameIdx = (item.iconFrame !== undefined) ? item.iconFrame : 0;
+        slot.setFillStyle(0x0f172a);
+
+        if (slotIcon) {
+          slotIcon.setTexture(`item_${item.id}`);
+          slotIcon.setDisplaySize(42, 42);
+          slotIcon.setVisible(true);
+        }
+
         if (index === this.selectedInventoryIndex) {
-          slot.setStrokeStyle(3, 0xffffff);
+          slot.setStrokeStyle(2.5, 0xfacc15);
         } else {
-          slot.setStrokeStyle(1, 0x444444);
+          slot.setStrokeStyle(1.5, item.color || 0x38bdf8);
         }
       } else {
-        slot.setFillStyle(0x333333);
-        slot.setStrokeStyle(1, 0x222222);
+        slot.setFillStyle(0x1e293b);
+        slot.setStrokeStyle(1.5, 0x334155);
+        if (slotIcon) slotIcon.setVisible(false);
       }
     });
   }

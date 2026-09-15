@@ -41,32 +41,32 @@ export const GAME_CONFIG = {
   },
   SHOP_ITEMS: [
     // Starter / Basic Items
-    { id: 'doransBlade', name: "Doran's Blade", statStr: '+15 ATK, +100 HP, +3% Vamp', cost: 450, color: 0xef4444, statsDict: { bonusDamage: 15, bonusHP: 100, lifesteal: 3 } },
-    { id: 'boots', name: 'Boots of Speed', statStr: '+30 Speed', cost: 300, color: 0x94a3b8, statsDict: { bonusSpeed: 30 } },
-    { id: 'longSword', name: 'Long Sword', statStr: '+15 ATK', cost: 350, color: 0xf87171, statsDict: { bonusDamage: 15 } },
-    { id: 'clothArmor', name: 'Cloth Armor', statStr: '+15 Armor', cost: 300, color: 0x22c55e, statsDict: { armor: 15 } },
+    { id: 'doransBlade', iconFrame: 0, name: "Doran's Blade", statStr: '+15 ATK, +100 HP, +3% Vamp', cost: 450, color: 0xef4444, statsDict: { bonusDamage: 15, bonusHP: 100, lifesteal: 3 } },
+    { id: 'boots', iconFrame: 1, name: 'Boots of Speed', statStr: '+30 Speed', cost: 300, color: 0x94a3b8, statsDict: { bonusSpeed: 30 } },
+    { id: 'longSword', iconFrame: 2, name: 'Long Sword', statStr: '+15 ATK', cost: 350, color: 0xf87171, statsDict: { bonusDamage: 15 } },
+    { id: 'clothArmor', iconFrame: 3, name: 'Cloth Armor', statStr: '+15 Armor', cost: 300, color: 0x22c55e, statsDict: { armor: 15 } },
 
     // Epic / Mid-Tier Items
-    { id: 'berserkers', name: "Berserker's Greaves", statStr: '+50 Speed, +10 ATK', cost: 1100, color: 0xfbbf24, statsDict: { bonusSpeed: 50, bonusDamage: 10 } },
-    { id: 'vampScepter', name: 'Vampiric Scepter', statStr: '+10% Lifesteal, +15 ATK', cost: 900, color: 0xdc2626, statsDict: { lifesteal: 10, bonusDamage: 15 } },
-    { id: 'lastWhisper', name: 'Last Whisper', statStr: '+18% Armor Pen, +20 ATK', cost: 1450, color: 0x06b6d4, statsDict: { armorPen: 18, bonusDamage: 20 } },
-    { id: 'cloakAgility', name: 'Cloak of Agility', statStr: '+15% Crit Chance', cost: 600, color: 0xa855f7, statsDict: { critChance: 15 } },
-    { id: 'fiendishCodex', name: 'Fiendish Codex', statStr: '+10% CDR, +20 ATK', cost: 900, color: 0x8b5cf6, statsDict: { cdr: 0.10, bonusDamage: 20 } },
+    { id: 'berserkers', iconFrame: 4, name: "Berserker's Greaves", statStr: '+50 Speed, +10 ATK', cost: 1100, color: 0xfbbf24, statsDict: { bonusSpeed: 50, bonusDamage: 10 } },
+    { id: 'vampScepter', iconFrame: 5, name: 'Vampiric Scepter', statStr: '+10% Lifesteal, +15 ATK', cost: 900, color: 0xdc2626, statsDict: { lifesteal: 10, bonusDamage: 15 } },
+    { id: 'lastWhisper', iconFrame: 6, name: 'Last Whisper', statStr: '+18% Armor Pen, +20 ATK', cost: 1450, color: 0x06b6d4, statsDict: { armorPen: 18, bonusDamage: 20 } },
+    { id: 'cloakAgility', iconFrame: 7, name: 'Cloak of Agility', statStr: '+15% Crit Chance', cost: 600, color: 0xa855f7, statsDict: { critChance: 15 } },
+    { id: 'fiendishCodex', iconFrame: 8, name: 'Fiendish Codex', statStr: '+10% CDR, +20 ATK', cost: 900, color: 0x8b5cf6, statsDict: { cdr: 0.10, bonusDamage: 20 } },
 
     // Legendary / Core LoL Masterpieces
-    { id: 'infinityEdge', name: 'Infinity Edge', statStr: '+70 ATK, +25% Crit', cost: 3400, color: 0xf59e0b, statsDict: { bonusDamage: 70, critChance: 25 } },
-    { id: 'bloodthirster', name: 'Bloodthirster', statStr: '+18% Lifesteal, +55 ATK', cost: 3200, color: 0xb91c1c, statsDict: { lifesteal: 18, bonusDamage: 55 } },
-    { id: 'lordDominik', name: "Lord Dominik's Regards", statStr: '+35% Armor Pen, +45 ATK', cost: 3000, color: 0x0284c7, statsDict: { armorPen: 35, bonusDamage: 45 } },
-    { id: 'thornmail', name: 'Thornmail', statStr: '+60 Armor, +250 HP', cost: 2700, color: 0x15803d, statsDict: { armor: 60, bonusHP: 250 } },
-    { id: 'trinityForce', name: 'Trinity Force', statStr: '+300 HP, +40 ATK, +30 Speed, +10% CDR', cost: 3333, color: 0xeab308, statsDict: { bonusHP: 300, bonusDamage: 40, bonusSpeed: 30, cdr: 0.10 } },
-    { id: 'navori', name: 'Navori Quickblades', statStr: '+25% Crit, +60 ATK, +15% CDR', cost: 3400, color: 0xec4899, statsDict: { critChance: 25, bonusDamage: 60, cdr: 0.15 } },
+    { id: 'infinityEdge', iconFrame: 9, name: 'Infinity Edge', statStr: '+70 ATK, +25% Crit', cost: 3400, color: 0xf59e0b, statsDict: { bonusDamage: 70, critChance: 25 } },
+    { id: 'bloodthirster', iconFrame: 10, name: 'Bloodthirster', statStr: '+18% Lifesteal, +55 ATK', cost: 3200, color: 0xb91c1c, statsDict: { lifesteal: 18, bonusDamage: 55 } },
+    { id: 'lordDominik', iconFrame: 11, name: "Lord Dominik's Regards", statStr: '+35% Armor Pen, +45 ATK', cost: 3000, color: 0x0284c7, statsDict: { armorPen: 35, bonusDamage: 45 } },
+    { id: 'thornmail', iconFrame: 12, name: 'Thornmail', statStr: '+60 Armor, +250 HP', cost: 2700, color: 0x15803d, statsDict: { armor: 60, bonusHP: 250 } },
+    { id: 'trinityForce', iconFrame: 13, name: 'Trinity Force', statStr: '+300 HP, +40 ATK, +30 Speed, +10% CDR', cost: 3333, color: 0xeab308, statsDict: { bonusHP: 300, bonusDamage: 40, bonusSpeed: 30, cdr: 0.10 } },
+    { id: 'navori', iconFrame: 14, name: 'Navori Quickblades', statStr: '+25% Crit, +60 ATK, +15% CDR', cost: 3400, color: 0xec4899, statsDict: { critChance: 25, bonusDamage: 60, cdr: 0.15 } },
 
     // Active & Utility Items
-    { id: 'healthPotion', name: 'Health Potion', statStr: 'Restores 250 HP over 5s', cost: 50, color: 0xef4444, statsDict: { bonusHP: 50 } },
-    { id: 'zhonya', name: "Zhonya's Hourglass", statStr: 'Active [Key 1]: Golden Stasis (2s Invulnerable)', cost: 2800, color: 0xfacc15, statsDict: { bonusDamage: 55, cdr: 0.10 } },
-    { id: 'qss', name: 'Quicksilver Sash (QSS)', statStr: 'Active [Key 2]: Cleanse Root/Charm, +30 Armor', cost: 1300, color: 0x38bdf8, statsDict: { armor: 30 } },
-    { id: 'rylai', name: "Rylai's Crystal Scepter", statStr: 'Passive: Skillshots Slow 25% for 1.5s', cost: 2600, color: 0x0284c7, statsDict: { bonusHP: 250, bonusDamage: 30 } },
-    { id: 'rocketbelt', name: 'Hextech Rocketbelt', statStr: 'Active [Key 3]: Rocket Dash, +25 Speed', cost: 2600, color: 0xec4899, statsDict: { bonusHP: 300, bonusSpeed: 25 } }
+    { id: 'healthPotion', iconFrame: 15, name: 'Health Potion', statStr: 'Restores 250 HP over 5s', cost: 50, color: 0xef4444, statsDict: { bonusHP: 50 } },
+    { id: 'zhonya', iconFrame: 16, name: "Zhonya's Hourglass", statStr: 'Active [Key 1]: Golden Stasis (2s Invulnerable)', cost: 2800, color: 0xfacc15, statsDict: { bonusDamage: 55, cdr: 0.10 } },
+    { id: 'qss', iconFrame: 17, name: 'Quicksilver Sash (QSS)', statStr: 'Active [Key 2]: Cleanse Root/Charm, +30 Armor', cost: 1300, color: 0x38bdf8, statsDict: { armor: 30 } },
+    { id: 'rylai', iconFrame: 18, name: "Rylai's Crystal Scepter", statStr: 'Passive: Skillshots Slow 25% for 1.5s', cost: 2600, color: 0x0284c7, statsDict: { bonusHP: 250, bonusDamage: 30 } },
+    { id: 'rocketbelt', iconFrame: 19, name: 'Hextech Rocketbelt', statStr: 'Active [Key 3]: Rocket Dash, +25 Speed', cost: 2600, color: 0xec4899, statsDict: { bonusHP: 300, bonusSpeed: 25 } }
   ],
   BOT_SCALING: {
     1: { speedMult: 1.0, hpMult: 1.0, armor: 0, armorPen: 0, critChance: 0, lifesteal: 0, dmgMult: 1.0, cdrMult: 1.0, projSpeedMult: 1.0 },
