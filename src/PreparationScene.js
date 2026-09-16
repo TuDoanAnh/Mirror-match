@@ -15,6 +15,7 @@ import sellBtnUrl from './assets/image/Sell.png';
 import readyBtnUrl from './assets/image/Ready.png';
 import bg1Url from './assets/image/BG_1.png';
 import bg2Url from './assets/image/BG_2.png';
+import bgMainUrl from './assets/image/Background.png';
 
 export default class PreparationScene extends Phaser.Scene {
   constructor() {
@@ -35,6 +36,7 @@ export default class PreparationScene extends Phaser.Scene {
     this.load.image('btn_ready', readyBtnUrl);
     this.load.image('bg_panel_1', bg1Url);
     this.load.image('bg_panel_2', bg2Url);
+    this.load.image('bg_main', bgMainUrl);
   }
 
   create() {
@@ -71,18 +73,16 @@ export default class PreparationScene extends Phaser.Scene {
     const width = GAME_CONFIG.CANVAS.WIDTH;
     const height = GAME_CONFIG.CANVAS.HEIGHT;
 
-    this.add.rectangle(0, 0, width, height, 0x111111).setOrigin(0);
-
-    // Ambient BG Grid
-    const grid = this.add.grid(width / 2, height / 2, width, height, 64, 64, 0x000000, 0, 0x222222, 0.5);
-    this.tweens.add({
-      targets: grid,
-      y: (height / 2) + 64,
-      duration: 3000,
-      repeat: -1,
-      yoyo: true,
-      ease: 'Sine.easeInOut'
-    });
+    // Main Scene Background Image
+    if (this.textures.exists('bg_main')) {
+      const bgMain = this.add.image(width / 2, height / 2, 'bg_main').setOrigin(0.5);
+      const scaleX = width / bgMain.width;
+      const scaleY = height / bgMain.height;
+      const scale = Math.max(scaleX, scaleY);
+      bgMain.setScale(scale);
+    } else {
+      this.add.rectangle(0, 0, width, height, 0x111111).setOrigin(0);
+    }
 
     this.selectedItem = null;
     this.selectedInventoryIndex = null;
@@ -107,7 +107,7 @@ export default class PreparationScene extends Phaser.Scene {
     this.add.rectangle(startX, topY, 300, 668, 0x000000, 0.1).setOrigin(0, 0);
 
     // Header Title (Shifted down to fit frame ornament)
-    currentY += 48;
+    currentY += 44;
     this.add.text(centerX, currentY, "ENEMY STATUS", {
       fontSize: '18px',
       fill: '#ff5555',
@@ -117,7 +117,7 @@ export default class PreparationScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Level Header
-    currentY += 25;
+    currentY += 24;
     const unlockedLevel = this.registry.get('unlockedLevel') || 1;
     let selectedLevel = this.registry.get('selectedLevel') || unlockedLevel;
     if (selectedLevel > unlockedLevel) {
@@ -138,7 +138,7 @@ export default class PreparationScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Compact Level Selector Bar (1 Single Row of 10 circular pills)
-    currentY += 24;
+    currentY += 26;
     this.levelButtons = [];
     for (let i = 1; i <= 10; i++) {
       const bx = (centerX - 112.5) + ((i - 1) * 25);
@@ -169,55 +169,78 @@ export default class PreparationScene extends Phaser.Scene {
       this.levelButtons.push(btnCircle);
     }
 
-    // Bot Champion Selector (Sleek Circular Avatar Badges)
-    currentY += 32;
-    this.add.text(centerX, currentY, "BOT CHAMPION", { fontSize: '11px', fill: '#ff8888', fontStyle: 'bold', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5);
-
-    currentY += 24;
-    const botHeroes = ['ezreal', 'lux', 'jinx', 'zed', 'riven'];
-    const botBtnGap = 48;
-    const startBotBtnX = centerX - ((botHeroes.length - 1) * botBtnGap) / 2;
-
-    botHeroes.forEach((bId, idx) => {
-      const bData = GAME_CONFIG.CHARACTERS[bId] || GAME_CONFIG.CHARACTERS.ezreal;
-      const bx = startBotBtnX + (idx * botBtnGap);
-      const isBotSelected = bId === currentBotHero;
-
-      const badgeBg = this.add.circle(bx, currentY, 16, isBotSelected ? bData.color : 0x1e293b).setInteractive({ useHandCursor: true });
-      badgeBg.setStrokeStyle(isBotSelected ? 2.5 : 1.5, isBotSelected ? 0xffffff : bData.color);
-
-      const shortName = bData.name.slice(0, 3).toUpperCase();
-      const txtColor = isBotSelected ? '#000000' : '#ffffff';
-      const badgeTxt = this.add.text(bx, currentY, shortName, { fontSize: '10px', fill: txtColor, fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-      const selectBot = () => {
-        this.registry.set('selectedBotHero', bId);
-        this.scene.restart();
-      };
-      badgeBg.on('pointerdown', selectBot);
-      badgeTxt.on('pointerdown', selectBot);
-
-      badgeBg.on('pointerover', () => this.tweens.add({ targets: badgeBg, scale: 1.15, duration: 100 }));
-      badgeBg.on('pointerout', () => this.tweens.add({ targets: badgeBg, scale: 1.0, duration: 100 }));
-    });
-
-    // Bot Graphic & Stats Section (Side-by-Side to save vertical space)
+    // Bot Champion Selector Section (Carousel Slide UI - Expanded vertical spacing)
     currentY += 46;
+    this.add.text(centerX, currentY, "BOT CHAMPION", { fontSize: '13px', fill: '#ff8888', fontStyle: 'bold', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5);
 
-    // Bot Champion Sprite (Left Side)
-    const botSpriteX = centerX - 85;
-    this.add.circle(botSpriteX, currentY + 15, 24, botHeroData.color || 0xffffff, 0.3);
+    const botHeroes = ['ezreal', 'lux', 'jinx', 'zed', 'riven'];
+    const currentBotHeroIndex = botHeroes.indexOf(currentBotHero) !== -1 ? botHeroes.indexOf(currentBotHero) : 0;
+
+    const selectBotByIndex = (idx) => {
+      const targetId = botHeroes[(idx + botHeroes.length) % botHeroes.length];
+      if (targetId !== currentBotHero) {
+        this.registry.set('selectedBotHero', targetId);
+        this.scene.restart();
+      }
+    };
+
+    const selectPrevBot = () => selectBotByIndex(currentBotHeroIndex - 1);
+    const selectNextBot = () => selectBotByIndex(currentBotHeroIndex + 1);
+
+    // Slide Carousel Center Y
+    currentY += 50;
+    const botSlideY = currentY;
+
+    // PREVIOUS Button (◄)
+    const botPrevX = centerX - 105;
+    const botPrevBg = this.add.circle(botPrevX, botSlideY, 16, 0x1e293b).setInteractive({ useHandCursor: true });
+    botPrevBg.setStrokeStyle(1.5, 0xef4444);
+    const botPrevTxt = this.add.text(botPrevX, botSlideY - 1, '◄', { fontSize: '15px', fill: '#ff8888', fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    botPrevBg.on('pointerdown', selectPrevBot);
+    botPrevTxt.on('pointerdown', selectPrevBot);
+    botPrevBg.on('pointerover', () => this.tweens.add({ targets: [botPrevBg, botPrevTxt], scale: 1.2, duration: 100 }));
+    botPrevBg.on('pointerout', () => this.tweens.add({ targets: [botPrevBg, botPrevTxt], scale: 1.0, duration: 100 }));
+
+    // NEXT Button (►)
+    const botNextX = centerX + 105;
+    const botNextBg = this.add.circle(botNextX, botSlideY, 16, 0x1e293b).setInteractive({ useHandCursor: true });
+    botNextBg.setStrokeStyle(1.5, 0xef4444);
+    const botNextTxt = this.add.text(botNextX, botSlideY - 1, '►', { fontSize: '15px', fill: '#ff8888', fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    botNextBg.on('pointerdown', selectNextBot);
+    botNextTxt.on('pointerdown', selectNextBot);
+    botNextBg.on('pointerover', () => this.tweens.add({ targets: [botNextBg, botNextTxt], scale: 1.2, duration: 100 }));
+    botNextBg.on('pointerout', () => this.tweens.add({ targets: [botNextBg, botNextTxt], scale: 1.0, duration: 100 }));
+
+    // Center Bot Graphic Sprite with Snug Circle Mask & Colored Ring
+    this.add.circle(centerX, botSlideY, 34, botHeroData.color || 0xffffff, 0.4);
+    const botInnerCircle = this.add.circle(centerX, botSlideY, 30, 0x0f172a);
+    botInnerCircle.setStrokeStyle(2, botHeroData.color || 0xef4444);
+
     const botSpriteKey = `${currentBotHero}_spritesheet`;
     if (this.textures.exists(botSpriteKey)) {
-      const botSprite = this.add.sprite(botSpriteX, currentY + 15, botSpriteKey, 0);
+      const botSprite = this.add.sprite(centerX, botSlideY, botSpriteKey, 0);
       botSprite.setScale(1.0);
+
+      // Geometry Mask to contain sprite strictly inside circle frame
+      const botMaskGfx = this.make.graphics();
+      botMaskGfx.fillStyle(0xffffff, 1.0);
+      botMaskGfx.fillCircle(centerX, botSlideY, 30);
+      botSprite.setMask(botMaskGfx.createGeometryMask());
+
       const animKey = `${currentBotHero}_idle`;
       if (this.anims.exists(animKey)) {
         botSprite.play(animKey);
       }
     }
 
-    // Bot Stats (Right Side of Bot Sprite)
+    // Colored Border Ring overlay over sprite
+    const botBorder = this.add.circle(centerX, botSlideY, 30);
+    botBorder.setStrokeStyle(2.5, botHeroData.color || 0xef4444);
+
+    // Bot Stats Section (2 Columns)
+    currentY += 48;
     const scale = GAME_CONFIG.BOT_SCALING[selectedLevel] || GAME_CONFIG.BOT_SCALING[1];
     const qDamage = (botHeroData.skills.Q && botHeroData.skills.Q.config && botHeroData.skills.Q.config.damage) || 100;
     const enemyStats = {
@@ -231,22 +254,21 @@ export default class PreparationScene extends Phaser.Scene {
       armorPen: scale.armorPen
     };
 
-    const statsX1 = centerX - 35;
-    const statsX2 = centerX + 55;
-    const statsY = currentY - 10;
+    const statsX1 = centerX - 65;
+    const statsX2 = centerX + 20;
 
-    this.add.text(statsX1, statsY, `HP: ${Math.round(enemyStats.maxHp)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
-    this.add.text(statsX1, statsY + 16, `ATK: ${Math.round(enemyStats.atk)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
-    this.add.text(statsX1, statsY + 32, `Armor: ${Math.round(enemyStats.armor)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
-    this.add.text(statsX1, statsY + 48, `Speed: ${Math.round(enemyStats.speed)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
+    this.add.text(statsX1, currentY, `HP: ${Math.round(enemyStats.maxHp)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
+    this.add.text(statsX1, currentY + 16, `ATK: ${Math.round(enemyStats.atk)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
+    this.add.text(statsX1, currentY + 32, `Armor: ${Math.round(enemyStats.armor)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
+    this.add.text(statsX1, currentY + 48, `Speed: ${Math.round(enemyStats.speed)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
 
-    this.add.text(statsX2, statsY, `Crit: ${Math.round(enemyStats.critChance)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
-    this.add.text(statsX2, statsY + 16, `CDR: ${Math.round(enemyStats.cdr)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
-    this.add.text(statsX2, statsY + 32, `Lifesteal: ${Math.round(enemyStats.lifesteal)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
-    this.add.text(statsX2, statsY + 48, `ArmPen: ${Math.round(enemyStats.armorPen)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
+    this.add.text(statsX2, currentY, `Crit: ${Math.round(enemyStats.critChance)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
+    this.add.text(statsX2, currentY + 16, `CDR: ${Math.round(enemyStats.cdr)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
+    this.add.text(statsX2, currentY + 32, `Lifesteal: ${Math.round(enemyStats.lifesteal)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
+    this.add.text(statsX2, currentY + 48, `ArmPen: ${Math.round(enemyStats.armorPen)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
 
     // Hero Selection Section
-    this.drawHeroSelection(centerX, currentY + 75);
+    this.drawHeroSelection(centerX, currentY + 68);
   }
 
   drawHeroSelection(centerX, startY) {
@@ -255,7 +277,7 @@ export default class PreparationScene extends Phaser.Scene {
     // Divider Line
     this.add.rectangle(centerX, currentY, 250, 1.5, 0x38bdf8, 0.6);
 
-    currentY += 20;
+    currentY += 26;
     this.add.text(centerX, currentY, "SELECT YOUR HERO", {
       fontSize: '16px',
       fill: '#00ffff',
@@ -264,19 +286,24 @@ export default class PreparationScene extends Phaser.Scene {
       strokeThickness: 3
     }).setOrigin(0.5);
 
-    currentY += 28;
     const heroes = ['ezreal', 'lux', 'jinx', 'zed', 'riven'];
     const currentHero = this.registry.get('selectedHero') || 'ezreal';
+    const currentIndex = heroes.indexOf(currentHero) !== -1 ? heroes.indexOf(currentHero) : 0;
 
-    const selectHeroById = (hId) => {
-      const current = this.registry.get('selectedHero');
-      if (current !== hId) {
-        this.registry.set('selectedHero', hId);
+    const selectHeroByIndex = (idx) => {
+      const targetId = heroes[(idx + heroes.length) % heroes.length];
+      if (targetId !== currentHero) {
+        this.registry.set('selectedHero', targetId);
         this.scene.restart();
       }
     };
 
+    const selectPrevHero = () => selectHeroByIndex(currentIndex - 1);
+    const selectNextHero = () => selectHeroByIndex(currentIndex + 1);
+
     const keys = this.input.keyboard.addKeys({
+      left: Phaser.Input.Keyboard.KeyCodes.LEFT,
+      right: Phaser.Input.Keyboard.KeyCodes.RIGHT,
       one: Phaser.Input.Keyboard.KeyCodes.ONE,
       two: Phaser.Input.Keyboard.KeyCodes.TWO,
       three: Phaser.Input.Keyboard.KeyCodes.THREE,
@@ -289,69 +316,87 @@ export default class PreparationScene extends Phaser.Scene {
       numFive: Phaser.Input.Keyboard.KeyCodes.NUMPAD_FIVE
     });
 
-    keys.one.on('down', () => selectHeroById('ezreal'));
-    keys.numOne.on('down', () => selectHeroById('ezreal'));
-    keys.two.on('down', () => selectHeroById('lux'));
-    keys.numTwo.on('down', () => selectHeroById('lux'));
-    keys.three.on('down', () => selectHeroById('jinx'));
-    keys.numThree.on('down', () => selectHeroById('jinx'));
-    keys.four.on('down', () => selectHeroById('zed'));
-    keys.numFour.on('down', () => selectHeroById('zed'));
-    keys.five.on('down', () => selectHeroById('riven'));
-    keys.numFive.on('down', () => selectHeroById('riven'));
+    keys.left.on('down', selectPrevHero);
+    keys.right.on('down', selectNextHero);
+    keys.one.on('down', () => selectHeroByIndex(0));
+    keys.numOne.on('down', () => selectHeroByIndex(0));
+    keys.two.on('down', () => selectHeroByIndex(1));
+    keys.numTwo.on('down', () => selectHeroByIndex(1));
+    keys.three.on('down', () => selectHeroByIndex(2));
+    keys.numThree.on('down', () => selectHeroByIndex(2));
+    keys.four.on('down', () => selectHeroByIndex(3));
+    keys.numFour.on('down', () => selectHeroByIndex(3));
+    keys.five.on('down', () => selectHeroByIndex(4));
+    keys.numFive.on('down', () => selectHeroByIndex(4));
 
-    const btnGap = 48;
-    const startBtnX = centerX - ((heroes.length - 1) * btnGap) / 2;
+    // Slide Carousel Center Y
+    currentY += 50;
+    const slideY = currentY;
 
-    heroes.forEach((hId, index) => {
-      const heroData = GAME_CONFIG.CHARACTERS[hId];
-      const x = startBtnX + (index * btnGap);
-      const isSelected = hId === currentHero;
+    // PREVIOUS Button (◄)
+    const prevX = centerX - 105;
+    const prevBg = this.add.circle(prevX, slideY, 18, 0x1e293b).setInteractive({ useHandCursor: true });
+    prevBg.setStrokeStyle(2, 0x38bdf8);
+    const prevTxt = this.add.text(prevX, slideY - 1, '◄', { fontSize: '16px', fill: '#00ffff', fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-      const badgeBg = this.add.circle(x, currentY, 16, isSelected ? heroData.color : 0x1e293b).setInteractive({ useHandCursor: true });
-      badgeBg.setStrokeStyle(isSelected ? 2.5 : 1.5, isSelected ? 0xffffff : heroData.color);
+    prevBg.on('pointerdown', selectPrevHero);
+    prevTxt.on('pointerdown', selectPrevHero);
+    prevBg.on('pointerover', () => this.tweens.add({ targets: [prevBg, prevTxt], scale: 1.2, duration: 100 }));
+    prevBg.on('pointerout', () => this.tweens.add({ targets: [prevBg, prevTxt], scale: 1.0, duration: 100 }));
 
-      const shortName = heroData.name.slice(0, 3).toUpperCase();
-      const txtColor = isSelected ? '#000000' : '#ffffff';
-      const badgeTxt = this.add.text(x, currentY, shortName, { fontSize: '10px', fill: txtColor, fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    // NEXT Button (►)
+    const nextX = centerX + 105;
+    const nextBg = this.add.circle(nextX, slideY, 18, 0x1e293b).setInteractive({ useHandCursor: true });
+    nextBg.setStrokeStyle(2, 0x38bdf8);
+    const nextTxt = this.add.text(nextX, slideY - 1, '►', { fontSize: '16px', fill: '#00ffff', fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-      badgeBg.on('pointerdown', () => selectHeroById(hId));
-      badgeTxt.on('pointerdown', () => selectHeroById(hId));
+    nextBg.on('pointerdown', selectNextHero);
+    nextTxt.on('pointerdown', selectNextHero);
+    nextBg.on('pointerover', () => this.tweens.add({ targets: [nextBg, nextTxt], scale: 1.2, duration: 100 }));
+    nextBg.on('pointerout', () => this.tweens.add({ targets: [nextBg, nextTxt], scale: 1.0, duration: 100 }));
 
-      badgeBg.on('pointerover', () => this.tweens.add({ targets: badgeBg, scale: 1.15, duration: 100 }));
-      badgeBg.on('pointerout', () => this.tweens.add({ targets: badgeBg, scale: 1.0, duration: 100 }));
-    });
-
-    // Hero Avatar Graphic
-    currentY += 45;
+    // Center Hero Avatar Display with Snug Circle Mask & Outer Ring Border
     const selectedData = GAME_CONFIG.CHARACTERS[currentHero] || GAME_CONFIG.CHARACTERS.ezreal;
+    this.add.circle(centerX, slideY, 34, selectedData.color || 0xffffff, 0.4);
+    const heroInnerCircle = this.add.circle(centerX, slideY, 30, 0x0f172a);
+    heroInnerCircle.setStrokeStyle(2, selectedData.color || 0x38bdf8);
 
-    this.add.circle(centerX, currentY, 24, selectedData.color || 0xffffff, 0.3);
     if (['ezreal', 'lux', 'jinx', 'zed', 'riven'].includes(currentHero)) {
       const sheetKey = `${currentHero}_spritesheet`;
       const idleKey = `${currentHero}_idle`;
       if (this.textures.exists(sheetKey)) {
-        const heroSprite = this.add.sprite(centerX, currentY, sheetKey, 0);
-        heroSprite.setScale(1.1);
+        const heroSprite = this.add.sprite(centerX, slideY, sheetKey, 0);
+        heroSprite.setScale(1.0);
+
+        // Geometry Mask to contain sprite strictly inside circle frame
+        const heroMaskGfx = this.make.graphics();
+        heroMaskGfx.fillStyle(0xffffff, 1.0);
+        heroMaskGfx.fillCircle(centerX, slideY, 30);
+        heroSprite.setMask(heroMaskGfx.createGeometryMask());
+
         if (this.anims.exists(idleKey)) {
           heroSprite.play(idleKey);
         }
       } else {
-        this.add.circle(centerX, currentY, 20, selectedData.color);
+        this.add.circle(centerX, slideY, 26, selectedData.color);
       }
     } else {
-      this.add.circle(centerX, currentY, 20, selectedData.color);
+      this.add.circle(centerX, slideY, 26, selectedData.color);
     }
 
+    // Colored Border Ring overlay over sprite
+    const heroBorder = this.add.circle(centerX, slideY, 30);
+    heroBorder.setStrokeStyle(2.5, selectedData.color || 0x38bdf8);
+
     // Hero Description Info
-    currentY += 42;
+    currentY += 46;
     this.add.text(centerX, currentY, `${selectedData.name} - ${selectedData.title}`, { fontSize: '13px', fill: '#facc15', fontStyle: 'bold', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5);
 
     currentY += 22;
-    this.add.text(centerX, currentY, selectedData.description, { fontSize: '11px', fill: '#ffffff', align: 'center', wordWrap: { width: 230 } }).setOrigin(0.5, 0);
+    this.add.text(centerX, currentY, selectedData.description, { fontSize: '11px', fill: '#ffffff', align: 'center', wordWrap: { width: 240 } }).setOrigin(0.5, 0);
 
     // Reset Progress Button
-    currentY += 85;
+    currentY += 72;
     const resetBtn = this.add.rectangle(centerX, currentY, 180, 26, 0x881111).setInteractive({ useHandCursor: true });
     resetBtn.setStrokeStyle(1.5, 0xef4444);
     this.add.text(centerX, currentY, "RESET TO LEVEL 1", { fontSize: '11px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
