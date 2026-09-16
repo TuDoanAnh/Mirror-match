@@ -14,6 +14,7 @@ import { MAP_OBSTACLES } from './mapObstacles';
 import { MAP_POLYGONS } from './mapPolygons';
 import { handleCharacterPolygonCollision, isPointInPolygon } from './polygonCollision';
 import { ALL_AUGMENTS } from './AugmentManager';
+import { preloadShopItemAssets } from './shopItemLoader';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -27,6 +28,7 @@ export default class GameScene extends Phaser.Scene {
     preloadJinxAssets(this);
     preloadZedSkillAssets(this);
     preloadRivenSkillAssets(this);
+    preloadShopItemAssets(this);
     preloadCharacterSFX(this);
     if (!this.textures.exists('battle_map')) {
       this.load.image('battle_map', mapImageUrl);
@@ -936,16 +938,16 @@ export default class GameScene extends Phaser.Scene {
       });
     }
 
-    // Frame background (Sleek dark HUD panel)
+    // Frame background (Sleek dark HUD panel accommodating skills & 6 item slots)
     const bg = this.add.graphics();
     bg.fillStyle(0x0f172a, 0.9);
-    bg.fillRoundedRect(-145, -36, 290, 72, 8);
+    bg.fillRoundedRect(-145, -36, 545, 72, 8);
     bg.lineStyle(2, 0xd4af37, 0.8);
-    bg.strokeRoundedRect(-145, -36, 290, 72, 8);
+    bg.strokeRoundedRect(-145, -36, 545, 72, 8);
     this.uiContainer.add(bg);
 
     // Hero title badge at top of HUD
-    const heroBadgeText = this.add.text(0, -26, heroData.name.toUpperCase(), {
+    const heroBadgeText = this.add.text(-25, -26, heroData.name.toUpperCase(), {
       fontSize: '10px',
       fill: '#d4af37',
       fontStyle: 'bold'
@@ -1023,6 +1025,71 @@ export default class GameScene extends Phaser.Scene {
         cdText
       };
     });
+
+    // 6 Active & Inventory Item HUD Slots (Keys 1, 2, 3, 4, 5, 6)
+    this.itemSlots = [];
+    const activeHotkeys = ['1', '2', '3', '4', '5', '6'];
+    const itemStartX = 152;
+    const itemGap = 41;
+
+    for (let i = 0; i < 6; i++) {
+      const ix = itemStartX + (i * itemGap);
+      const iy = 3;
+
+      // Divider line between skills and items
+      if (i === 0) {
+        const div = this.add.rectangle(ix - 23, iy, 1.5, 50, 0x38bdf8, 0.5);
+        this.uiContainer.add(div);
+      }
+
+      // Slot Box Background
+      const itemBoxBg = this.add.rectangle(ix, iy, 36, 36, 0x0f172a, 0.95).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      itemBoxBg.setStrokeStyle(1.5, 0x334155);
+
+      // Item Icon Image
+      const itemIcon = this.add.image(ix, iy, 'item_doransBlade').setOrigin(0.5).setVisible(false);
+      itemIcon.setDisplaySize(28, 28);
+
+      // Dark Overlay on Cooldown
+      const itemDarkOverlay = this.add.rectangle(ix, iy, 36, 36, 0x000000, 0.6).setOrigin(0.5).setVisible(false);
+
+      // Border Graphics
+      const itemBorderGfx = this.add.graphics();
+
+      // Hotkey Badge
+      const itemBadgeBg = this.add.rectangle(ix - 11, iy + 12, 13, 11, 0x0f172a, 0.95).setOrigin(0.5);
+      const itemBadgeTxt = this.add.text(ix - 11, iy + 12, activeHotkeys[i], {
+        fontSize: '9px',
+        fill: '#fde047',
+        fontStyle: 'bold'
+      }).setOrigin(0.5);
+
+      // Cooldown text
+      const itemCdTxt = this.add.text(ix, iy, '', {
+        fontSize: '13px',
+        fill: '#ffffff',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 3
+      }).setOrigin(0.5).setVisible(false);
+
+      this.uiContainer.add([itemBoxBg, itemIcon, itemDarkOverlay, itemBorderGfx, itemBadgeBg, itemBadgeTxt, itemCdTxt]);
+
+      itemBoxBg.on('pointerdown', () => {
+        if (this.player && this.player.active) {
+          this.player.useActiveItemBySlot(i);
+        }
+      });
+
+      this.itemSlots.push({
+        boxBg: itemBoxBg,
+        icon: itemIcon,
+        darkOverlay: itemDarkOverlay,
+        borderGfx: itemBorderGfx,
+        cdTxt: itemCdTxt,
+        index: i
+      });
+    }
   }
 
   updateUI(time) {
@@ -1080,6 +1147,50 @@ export default class GameScene extends Phaser.Scene {
         slot.cdText.setVisible(false);
       }
     });
+
+    // Update 6 Inventory & Active Items HUD Slots
+    const inv = this.registry.get('inventory') || [];
+    if (this.itemSlots) {
+      this.itemSlots.forEach((slot, i) => {
+        if (i < inv.length) {
+          const item = inv[i];
+          const iconKey = `item_${item.id}`;
+          if (this.textures.exists(iconKey)) {
+            slot.icon.setTexture(iconKey).setDisplaySize(28, 28).setVisible(true);
+          } else {
+            slot.icon.setVisible(false);
+          }
+
+          const isActiveItem = ['zhonya', 'qss', 'rocketbelt', 'healthPotion'].includes(item.id);
+          const cdMs = (isActiveItem && this.player.activeCooldowns && this.player.activeCooldowns[item.id]) ? (this.player.activeCooldowns[item.id] - time) : 0;
+
+          slot.borderGfx.clear();
+          if (cdMs > 0) {
+            slot.darkOverlay.setVisible(true);
+            slot.borderGfx.lineStyle(1.5, 0x475569, 1);
+            slot.borderGfx.strokeRect(slot.boxBg.x - 18, slot.boxBg.y - 18, 36, 36);
+            slot.cdTxt.setText(Math.ceil(cdMs / 1000)).setVisible(true);
+          } else if (isActiveItem) {
+            slot.darkOverlay.setVisible(false);
+            slot.borderGfx.lineStyle(1.5, 0x38bdf8, 1);
+            slot.borderGfx.strokeRect(slot.boxBg.x - 18, slot.boxBg.y - 18, 36, 36);
+            slot.cdTxt.setVisible(false);
+          } else {
+            slot.darkOverlay.setVisible(false);
+            slot.borderGfx.lineStyle(1, 0x64748b, 0.8);
+            slot.borderGfx.strokeRect(slot.boxBg.x - 18, slot.boxBg.y - 18, 36, 36);
+            slot.cdTxt.setVisible(false);
+          }
+        } else {
+          slot.icon.setVisible(false);
+          slot.darkOverlay.setVisible(false);
+          slot.cdTxt.setVisible(false);
+          slot.borderGfx.clear();
+          slot.borderGfx.lineStyle(1, 0x1e293b, 0.5);
+          slot.borderGfx.strokeRect(slot.boxBg.x - 18, slot.boxBg.y - 18, 36, 36);
+        }
+      });
+    }
   }
 
   createSkillIconsTextures() {

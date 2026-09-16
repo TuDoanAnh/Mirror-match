@@ -6,6 +6,7 @@ import { playSkillSFX } from './soundManager';
 import { MAP_OBSTACLES } from './mapObstacles';
 import { MAP_POLYGONS } from './mapPolygons';
 import { isPointInAnyPolygon } from './polygonCollision';
+import { showDamageText } from './FloatingDamage';
 
 export default class Player extends BaseCharacter {
   constructor(scene, x, y, isBot = false, color = 0x0088ff, customHeroId = null) {
@@ -76,6 +77,11 @@ export default class Player extends BaseCharacter {
     this.hasVampiricSoul = this.ownedAugments.includes('vampiricSoul');
     this.hasRunicShield = this.ownedAugments.includes('runicShield');
 
+    // Parse Inventory Passives
+    const inv = (!isBot && scene.registry.has('inventory')) ? (scene.registry.get('inventory') || []) : [];
+    this.hasRylai = inv.some(item => item.id === 'rylai');
+    this.hasThornmail = inv.some(item => item.id === 'thornmail');
+
     if (this.hasGlassCannon) {
       this.maxHp = Math.round(this.maxHp * 0.8);
       this.hp = this.maxHp;
@@ -86,10 +92,20 @@ export default class Player extends BaseCharacter {
     this.lastBulletTimeTrigger = 0;
 
     if (!isBot) {
-      this.keys = scene.input.keyboard.addKeys('W,A,S,D,SPACE,ONE,TWO,THREE');
-      this.keys.ONE.on('down', () => this.useActiveItem('zhonya'));
-      this.keys.TWO.on('down', () => this.useActiveItem('qss'));
-      this.keys.THREE.on('down', () => this.useActiveItem('rocketbelt'));
+      this.keys = scene.input.keyboard.addKeys('W,A,S,D,SPACE,ONE,TWO,THREE,FOUR,FIVE,SIX,NUMPAD_ONE,NUMPAD_TWO,NUMPAD_THREE,NUMPAD_FOUR,NUMPAD_FIVE,NUMPAD_SIX');
+
+      this.keys.ONE.on('down', () => this.useActiveItemBySlot(0));
+      this.keys.NUMPAD_ONE.on('down', () => this.useActiveItemBySlot(0));
+      this.keys.TWO.on('down', () => this.useActiveItemBySlot(1));
+      this.keys.NUMPAD_TWO.on('down', () => this.useActiveItemBySlot(1));
+      this.keys.THREE.on('down', () => this.useActiveItemBySlot(2));
+      this.keys.NUMPAD_THREE.on('down', () => this.useActiveItemBySlot(2));
+      this.keys.FOUR.on('down', () => this.useActiveItemBySlot(3));
+      this.keys.NUMPAD_FOUR.on('down', () => this.useActiveItemBySlot(3));
+      this.keys.FIVE.on('down', () => this.useActiveItemBySlot(4));
+      this.keys.NUMPAD_FIVE.on('down', () => this.useActiveItemBySlot(4));
+      this.keys.SIX.on('down', () => this.useActiveItemBySlot(5));
+      this.keys.NUMPAD_SIX.on('down', () => this.useActiveItemBySlot(5));
     }
   }
 
@@ -99,9 +115,7 @@ export default class Player extends BaseCharacter {
       finalAmount += 150;
       this.applySpeedBoost(1.30, 3000);
       if (this.scene) {
-        import('./FloatingDamage').then(m => {
-          if (m.showDamageText) m.showDamageText(this.scene, this.x, this.y - 25, 'RUNIC VALOR!', 'heal');
-        }).catch(() => {});
+        showDamageText(this.scene, this.x, this.y - 25, 'RUNIC VALOR!', 'heal');
       }
     }
     super.addShield(finalAmount, duration);
@@ -118,7 +132,12 @@ export default class Player extends BaseCharacter {
     }
 
     // Apply damage to target
-    target.takeDamage(finalDamage, isCrit);
+    target.takeDamage(finalDamage, isCrit, this);
+
+    // Rylai's Crystal Scepter Passive: 25% slow for 1.5s
+    if (this.hasRylai && typeof target.applySlow === 'function') {
+      target.applySlow(0.25, 1500);
+    }
 
     // Vampiric Soul Augment: Heal for 18% of damage dealt
     if (this.hasVampiricSoul && this.hp > 0 && finalDamage > 0) {
@@ -131,32 +150,115 @@ export default class Player extends BaseCharacter {
     }
   }
 
-  useActiveItem(itemId) {
-    if (this.hp <= 0 || this.isStasis || this.isBot) return;
+  useActiveItemBySlot(slotIdx) {
+    if (this.hp <= 0 || this.isStasis || this.isBot) return false;
     const inv = this.scene.registry.get('inventory') || [];
-    const hasItem = inv.some(item => item.id === itemId);
-    if (!hasItem) return;
+    if (slotIdx >= 0 && slotIdx < inv.length) {
+      const item = inv[slotIdx];
+      if (item && item.id) {
+        return this.useActiveItem(item.id, slotIdx);
+      }
+    }
+    return false;
+  }
+
+  useActiveItem(itemId, slotIdx = -1) {
+    if (this.hp <= 0 || this.isStasis || this.isBot) return false;
+    const inv = this.scene.registry.get('inventory') || [];
+
+    let targetIndex = slotIdx;
+    if (targetIndex < 0 || targetIndex >= inv.length || inv[targetIndex].id !== itemId) {
+      targetIndex = inv.findIndex(item => item.id === itemId);
+    }
+    if (targetIndex === -1) return false;
 
     if (itemId === 'zhonya') {
       if (this.canUseActiveItem('zhonya', 30000)) {
         this.applyStasis(2000);
+        return true;
       }
     } else if (itemId === 'qss') {
       if (this.canUseActiveItem('qss', 20000)) {
         this.isRooted = false;
         this.isCharmed = false;
+        this.isSlowed = false;
+        this.applySpeedBoost(1.35, 2500);
         if (this.scene) {
-          showDamageText(this.scene, this.x, this.y - 15, 'CLEANSED', 'heal');
+          showDamageText(this.scene, this.x, this.y - 15, 'CLEANSED!', 'heal');
+          const aura = this.scene.add.circle(this.x, this.y, 35, 0x38bdf8, 0.6);
+          aura.setStrokeStyle(3, 0xffffff);
+          this.scene.tweens.add({ targets: aura, scale: 2.0, alpha: 0, duration: 400, onComplete: () => aura.destroy() });
         }
+        return true;
       }
     } else if (itemId === 'rocketbelt') {
       if (this.canUseActiveItem('rocketbelt', 20000)) {
         const ptr = this.scene.input.activePointer;
         const angle = Phaser.Math.Angle.Between(this.x, this.y, ptr.worldX, ptr.worldY);
-        this.executeDash('E', ptr.worldX, ptr.worldY, angle);
-        this.shootSpreadProjectiles('Q', angle);
+        
+        // Rocket Dash forward 180px
+        const dashDist = 180;
+        const targetX = Phaser.Math.Clamp(this.x + Math.cos(angle) * dashDist, 50, 1486);
+        const targetY = Phaser.Math.Clamp(this.y + Math.sin(angle) * dashDist, 50, 974);
+        
+        this.setPosition(targetX, targetY);
+        if (this.body) this.body.reset(targetX, targetY);
+
+        this.applySpeedBoost(1.25, 2000);
+
+        // Fire 5 Hextech rocket spread projectiles
+        for (let i = -2; i <= 2; i++) {
+          const rocketAngle = angle + (i * 0.15);
+          const proj = new Projectile(
+            this.scene,
+            this.x,
+            this.y,
+            rocketAngle,
+            750,
+            110,
+            false,
+            0xec4899,
+            this
+          );
+          proj.setDisplaySize(16, 16);
+          this.scene.playerProjectiles.add(proj);
+        }
+
+        if (this.scene) {
+          showDamageText(this.scene, this.x, this.y - 15, 'HEX DASH!', 'crit');
+          const ring = this.scene.add.circle(this.x, this.y, 40, 0xec4899, 0.7);
+          this.scene.tweens.add({ targets: ring, scale: 2.2, alpha: 0, duration: 350, onComplete: () => ring.destroy() });
+        }
+        return true;
+      }
+    } else if (itemId === 'healthPotion') {
+      if (this.canUseActiveItem('healthPotion', 10000)) {
+        // Remove 1 potion from inventory
+        const potIdx = inv.findIndex(item => item.id === 'healthPotion');
+        if (potIdx !== -1) {
+          inv.splice(potIdx, 1);
+          this.scene.registry.set('inventory', inv);
+        }
+
+        showDamageText(this.scene, this.x, this.y - 15, 'HEALTH POTION!', 'heal');
+        let ticks = 5;
+        const regenTimer = this.scene.time.addEvent({
+          delay: 1000,
+          callback: () => {
+            if (this.active && this.hp > 0) {
+              this.heal(50);
+              ticks--;
+              if (ticks <= 0) regenTimer.remove();
+            } else {
+              regenTimer.remove();
+            }
+          },
+          loop: true
+        });
+        return true;
       }
     }
+    return false;
   }
 
   canUseActiveItem(itemId, cooldown = 20000) {

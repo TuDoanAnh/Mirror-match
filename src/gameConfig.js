@@ -62,11 +62,11 @@ export const GAME_CONFIG = {
     { id: 'navori', iconFrame: 14, name: 'Navori Quickblades', statStr: '+25% Crit, +60 ATK, +15% CDR', cost: 3400, color: 0xec4899, statsDict: { critChance: 25, bonusDamage: 60, cdr: 0.15 } },
 
     // Active & Utility Items
-    { id: 'healthPotion', iconFrame: 15, name: 'Health Potion', statStr: 'Restores 250 HP over 5s', cost: 50, color: 0xef4444, statsDict: { bonusHP: 50 } },
-    { id: 'zhonya', iconFrame: 16, name: "Zhonya's Hourglass", statStr: 'Active [Key 1]: Golden Stasis (2s Invulnerable)', cost: 2800, color: 0xfacc15, statsDict: { bonusDamage: 55, cdr: 0.10 } },
-    { id: 'qss', iconFrame: 17, name: 'Quicksilver Sash (QSS)', statStr: 'Active [Key 2]: Cleanse Root/Charm, +30 Armor', cost: 1300, color: 0x38bdf8, statsDict: { armor: 30 } },
+    { id: 'healthPotion', iconFrame: 15, name: 'Health Potion', statStr: 'Consumable: Restores 250 HP over 5s', cost: 50, color: 0xef4444, statsDict: { bonusHP: 50 } },
+    { id: 'zhonya', iconFrame: 16, name: "Zhonya's Hourglass", statStr: 'Active (Slot Key): Golden Stasis (2s Invulnerable)', cost: 2800, color: 0xfacc15, statsDict: { bonusDamage: 55, cdr: 0.10 } },
+    { id: 'qss', iconFrame: 17, name: 'Quicksilver Sash (QSS)', statStr: 'Active (Slot Key): Cleanse CC & +35% Speed', cost: 1300, color: 0x38bdf8, statsDict: { armor: 30 } },
     { id: 'rylai', iconFrame: 18, name: "Rylai's Crystal Scepter", statStr: 'Passive: Skillshots Slow 25% for 1.5s', cost: 2600, color: 0x0284c7, statsDict: { bonusHP: 250, bonusDamage: 30 } },
-    { id: 'rocketbelt', iconFrame: 19, name: 'Hextech Rocketbelt', statStr: 'Active [Key 3]: Rocket Dash, +25 Speed', cost: 2600, color: 0xec4899, statsDict: { bonusHP: 300, bonusSpeed: 25 } }
+    { id: 'rocketbelt', iconFrame: 19, name: 'Hextech Rocketbelt', statStr: 'Active (Slot Key): Rocket Dash & Hextech Bolts', cost: 2600, color: 0xec4899, statsDict: { bonusHP: 300, bonusSpeed: 25 } }
   ],
   BOT_SCALING: {
     1: { speedMult: 1.0, hpMult: 1.0, armor: 0, armorPen: 0, critChance: 0, lifesteal: 0, dmgMult: 1.0, cdrMult: 1.0, projSpeedMult: 1.0 },

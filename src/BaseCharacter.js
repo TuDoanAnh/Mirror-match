@@ -353,6 +353,76 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
+  heal(amount) {
+    if (this.hp <= 0) return;
+    const actualHeal = Math.min(amount, this.maxHp - this.hp);
+    if (actualHeal <= 0) return;
+    this.hp += actualHeal;
+    this.updateHpBar();
+
+    if (this.scene) {
+      showDamageText(this.scene, this.x, this.y - 20, `+${actualHeal}`, 'heal');
+      const healRing = this.scene.add.circle(this.x, this.y, 20);
+      healRing.setStrokeStyle(2, 0x34d399, 0.9);
+      this.scene.tweens.add({
+        targets: healRing,
+        scale: 1.6,
+        alpha: 0,
+        duration: 400,
+        onComplete: () => healRing.destroy()
+      });
+    }
+  }
+
+  applySpeedBoost(multiplier = 1.30, duration = 3000) {
+    if (this.hp <= 0) return;
+    if (this.isSpeedBoosted) return;
+    this.isSpeedBoosted = true;
+    const originalSpeed = this.speed;
+    this.speed = Math.round(originalSpeed * multiplier);
+
+    if (this.scene) {
+      showDamageText(this.scene, this.x, this.y - 15, 'SPEED BOOST!', 'heal');
+    }
+
+    if (this.speedBoostTimer) this.speedBoostTimer.remove();
+    this.speedBoostTimer = this.scene.time.delayedCall(duration, () => {
+      this.speed = originalSpeed;
+      this.isSpeedBoosted = false;
+    });
+  }
+
+  applySlow(slowPercent = 0.25, duration = 1500) {
+    if (this.isStasis || this.hp <= 0) return;
+    if (this.isSlowed) return;
+    this.isSlowed = true;
+    const originalSpeed = this.speed;
+    this.speed = Math.round(originalSpeed * (1 - slowPercent));
+
+    if (this.scene) {
+      showDamageText(this.scene, this.x, this.y - 15, 'SLOWED!', 'root');
+    }
+
+    const icyRing = this.scene.add.circle(this.x, this.y, 22, 0x0284c7, 0.4);
+    icyRing.setStrokeStyle(2, 0x38bdf8, 0.9);
+
+    const updateTimer = this.scene.time.addEvent({
+      delay: 20,
+      callback: () => {
+        if (icyRing && icyRing.active) icyRing.setPosition(this.x, this.y);
+      },
+      loop: true
+    });
+
+    if (this.slowTimer) this.slowTimer.remove();
+    this.slowTimer = this.scene.time.delayedCall(duration, () => {
+      this.speed = originalSpeed;
+      this.isSlowed = false;
+      updateTimer.remove();
+      if (icyRing && icyRing.active) icyRing.destroy();
+    });
+  }
+
   applyDeathMark(baseDamage = 250, duration = 4150) {
     if (this.isStasis || this.hp <= 0) return;
     this.isDeathMarked = true;

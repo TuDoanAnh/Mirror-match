@@ -73,13 +73,27 @@ export default class PreparationScene extends Phaser.Scene {
     const width = GAME_CONFIG.CANVAS.WIDTH;
     const height = GAME_CONFIG.CANVAS.HEIGHT;
 
-    // Main Scene Background Image
+    // Main Scene Background Image with Dimming and Up & Down Floating Motion
     if (this.textures.exists('bg_main')) {
       const bgMain = this.add.image(width / 2, height / 2, 'bg_main').setOrigin(0.5);
       const scaleX = width / bgMain.width;
       const scaleY = height / bgMain.height;
-      const scale = Math.max(scaleX, scaleY);
+      const scale = Math.max(scaleX, scaleY) * 1.08; // Slightly larger scale to prevent edge clipping during Y movement
       bgMain.setScale(scale);
+      bgMain.setTint(0x777777); // Dim background slightly
+
+      // Subtle dark overlay to make UI panels stand out even more
+      this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.25).setOrigin(0.5);
+
+      // Smooth floating up and down motion effect
+      this.tweens.add({
+        targets: bgMain,
+        y: (height / 2) + 18,
+        duration: 3200,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut'
+      });
     } else {
       this.add.rectangle(0, 0, width, height, 0x111111).setOrigin(0);
     }
