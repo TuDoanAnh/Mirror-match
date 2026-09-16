@@ -17,6 +17,15 @@ import bg1Url from './assets/image/BG_1.png';
 import bg2Url from './assets/image/BG_2.png';
 import bgMainUrl from './assets/image/Background.png';
 
+import iconHpUrl from './assets/image/hp.png';
+import iconAtkUrl from './assets/image/Atk.png';
+import iconArmorUrl from './assets/image/Armor.png';
+import iconSpeedUrl from './assets/image/speed.png';
+import iconCritUrl from './assets/image/Crit.png';
+import iconCdrUrl from './assets/image/cooldown.png';
+import iconLifestealUrl from './assets/image/healthsteal.png';
+import iconArmPenUrl from './assets/image/pen armor.png';
+
 export default class PreparationScene extends Phaser.Scene {
   constructor() {
     super('PreparationScene');
@@ -37,6 +46,15 @@ export default class PreparationScene extends Phaser.Scene {
     this.load.image('bg_panel_1', bg1Url);
     this.load.image('bg_panel_2', bg2Url);
     this.load.image('bg_main', bgMainUrl);
+
+    this.load.image('stat_hp', iconHpUrl);
+    this.load.image('stat_atk', iconAtkUrl);
+    this.load.image('stat_armor', iconArmorUrl);
+    this.load.image('stat_speed', iconSpeedUrl);
+    this.load.image('stat_crit', iconCritUrl);
+    this.load.image('stat_cdr', iconCdrUrl);
+    this.load.image('stat_lifesteal', iconLifestealUrl);
+    this.load.image('stat_armPen', iconArmPenUrl);
   }
 
   create() {
@@ -268,21 +286,42 @@ export default class PreparationScene extends Phaser.Scene {
       armorPen: scale.armorPen
     };
 
-    const statsX1 = centerX - 65;
-    const statsX2 = centerX + 20;
+    const col1IconX = centerX - 120;
+    const col1TextX = centerX - 100;
+    const col2IconX = centerX + 12;
+    const col2TextX = centerX + 32;
+    const rowGap = 20;
 
-    this.add.text(statsX1, currentY, `HP: ${Math.round(enemyStats.maxHp)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
-    this.add.text(statsX1, currentY + 16, `ATK: ${Math.round(enemyStats.atk)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
-    this.add.text(statsX1, currentY + 32, `Armor: ${Math.round(enemyStats.armor)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
-    this.add.text(statsX1, currentY + 48, `Speed: ${Math.round(enemyStats.speed)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
+    // Row 1: HP & Crit
+    this.add.image(col1IconX, currentY + 7, 'stat_hp').setDisplaySize(16, 16).setOrigin(0.5);
+    this.add.text(col1TextX, currentY, `HP: ${Math.round(enemyStats.maxHp)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
 
-    this.add.text(statsX2, currentY, `Crit: ${Math.round(enemyStats.critChance)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
-    this.add.text(statsX2, currentY + 16, `CDR: ${Math.round(enemyStats.cdr)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
-    this.add.text(statsX2, currentY + 32, `Lifesteal: ${Math.round(enemyStats.lifesteal)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
-    this.add.text(statsX2, currentY + 48, `ArmPen: ${Math.round(enemyStats.armorPen)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
+    this.add.image(col2IconX, currentY + 7, 'stat_crit').setDisplaySize(16, 16).setOrigin(0.5);
+    this.add.text(col2TextX, currentY, `Crit: ${Math.round(enemyStats.critChance)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
+
+    // Row 2: ATK & CDR
+    this.add.image(col1IconX, currentY + rowGap + 7, 'stat_atk').setDisplaySize(16, 16).setOrigin(0.5);
+    this.add.text(col1TextX, currentY + rowGap, `ATK: ${Math.round(enemyStats.atk)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
+
+    this.add.image(col2IconX, currentY + rowGap + 7, 'stat_cdr').setDisplaySize(16, 16).setOrigin(0.5);
+    this.add.text(col2TextX, currentY + rowGap, `CDR: ${Math.round(enemyStats.cdr)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
+
+    // Row 3: Armor & Lifesteal
+    this.add.image(col1IconX, currentY + rowGap * 2 + 7, 'stat_armor').setDisplaySize(16, 16).setOrigin(0.5);
+    this.add.text(col1TextX, currentY + rowGap * 2, `Armor: ${Math.round(enemyStats.armor)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
+
+    this.add.image(col2IconX, currentY + rowGap * 2 + 7, 'stat_lifesteal').setDisplaySize(16, 16).setOrigin(0.5);
+    this.add.text(col2TextX, currentY + rowGap * 2, `Lifesteal: ${Math.round(enemyStats.lifesteal)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
+
+    // Row 4: Speed & ArmPen
+    this.add.image(col1IconX, currentY + rowGap * 3 + 7, 'stat_speed').setDisplaySize(16, 16).setOrigin(0.5);
+    this.add.text(col1TextX, currentY + rowGap * 3, `Speed: ${Math.round(enemyStats.speed)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
+
+    this.add.image(col2IconX, currentY + rowGap * 3 + 7, 'stat_armPen').setDisplaySize(16, 16).setOrigin(0.5);
+    this.add.text(col2TextX, currentY + rowGap * 3, `Arm Pen: ${Math.round(enemyStats.armorPen)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
 
     // Hero Selection Section
-    this.drawHeroSelection(centerX, currentY + 68);
+    this.drawHeroSelection(centerX, currentY + 92);
   }
 
   drawHeroSelection(centerX, startY) {
@@ -589,19 +628,36 @@ export default class PreparationScene extends Phaser.Scene {
     const heroId = this.registry.get('selectedHero') || 'ezreal';
     const heroData = GAME_CONFIG.CHARACTERS[heroId] || GAME_CONFIG.CHARACTERS.ezreal;
 
-    const col1X = centerX - 130;
-    const col2X = centerX;
+    const pCol1IconX = centerX - 120;
+    const pCol1TextX = centerX - 100;
+    const pCol2IconX = centerX + 12;
+    const pCol2TextX = centerX + 32;
+    const pRowGap = 20;
+
+    // Col 1 Stat Icons
+    this.add.image(pCol1IconX, currentY + 7, 'stat_hp').setDisplaySize(16, 16).setOrigin(0.5);
+    this.add.image(pCol1IconX, currentY + pRowGap + 7, 'stat_atk').setDisplaySize(16, 16).setOrigin(0.5);
+    this.add.image(pCol1IconX, currentY + pRowGap * 2 + 7, 'stat_armor').setDisplaySize(16, 16).setOrigin(0.5);
+    this.add.image(pCol1IconX, currentY + pRowGap * 3 + 7, 'stat_speed').setDisplaySize(16, 16).setOrigin(0.5);
+
+    // Col 2 Stat Icons
+    this.add.image(pCol2IconX, currentY + 7, 'stat_crit').setDisplaySize(16, 16).setOrigin(0.5);
+    this.add.image(pCol2IconX, currentY + pRowGap + 7, 'stat_cdr').setDisplaySize(16, 16).setOrigin(0.5);
+    this.add.image(pCol2IconX, currentY + pRowGap * 2 + 7, 'stat_lifesteal').setDisplaySize(16, 16).setOrigin(0.5);
+    this.add.image(pCol2IconX, currentY + pRowGap * 3 + 7, 'stat_armPen').setDisplaySize(16, 16).setOrigin(0.5);
+
+    const txtStyle = { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 };
 
     this.statTexts = {
-      hp: this.add.text(col1X, currentY, `HP: ${heroData.baseStats.hp + stats.bonusHP}`, { fontSize: '13px', fill: '#aaaaaa' }),
-      atk: this.add.text(col1X, currentY + 18, `ATK: ${heroData.skills.Q.config.damage + stats.bonusDamage}`, { fontSize: '13px', fill: '#aaaaaa' }),
-      armor: this.add.text(col1X, currentY + 36, `Armor: ${heroData.baseStats.armor + stats.armor}`, { fontSize: '13px', fill: '#aaaaaa' }),
-      speed: this.add.text(col1X, currentY + 54, `Speed: ${heroData.baseStats.speed + stats.bonusSpeed}`, { fontSize: '13px', fill: '#aaaaaa' }),
+      hp: this.add.text(pCol1TextX, currentY, `HP: ${heroData.baseStats.hp + stats.bonusHP}`, txtStyle),
+      atk: this.add.text(pCol1TextX, currentY + pRowGap, `ATK: ${heroData.skills.Q.config.damage + stats.bonusDamage}`, txtStyle),
+      armor: this.add.text(pCol1TextX, currentY + pRowGap * 2, `Armor: ${heroData.baseStats.armor + stats.armor}`, txtStyle),
+      speed: this.add.text(pCol1TextX, currentY + pRowGap * 3, `Speed: ${heroData.baseStats.speed + stats.bonusSpeed}`, txtStyle),
 
-      crit: this.add.text(col2X, currentY, `Crit: ${heroData.baseStats.critChance + stats.critChance}%`, { fontSize: '13px', fill: '#aaaaaa' }),
-      cdr: this.add.text(col2X, currentY + 18, `CDR: ${Math.round(stats.cdr * 100)}%`, { fontSize: '13px', fill: '#aaaaaa' }),
-      lifesteal: this.add.text(col2X, currentY + 36, `Lifesteal: ${heroData.baseStats.lifesteal + stats.lifesteal}%`, { fontSize: '13px', fill: '#aaaaaa' }),
-      armPen: this.add.text(col2X, currentY + 54, `Arm Pen: ${stats.armorPen}%`, { fontSize: '13px', fill: '#aaaaaa' })
+      crit: this.add.text(pCol2TextX, currentY, `Crit: ${heroData.baseStats.critChance + stats.critChance}%`, txtStyle),
+      cdr: this.add.text(pCol2TextX, currentY + pRowGap, `CDR: ${Math.round(stats.cdr * 100)}%`, txtStyle),
+      lifesteal: this.add.text(pCol2TextX, currentY + pRowGap * 2, `Lifesteal: ${heroData.baseStats.lifesteal + stats.lifesteal}%`, txtStyle),
+      armPen: this.add.text(pCol2TextX, currentY + pRowGap * 3, `Arm Pen: ${stats.armorPen}%`, txtStyle)
     };
 
     // Active Augments Section
