@@ -10,6 +10,12 @@ import { preloadCharacterSFX, playPreparationBGM, stopPreparationBGM } from './s
 import { ALL_AUGMENTS } from './AugmentManager';
 import { preloadShopItemAssets } from './shopItemLoader';
 
+import buyBtnUrl from './assets/image/Buy.png';
+import sellBtnUrl from './assets/image/Sell.png';
+import readyBtnUrl from './assets/image/Ready.png';
+import bg1Url from './assets/image/BG_1.png';
+import bg2Url from './assets/image/BG_2.png';
+
 export default class PreparationScene extends Phaser.Scene {
   constructor() {
     super('PreparationScene');
@@ -23,6 +29,12 @@ export default class PreparationScene extends Phaser.Scene {
     preloadRivenSkillAssets(this);
     preloadShopItemAssets(this);
     preloadCharacterSFX(this);
+
+    this.load.image('btn_buy', buyBtnUrl);
+    this.load.image('btn_sell', sellBtnUrl);
+    this.load.image('btn_ready', readyBtnUrl);
+    this.load.image('bg_panel_1', bg1Url);
+    this.load.image('bg_panel_2', bg2Url);
   }
 
   create() {
@@ -44,9 +56,9 @@ export default class PreparationScene extends Phaser.Scene {
       this.registry.set('gold', GAME_CONFIG.ECONOMY.STARTING_GOLD);
     }
     if (!this.registry.has('playerStats')) {
-      this.registry.set('playerStats', { 
-        bonusDamage: 0, bonusSpeed: 0, bonusHP: 0, cdr: 0, 
-        armor: 0, lifesteal: 0, critChance: 0, armorPen: 0 
+      this.registry.set('playerStats', {
+        bonusDamage: 0, bonusSpeed: 0, bonusHP: 0, cdr: 0,
+        armor: 0, lifesteal: 0, critChance: 0, armorPen: 0
       });
     }
     if (!this.registry.has('inventory')) {
@@ -84,21 +96,28 @@ export default class PreparationScene extends Phaser.Scene {
   }
 
   drawLeftPanel() {
-    // Left Panel bounds: startX = 293, width = 250, Center X = 418, topY = 178
-    const startX = 293;
+    // Left Panel bounds: startX = 258, width = 300, Center X = 408, topY = 178
+    const startX = 258;
     const topY = 178;
-    const centerX = startX + 125;
+    const centerX = startX + 150;
     let currentY = topY;
 
-    // Background
-    this.add.rectangle(startX, topY, 250, 668, 0x1a1a1a).setOrigin(0, 0);
+    // Background (BG_2.png frame image - Width 300px)
+    this.add.image(startX, topY, 'bg_panel_2').setOrigin(0, 0).setDisplaySize(300, 668).setTint(0xcccccc);
+    this.add.rectangle(startX, topY, 300, 668, 0x000000, 0.1).setOrigin(0, 0);
 
-    // Title
-    currentY += 30;
-    this.add.text(centerX, currentY, "ENEMY STATUS", { fontSize: '20px', fill: '#ff5555', fontStyle: 'bold' }).setOrigin(0.5);
+    // Header Title (Shifted down to fit frame ornament)
+    currentY += 48;
+    this.add.text(centerX, currentY, "ENEMY STATUS", {
+      fontSize: '18px',
+      fill: '#ff5555',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5);
 
-    // Selected Level & Bot Hero Text
-    currentY += 28;
+    // Level Header
+    currentY += 25;
     const unlockedLevel = this.registry.get('unlockedLevel') || 1;
     let selectedLevel = this.registry.get('selectedLevel') || unlockedLevel;
     if (selectedLevel > unlockedLevel) {
@@ -110,64 +129,53 @@ export default class PreparationScene extends Phaser.Scene {
     const currentBotHero = this.registry.get('selectedBotHero') || defaultBotHero;
     const botHeroData = GAME_CONFIG.CHARACTERS[currentBotHero] || GAME_CONFIG.CHARACTERS.ezreal;
 
-    this.levelTitleText = this.add.text(centerX, currentY, `LEVEL ${selectedLevel} (${botHeroData.name.toUpperCase()} BOT)`, { fontSize: '13px', fill: '#ffff00', fontStyle: 'bold' }).setOrigin(0.5);
+    this.levelTitleText = this.add.text(centerX, currentY, `LEVEL ${selectedLevel} (${botHeroData.name.toUpperCase()} BOT)`, {
+      fontSize: '12px',
+      fill: '#facc15',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5);
 
-    // Level Selector 1..10 (2 Rows of 5 Buttons)
-    currentY += 35;
+    // Compact Level Selector Bar (1 Single Row of 10 circular pills)
+    currentY += 24;
     this.levelButtons = [];
-    const btnSize = 36;
-    const gapX = 44;
-
     for (let i = 1; i <= 10; i++) {
-      const row = i <= 5 ? 0 : 1;
-      const col = (i - 1) % 5;
-      const bx = (centerX - 88) + (col * gapX);
-      const by = currentY + (row * 38);
-
+      const bx = (centerX - 112.5) + ((i - 1) * 25);
       const isUnlocked = i <= unlockedLevel;
       const isSelected = i === selectedLevel;
 
-      let bgColor = 0x333333;
-      let strokeColor = 0x555555;
-      if (isSelected) {
-        bgColor = 0x0088ff;
-        strokeColor = 0xffffff;
-      } else if (isUnlocked) {
-        bgColor = 0x1e293b;
-        strokeColor = 0x38bdf8;
-      }
+      let bgColor = isSelected ? 0x0088ff : (isUnlocked ? 0x1e293b : 0x0f172a);
+      let strokeColor = isSelected ? 0xffffff : (isUnlocked ? 0x38bdf8 : 0x334155);
 
-      const btnBox = this.add.rectangle(bx, by, btnSize, 30, bgColor).setOrigin(0.5);
-      btnBox.setStrokeStyle(1.5, strokeColor);
+      const btnCircle = this.add.circle(bx, currentY, 10, bgColor).setInteractive({ useHandCursor: isUnlocked });
+      btnCircle.setStrokeStyle(1.5, strokeColor);
 
       const labelTxt = isUnlocked ? `${i}` : '🔒';
       const labelColor = isSelected ? '#ffffff' : (isUnlocked ? '#38bdf8' : '#666666');
-      const btnTxt = this.add.text(bx, by, labelTxt, { fontSize: '12px', fill: labelColor, fontStyle: 'bold' }).setOrigin(0.5);
+      const btnTxt = this.add.text(bx, currentY, labelTxt, { fontSize: '10px', fill: labelColor, fontStyle: 'bold' }).setOrigin(0.5);
 
       if (isUnlocked) {
-        btnBox.setInteractive({ useHandCursor: true });
         btnTxt.setInteractive({ useHandCursor: true });
-
         const selectLvl = () => {
           this.registry.set('selectedLevel', i);
           this.registry.set('selectedBotHero', GAME_CONFIG.DEFAULT_BOT_HERO_BY_LEVEL[i] || 'ezreal');
           this.scene.restart();
         };
-
-        btnBox.on('pointerdown', selectLvl);
+        btnCircle.on('pointerdown', selectLvl);
         btnTxt.on('pointerdown', selectLvl);
       }
 
-      this.levelButtons.push(btnBox);
+      this.levelButtons.push(btnCircle);
     }
 
-    // Bot Champion Selector Buttons
-    currentY += 72;
-    this.add.text(centerX, currentY, "BOT CHAMPION", { fontSize: '11px', fill: '#ff5555', fontStyle: 'bold' }).setOrigin(0.5);
-    currentY += 22;
+    // Bot Champion Selector (Sleek Circular Avatar Badges)
+    currentY += 32;
+    this.add.text(centerX, currentY, "BOT CHAMPION", { fontSize: '11px', fill: '#ff8888', fontStyle: 'bold', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5);
+
+    currentY += 24;
     const botHeroes = ['ezreal', 'lux', 'jinx', 'zed', 'riven'];
-    const botBtnWidth = 38;
-    const botBtnGap = 42;
+    const botBtnGap = 48;
     const startBotBtnX = centerX - ((botHeroes.length - 1) * botBtnGap) / 2;
 
     botHeroes.forEach((bId, idx) => {
@@ -175,37 +183,41 @@ export default class PreparationScene extends Phaser.Scene {
       const bx = startBotBtnX + (idx * botBtnGap);
       const isBotSelected = bId === currentBotHero;
 
-      const bColor = isBotSelected ? bData.color : 0x222222;
-      const bBtn = this.add.rectangle(bx, currentY, botBtnWidth, 24, bColor).setInteractive({ useHandCursor: true });
-      if (isBotSelected) bBtn.setStrokeStyle(2, 0xffffff);
+      const badgeBg = this.add.circle(bx, currentY, 16, isBotSelected ? bData.color : 0x1e293b).setInteractive({ useHandCursor: true });
+      badgeBg.setStrokeStyle(isBotSelected ? 2.5 : 1.5, isBotSelected ? 0xffffff : bData.color);
 
-      const bTxtColor = isBotSelected ? '#000000' : '#ffffff';
-      const bShort = bData.name.slice(0, 3).toUpperCase();
-      const bTxt = this.add.text(bx, currentY, bShort, { fontSize: '10px', fill: bTxtColor, fontStyle: 'bold' }).setOrigin(0.5);
+      const shortName = bData.name.slice(0, 3).toUpperCase();
+      const txtColor = isBotSelected ? '#000000' : '#ffffff';
+      const badgeTxt = this.add.text(bx, currentY, shortName, { fontSize: '10px', fill: txtColor, fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
       const selectBot = () => {
         this.registry.set('selectedBotHero', bId);
         this.scene.restart();
       };
-      bBtn.on('pointerdown', selectBot);
+      badgeBg.on('pointerdown', selectBot);
+      badgeTxt.on('pointerdown', selectBot);
+
+      badgeBg.on('pointerover', () => this.tweens.add({ targets: badgeBg, scale: 1.15, duration: 100 }));
+      badgeBg.on('pointerout', () => this.tweens.add({ targets: badgeBg, scale: 1.0, duration: 100 }));
     });
 
-    // Graphic (Bot Champion Sprite)
-    currentY += 38;
-    this.add.circle(centerX, currentY, 24, botHeroData.color || 0xffffff, 0.3);
+    // Bot Graphic & Stats Section (Side-by-Side to save vertical space)
+    currentY += 46;
+
+    // Bot Champion Sprite (Left Side)
+    const botSpriteX = centerX - 85;
+    this.add.circle(botSpriteX, currentY + 15, 24, botHeroData.color || 0xffffff, 0.3);
     const botSpriteKey = `${currentBotHero}_spritesheet`;
     if (this.textures.exists(botSpriteKey)) {
-      const botSprite = this.add.sprite(centerX, currentY, botSpriteKey, 0);
-      botSprite.setScale(1.1);
+      const botSprite = this.add.sprite(botSpriteX, currentY + 15, botSpriteKey, 0);
+      botSprite.setScale(1.0);
       const animKey = `${currentBotHero}_idle`;
       if (this.anims.exists(animKey)) {
         botSprite.play(animKey);
       }
     }
 
-    // Stats (2 Columns)
-    currentY += 38;
-    
+    // Bot Stats (Right Side of Bot Sprite)
     const scale = GAME_CONFIG.BOT_SCALING[selectedLevel] || GAME_CONFIG.BOT_SCALING[1];
     const qDamage = (botHeroData.skills.Q && botHeroData.skills.Q.config && botHeroData.skills.Q.config.damage) || 100;
     const enemyStats = {
@@ -218,30 +230,41 @@ export default class PreparationScene extends Phaser.Scene {
       lifesteal: scale.lifesteal,
       armorPen: scale.armorPen
     };
-    
-    const col1X = centerX - 110;
-    const col2X = centerX;
 
-    this.add.text(col1X, currentY, `HP: ${Math.round(enemyStats.maxHp)}`, { fontSize: '12px', fill: '#aaaaaa' });
-    this.add.text(col1X, currentY + 18, `ATK: ${Math.round(enemyStats.atk)}`, { fontSize: '12px', fill: '#aaaaaa' });
-    this.add.text(col1X, currentY + 36, `Armor: ${Math.round(enemyStats.armor)}`, { fontSize: '12px', fill: '#aaaaaa' });
-    this.add.text(col1X, currentY + 54, `Speed: ${Math.round(enemyStats.speed)}`, { fontSize: '12px', fill: '#aaaaaa' });
+    const statsX1 = centerX - 35;
+    const statsX2 = centerX + 55;
+    const statsY = currentY - 10;
 
-    this.add.text(col2X, currentY, `Crit: ${Math.round(enemyStats.critChance)}%`, { fontSize: '12px', fill: '#aaaaaa' });
-    this.add.text(col2X, currentY + 18, `CDR: ${Math.round(enemyStats.cdr)}%`, { fontSize: '12px', fill: '#aaaaaa' });
-    this.add.text(col2X, currentY + 36, `Lifesteal: ${Math.round(enemyStats.lifesteal)}%`, { fontSize: '12px', fill: '#aaaaaa' });
-    this.add.text(col2X, currentY + 54, `Arm Pen: ${Math.round(enemyStats.armorPen)}%`, { fontSize: '12px', fill: '#aaaaaa' });
+    this.add.text(statsX1, statsY, `HP: ${Math.round(enemyStats.maxHp)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
+    this.add.text(statsX1, statsY + 16, `ATK: ${Math.round(enemyStats.atk)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
+    this.add.text(statsX1, statsY + 32, `Armor: ${Math.round(enemyStats.armor)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
+    this.add.text(statsX1, statsY + 48, `Speed: ${Math.round(enemyStats.speed)}`, { fontSize: '11px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 });
+
+    this.add.text(statsX2, statsY, `Crit: ${Math.round(enemyStats.critChance)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
+    this.add.text(statsX2, statsY + 16, `CDR: ${Math.round(enemyStats.cdr)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
+    this.add.text(statsX2, statsY + 32, `Lifesteal: ${Math.round(enemyStats.lifesteal)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
+    this.add.text(statsX2, statsY + 48, `ArmPen: ${Math.round(enemyStats.armorPen)}%`, { fontSize: '11px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 });
 
     // Hero Selection Section
-    this.drawHeroSelection(centerX, currentY + 90);
+    this.drawHeroSelection(centerX, currentY + 75);
   }
 
   drawHeroSelection(centerX, startY) {
     let currentY = startY;
 
-    this.add.text(centerX, currentY, "HERO SELECT", { fontSize: '16px', fill: '#00ffff', fontStyle: 'bold' }).setOrigin(0.5);
-    
-    currentY += 32;
+    // Divider Line
+    this.add.rectangle(centerX, currentY, 250, 1.5, 0x38bdf8, 0.6);
+
+    currentY += 20;
+    this.add.text(centerX, currentY, "SELECT YOUR HERO", {
+      fontSize: '16px',
+      fill: '#00ffff',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5);
+
+    currentY += 28;
     const heroes = ['ezreal', 'lux', 'jinx', 'zed', 'riven'];
     const currentHero = this.registry.get('selectedHero') || 'ezreal';
 
@@ -277,8 +300,7 @@ export default class PreparationScene extends Phaser.Scene {
     keys.five.on('down', () => selectHeroById('riven'));
     keys.numFive.on('down', () => selectHeroById('riven'));
 
-    const btnWidth = 40;
-    const btnGap = 44;
+    const btnGap = 48;
     const startBtnX = centerX - ((heroes.length - 1) * btnGap) / 2;
 
     heroes.forEach((hId, index) => {
@@ -286,23 +308,25 @@ export default class PreparationScene extends Phaser.Scene {
       const x = startBtnX + (index * btnGap);
       const isSelected = hId === currentHero;
 
-      const btnColor = isSelected ? heroData.color : 0x333333;
-      const btn = this.add.rectangle(x, currentY, btnWidth, 26, btnColor).setInteractive({ useHandCursor: true });
-      if (isSelected) btn.setStrokeStyle(2, 0xffffff);
+      const badgeBg = this.add.circle(x, currentY, 16, isSelected ? heroData.color : 0x1e293b).setInteractive({ useHandCursor: true });
+      badgeBg.setStrokeStyle(isSelected ? 2.5 : 1.5, isSelected ? 0xffffff : heroData.color);
 
+      const shortName = heroData.name.slice(0, 3).toUpperCase();
       const txtColor = isSelected ? '#000000' : '#ffffff';
-      const shortName = heroData.name.slice(0, 4);
-      const txt = this.add.text(x, currentY, shortName, { fontSize: '11px', fill: txtColor, fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+      const badgeTxt = this.add.text(x, currentY, shortName, { fontSize: '10px', fill: txtColor, fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
-      btn.on('pointerdown', () => selectHeroById(hId));
-      txt.on('pointerdown', () => selectHeroById(hId));
+      badgeBg.on('pointerdown', () => selectHeroById(hId));
+      badgeTxt.on('pointerdown', () => selectHeroById(hId));
+
+      badgeBg.on('pointerover', () => this.tweens.add({ targets: badgeBg, scale: 1.15, duration: 100 }));
+      badgeBg.on('pointerout', () => this.tweens.add({ targets: badgeBg, scale: 1.0, duration: 100 }));
     });
 
     // Hero Avatar Graphic
     currentY += 45;
     const selectedData = GAME_CONFIG.CHARACTERS[currentHero] || GAME_CONFIG.CHARACTERS.ezreal;
-    
-    this.add.circle(centerX, currentY, 24, 0xffffff, 0.25);
+
+    this.add.circle(centerX, currentY, 24, selectedData.color || 0xffffff, 0.3);
     if (['ezreal', 'lux', 'jinx', 'zed', 'riven'].includes(currentHero)) {
       const sheetKey = `${currentHero}_spritesheet`;
       const idleKey = `${currentHero}_idle`;
@@ -321,15 +345,16 @@ export default class PreparationScene extends Phaser.Scene {
 
     // Hero Description Info
     currentY += 42;
-    this.add.text(centerX, currentY, `${selectedData.name} - ${selectedData.title}`, { fontSize: '12px', fill: '#ffff00', fontStyle: 'bold' }).setOrigin(0.5);
+    this.add.text(centerX, currentY, `${selectedData.name} - ${selectedData.title}`, { fontSize: '13px', fill: '#facc15', fontStyle: 'bold', stroke: '#000000', strokeThickness: 2 }).setOrigin(0.5);
 
     currentY += 22;
-    this.add.text(centerX, currentY, selectedData.description, { fontSize: '11px', fill: '#aaaaaa', align: 'center', wordWrap: { width: 230 } }).setOrigin(0.5, 0);
+    this.add.text(centerX, currentY, selectedData.description, { fontSize: '11px', fill: '#ffffff', align: 'center', wordWrap: { width: 230 } }).setOrigin(0.5, 0);
 
     // Reset Progress Button
     currentY += 85;
-    const resetBtn = this.add.rectangle(centerX, currentY, 200, 28, 0x661111).setInteractive({ useHandCursor: true });
-    this.add.text(centerX, currentY, "RESET TO LEVEL 1", { fontSize: '12px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+    const resetBtn = this.add.rectangle(centerX, currentY, 180, 26, 0x881111).setInteractive({ useHandCursor: true });
+    resetBtn.setStrokeStyle(1.5, 0xef4444);
+    this.add.text(centerX, currentY, "RESET TO LEVEL 1", { fontSize: '11px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
 
     resetBtn.on('pointerdown', () => {
       this.registry.set('unlockedLevel', 1);
@@ -342,27 +367,34 @@ export default class PreparationScene extends Phaser.Scene {
   }
 
   drawCenterPanel() {
-    // Center Panel bounds: startX = 593, width = 300, Center X = 743, topY = 178
-    const startX = 593;
+    // Center Panel bounds: startX = 618, width = 300, Center X = 768, topY = 178
+    const startX = 618;
     const topY = 178;
     const centerX = startX + 150;
     let currentY = topY;
 
     // Background
-    this.add.rectangle(startX, topY, 300, 668, 0x1a1a1a).setOrigin(0, 0);
+    this.add.image(startX, topY, 'bg_panel_2').setOrigin(0, 0).setDisplaySize(300, 668).setTint(0xcccccc);
+    this.add.rectangle(startX, topY, 300, 668, 0x000000, 0.1).setOrigin(0, 0);
 
-    // Title
-    currentY += 32;
-    this.add.text(centerX, currentY, "LoL ITEM SHOP", { fontSize: '22px', fill: '#ffcc00', fontStyle: 'bold' }).setOrigin(0.5);
+    // Title (Shifted down slightly to fit frame ornament)
+    currentY += 54;
+    this.add.text(centerX, currentY, "ITEM SHOP", {
+      fontSize: '22px',
+      fill: '#ffcc00',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5);
 
     this.shopItems = GAME_CONFIG.SHOP_ITEMS;
 
     // Grid properties for 20 items (3 cols x 7 rows)
-    currentY += 45;
+    currentY += 60;
     let row = 0;
     let col = 0;
     const paddingX = 85;
-    const paddingY = 72;
+    const paddingY = 74;
 
     this.itemButtons = [];
 
@@ -372,14 +404,22 @@ export default class PreparationScene extends Phaser.Scene {
 
       const itemContainer = this.add.container(x, y);
 
-      const box = this.add.rectangle(0, 0, 56, 56, 0x0f172a).setInteractive({ useHandCursor: true });
-      box.setStrokeStyle(1.5, item.color || 0x38bdf8, 0.9);
+      // 3D Drop Shadow for Pop-out effect
+      const shadow = this.add.rectangle(3, 3, 62, 62, 0x000000, 0.6);
 
+      // Main Item Box
+      const box = this.add.rectangle(0, 0, 62, 62, 0x0f172a).setInteractive({ useHandCursor: true });
+      box.setStrokeStyle(2, item.color || 0x38bdf8, 1);
+
+      // Enlarged Icon (50x50)
       const itemKey = `item_${item.id}`;
-      const icon = this.add.image(0, -3, itemKey);
-      icon.setDisplaySize(44, 44);
+      const icon = this.add.image(0, -5, itemKey);
+      icon.setDisplaySize(50, 50);
 
-      const priceText = this.add.text(0, 17, `${item.cost}G`, {
+      // Price Tag Badge
+      const priceBg = this.add.rectangle(0, 20, 48, 15, 0x090d16, 0.85);
+      priceBg.setStrokeStyle(1, 0x334155, 0.8);
+      const priceText = this.add.text(0, 20, `${item.cost}G`, {
         fontSize: '11px',
         fill: '#facc15',
         fontStyle: 'bold',
@@ -387,11 +427,11 @@ export default class PreparationScene extends Phaser.Scene {
         strokeThickness: 2
       }).setOrigin(0.5);
 
-      itemContainer.add([box, icon, priceText]);
+      itemContainer.add([shadow, box, icon, priceBg, priceText]);
 
       box.on('pointerover', () => {
         this.tweens.killTweensOf(itemContainer);
-        this.tweens.add({ targets: itemContainer, scale: 1.12, duration: 120, ease: 'Power2' });
+        this.tweens.add({ targets: itemContainer, scale: 1.15, duration: 120, ease: 'Power2' });
       });
       box.on('pointerout', () => {
         this.tweens.killTweensOf(itemContainer);
@@ -416,14 +456,15 @@ export default class PreparationScene extends Phaser.Scene {
   }
 
   drawRightPanel() {
-    // Right Panel bounds: startX = 943, width = 300, Center X = 1093, topY = 178
-    const startX = 943;
+    // Right Panel bounds: startX = 978, width = 300, Center X = 1128, topY = 178
+    const startX = 978;
     const topY = 178;
     const centerX = startX + 150;
     let currentY = topY;
 
     // Background
-    this.add.rectangle(startX, topY, 300, 668, 0x1a1a1a).setOrigin(0, 0);
+    this.add.image(startX, topY, 'bg_panel_2').setOrigin(0, 0).setDisplaySize(300, 668).setTint(0xcccccc);
+    this.add.rectangle(startX, topY, 300, 668, 0x000000, 0.1).setOrigin(0, 0);
 
     // Gold
     currentY += 35;
@@ -491,7 +532,7 @@ export default class PreparationScene extends Phaser.Scene {
 
     const col1X = centerX - 130;
     const col2X = centerX;
-    
+
     this.statTexts = {
       hp: this.add.text(col1X, currentY, `HP: ${heroData.baseStats.hp + stats.bonusHP}`, { fontSize: '13px', fill: '#aaaaaa' }),
       atk: this.add.text(col1X, currentY + 18, `ATK: ${heroData.skills.Q.config.damage + stats.bonusDamage}`, { fontSize: '13px', fill: '#aaaaaa' }),
@@ -524,25 +565,31 @@ export default class PreparationScene extends Phaser.Scene {
     const btnY = currentY;
 
     // BUY Button (Left)
-    this.buyBtnBg = this.add.rectangle(centerX - 65, btnY, 110, 36, 0x555555).setInteractive({ useHandCursor: true });
-    this.buyBtnText = this.add.text(centerX - 65, btnY, "BUY", { fontSize: '16px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
-    
-    this.buyBtnBg.on('pointerover', () => this.tweens.add({ targets: [this.buyBtnBg, this.buyBtnText], scale: 1.08, duration: 150, ease: 'Power2' }));
-    this.buyBtnBg.on('pointerout', () => this.tweens.add({ targets: [this.buyBtnBg, this.buyBtnText], scale: 1.0, duration: 150, ease: 'Power2' }));
-    this.buyBtnBg.on('pointerdown', () => this.buyItem());
+    this.buyBtn = this.add.image(centerX - 65, btnY, 'btn_buy').setInteractive({ useHandCursor: true });
+    this.buyBtn.setDisplaySize(116, 42);
+    this.buyBtn.baseScaleX = this.buyBtn.scaleX;
+    this.buyBtn.baseScaleY = this.buyBtn.scaleY;
+
+    this.buyBtn.on('pointerover', () => this.tweens.add({ targets: this.buyBtn, scaleX: this.buyBtn.baseScaleX * 1.08, scaleY: this.buyBtn.baseScaleY * 1.08, duration: 150, ease: 'Power2' }));
+    this.buyBtn.on('pointerout', () => this.tweens.add({ targets: this.buyBtn, scaleX: this.buyBtn.baseScaleX, scaleY: this.buyBtn.baseScaleY, duration: 150, ease: 'Power2' }));
+    this.buyBtn.on('pointerdown', () => this.buyItem());
 
     // SELL Button (Right)
-    this.sellBtnBg = this.add.rectangle(centerX + 65, btnY, 110, 36, 0x555555).setInteractive({ useHandCursor: true });
-    this.sellBtnText = this.add.text(centerX + 65, btnY, "SELL", { fontSize: '16px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+    this.sellBtn = this.add.image(centerX + 65, btnY, 'btn_sell').setInteractive({ useHandCursor: true });
+    this.sellBtn.setDisplaySize(116, 42);
+    this.sellBtn.baseScaleX = this.sellBtn.scaleX;
+    this.sellBtn.baseScaleY = this.sellBtn.scaleY;
 
-    this.sellBtnBg.on('pointerover', () => this.tweens.add({ targets: [this.sellBtnBg, this.sellBtnText], scale: 1.08, duration: 150, ease: 'Power2' }));
-    this.sellBtnBg.on('pointerout', () => this.tweens.add({ targets: [this.sellBtnBg, this.sellBtnText], scale: 1.0, duration: 150, ease: 'Power2' }));
-    this.sellBtnBg.on('pointerdown', () => this.sellItem());
+    this.sellBtn.on('pointerover', () => this.tweens.add({ targets: this.sellBtn, scaleX: this.sellBtn.baseScaleX * 1.08, scaleY: this.sellBtn.baseScaleY * 1.08, duration: 150, ease: 'Power2' }));
+    this.sellBtn.on('pointerout', () => this.tweens.add({ targets: this.sellBtn, scaleX: this.sellBtn.baseScaleX, scaleY: this.sellBtn.baseScaleY, duration: 150, ease: 'Power2' }));
+    this.sellBtn.on('pointerdown', () => this.sellItem());
 
     // READY Button
     currentY += 68;
-    const readyBtn = this.add.rectangle(centerX, currentY, 200, 50, 0x00aa00).setInteractive({ useHandCursor: true });
-    const readyTxt = this.add.text(centerX, currentY, "BATTLE READY", { fontSize: '22px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    this.readyBtn = this.add.image(centerX, currentY, 'btn_ready').setInteractive({ useHandCursor: true });
+    this.readyBtn.setDisplaySize(210, 56);
+    this.readyBtn.baseScaleX = this.readyBtn.scaleX;
+    this.readyBtn.baseScaleY = this.readyBtn.scaleY;
 
     const onReady = () => {
       stopPreparationBGM(this);
@@ -555,10 +602,9 @@ export default class PreparationScene extends Phaser.Scene {
       });
     };
 
-    readyBtn.on('pointerover', () => this.tweens.add({ targets: [readyBtn, readyTxt], scale: 1.05, duration: 150, ease: 'Power2' }));
-    readyBtn.on('pointerout', () => this.tweens.add({ targets: [readyBtn, readyTxt], scale: 1.0, duration: 150, ease: 'Power2' }));
-    readyBtn.on('pointerdown', onReady);
-    readyTxt.on('pointerdown', onReady);
+    this.readyBtn.on('pointerover', () => this.tweens.add({ targets: this.readyBtn, scaleX: this.readyBtn.baseScaleX * 1.05, scaleY: this.readyBtn.baseScaleY * 1.05, duration: 150, ease: 'Power2' }));
+    this.readyBtn.on('pointerout', () => this.tweens.add({ targets: this.readyBtn, scaleX: this.readyBtn.baseScaleX, scaleY: this.readyBtn.baseScaleY, duration: 150, ease: 'Power2' }));
+    this.readyBtn.on('pointerdown', onReady);
     this.input.keyboard.once('keydown-ENTER', onReady);
 
     this.updateInventoryView();
@@ -578,8 +624,8 @@ export default class PreparationScene extends Phaser.Scene {
         this.descIcon.setVisible(true);
       }
 
-      this.buyBtnBg.setFillStyle(0x0055ff);
-      this.sellBtnBg.setFillStyle(0x555555);
+      if (this.buyBtn) this.buyBtn.setAlpha(1.0).clearTint();
+      if (this.sellBtn) this.sellBtn.setAlpha(0.45).setTint(0x666666);
     } else if (this.selectedInventoryIndex !== null) {
       // Inventory item selected
       const inv = this.registry.get('inventory');
@@ -598,8 +644,8 @@ export default class PreparationScene extends Phaser.Scene {
           this.descIcon.setVisible(true);
         }
 
-        this.buyBtnBg.setFillStyle(0x555555);
-        this.sellBtnBg.setFillStyle(0xd35400);
+        if (this.buyBtn) this.buyBtn.setAlpha(0.45).setTint(0x666666);
+        if (this.sellBtn) this.sellBtn.setAlpha(1.0).clearTint();
       }
     } else {
       this.descName.setText("SELECT AN ITEM");
@@ -607,8 +653,8 @@ export default class PreparationScene extends Phaser.Scene {
       this.descCost.setText("");
       if (this.descIcon) this.descIcon.setVisible(false);
 
-      this.buyBtnBg.setFillStyle(0x555555);
-      this.sellBtnBg.setFillStyle(0x555555);
+      if (this.buyBtn) this.buyBtn.setAlpha(0.45).setTint(0x666666);
+      if (this.sellBtn) this.sellBtn.setAlpha(0.45).setTint(0x666666);
     }
   }
 
@@ -660,12 +706,12 @@ export default class PreparationScene extends Phaser.Scene {
       this.updatePlayerStatsUI();
 
       // Flash effect
-      this.buyBtnBg.setFillStyle(0xffffff);
-      this.time.delayedCall(100, () => this.buyBtnBg.setFillStyle(0x0055ff));
+      if (this.buyBtn) this.buyBtn.setTint(0x00ff88);
+      this.time.delayedCall(120, () => this.updateRightPanel());
     } else {
       // Error effect
-      this.buyBtnBg.setFillStyle(0xff0000);
-      this.time.delayedCall(100, () => this.buyBtnBg.setFillStyle(0x0055ff));
+      if (this.buyBtn) this.buyBtn.setTint(0xff3333);
+      this.time.delayedCall(120, () => this.updateRightPanel());
     }
   }
 
@@ -705,8 +751,8 @@ export default class PreparationScene extends Phaser.Scene {
     this.updatePlayerStatsUI();
 
     // Flash effect
-    this.sellBtnBg.setFillStyle(0xffffff);
-    this.time.delayedCall(100, () => this.sellBtnBg.setFillStyle(0x555555));
+    if (this.sellBtn) this.sellBtn.setTint(0xffaa00);
+    this.time.delayedCall(120, () => this.updateRightPanel());
   }
 
   updateInventoryView() {
