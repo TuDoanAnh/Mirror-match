@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import Player from './Player';
 import EnemyBot from './EnemyBot';
 import Creep from './Creep';
-import { GAME_CONFIG } from './gameConfig';
+import { GAME_CONFIG, getBotHeroForCampaignLevel } from './gameConfig';
 import { preloadLuxAssets, createLuxAnimations } from './luxAnimations';
 import { preloadEzrealSkillAssets, createEzrealSkillAnimations } from './ezrealSkillAnimations';
 import { preloadJinxAssets, createJinxAnimations } from './jinxAnimations';
@@ -158,8 +158,8 @@ export default class GameScene extends Phaser.Scene {
 
     } else {
       // Classic Campaign Mode Setup
-      const defaultBot = GAME_CONFIG.DEFAULT_BOT_HERO_BY_LEVEL[this.level] || 'ezreal';
-      const chosenBotHero = this.registry.get('selectedBotHero') || defaultBot;
+      const playerHero = this.registry.get('selectedHero') || 'ezreal';
+      const chosenBotHero = getBotHeroForCampaignLevel(playerHero, this.level);
       this.bot = new EnemyBot(this, 1180, 512, this.level, chosenBotHero);
       this.bot.setTarget(this.player);
 
@@ -1167,9 +1167,22 @@ export default class GameScene extends Phaser.Scene {
         });
 
         const augList = this.registry.get('augments') || [];
-        if (!augList.some(a => (a.id || a) === aug.id)) {
+        if (aug.isRepeatable) {
           augList.push(aug);
           this.registry.set('augments', augList);
+
+          let stats = this.registry.get('playerStats');
+          if (aug.statsDict) {
+            Object.keys(aug.statsDict).forEach(k => {
+              stats[k] = (stats[k] || 0) + aug.statsDict[k];
+            });
+          }
+          this.registry.set('playerStats', stats);
+        } else {
+          if (!augList.some(a => (a.id || a) === aug.id)) {
+            augList.push(aug);
+            this.registry.set('augments', augList);
+          }
         }
       };
 
@@ -1783,7 +1796,8 @@ export default class GameScene extends Phaser.Scene {
     if (!this.player || !this.player.active || !this.player.hasBulletTime) return;
     if (time - (this.player.lastBulletTimeTrigger || 0) < 5000) return;
 
-    const enemyProjs = this.projectileGroup.getChildren();
+    if (!this.enemyProjectiles) return;
+    const enemyProjs = this.enemyProjectiles.getChildren();
     enemyProjs.forEach(proj => {
       if (proj.attacker === this.bot && proj.active) {
         const dist = Phaser.Math.Distance.Between(proj.x, proj.y, this.player.x, this.player.y);

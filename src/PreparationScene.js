@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import EnemyBot from './EnemyBot';
-import { GAME_CONFIG, getBotEquipmentForLevel } from './gameConfig';
+import { GAME_CONFIG, getBotEquipmentForLevel, getBotHeroForCampaignLevel } from './gameConfig';
 import { preloadLuxAssets, createLuxAnimations } from './luxAnimations';
 import { preloadEzrealSkillAssets, createEzrealSkillAnimations } from './ezrealSkillAnimations';
 import { preloadJinxAssets, createJinxAnimations } from './jinxAnimations';
@@ -190,15 +190,22 @@ export default class PreparationScene extends Phaser.Scene {
       this.registry.set('selectedLevel', selectedLevel);
     }
 
-    const defaultBotHero = GAME_CONFIG.DEFAULT_BOT_HERO_BY_LEVEL[selectedLevel] || 'ezreal';
-    const currentBotHero = this.registry.get('selectedBotHero') || defaultBotHero;
-    const botHeroData = GAME_CONFIG.CHARACTERS[currentBotHero] || GAME_CONFIG.CHARACTERS.ezreal;
-
+    const currentHero = this.registry.get('selectedHero') || 'ezreal';
+    let currentBotHero = 'ezreal';
     if (isInfinityMode) {
       const survivalLevel = this.registry.get('survivalLevel') || 1;
       selectedLevel = survivalLevel;
+      currentBotHero = getBotHeroForCampaignLevel(currentHero, survivalLevel);
     } else {
-      this.levelTitleText = this.add.text(centerX, currentY, `LEVEL ${selectedLevel} (${botHeroData.name.toUpperCase()} BOT)`, {
+      currentBotHero = getBotHeroForCampaignLevel(currentHero, selectedLevel);
+    }
+    this.registry.set('selectedBotHero', currentBotHero);
+
+    const botHeroData = GAME_CONFIG.CHARACTERS[currentBotHero] || GAME_CONFIG.CHARACTERS.ezreal;
+
+    if (!isInfinityMode) {
+      const stageNum = Math.floor((selectedLevel - 1) / 5) + 1;
+      this.levelTitleText = this.add.text(centerX, currentY, `LEVEL ${selectedLevel}: VS ${botHeroData.name.toUpperCase()} (STAGE ${stageNum}/4)`, {
         fontSize: '12px',
         fill: '#facc15',
         fontStyle: 'bold',
@@ -206,142 +213,43 @@ export default class PreparationScene extends Phaser.Scene {
         strokeThickness: 2
       }).setOrigin(0.5);
 
-      // Compact Level Selector Bar (1 Single Row of 10 circular pills)
-      currentY += 26;
-      this.levelButtons = [];
-      for (let i = 1; i <= 10; i++) {
-        const bx = (centerX - 112.5) + ((i - 1) * 25);
-        const isUnlocked = i <= unlockedLevel;
-        const isSelected = i === selectedLevel;
+      currentY += 16;
+    }
 
-        let bgColor = isSelected ? 0x0088ff : (isUnlocked ? 0x1e293b : 0x0f172a);
-        let strokeColor = isSelected ? 0xffffff : (isUnlocked ? 0x38bdf8 : 0x334155);
+    // Bot Inventory Section Header & 6-Slot Item Grid
+    currentY += 24;
 
-        const btnCircle = this.add.circle(bx, currentY, 10, bgColor).setInteractive({ useHandCursor: isUnlocked });
-        btnCircle.setStrokeStyle(1.5, strokeColor);
+    this.add.text(centerX, currentY, "BOT INVENTORY GEAR", {
+      fontSize: '11px',
+      fill: '#a855f7',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
 
-        const labelTxt = isUnlocked ? `${i}` : '🔒';
-        const labelColor = isSelected ? '#ffffff' : (isUnlocked ? '#38bdf8' : '#666666');
-        const btnTxt = this.add.text(bx, currentY, labelTxt, { fontSize: '10px', fill: labelColor, fontStyle: 'bold' }).setOrigin(0.5);
+    const botEquip = getBotEquipmentForLevel(selectedLevel);
+    const gridY = currentY + 28;
+    const slotWidth = 36;
+    const slotGap = 42;
+    const startSlotX = centerX - ((6 - 1) * slotGap) / 2;
 
-        if (isUnlocked) {
-          btnTxt.setInteractive({ useHandCursor: true });
-          const selectLvl = () => {
-            this.registry.set('selectedLevel', i);
-            this.registry.set('selectedBotHero', GAME_CONFIG.DEFAULT_BOT_HERO_BY_LEVEL[i] || 'ezreal');
-            this.scene.restart();
-          };
-          btnCircle.on('pointerdown', selectLvl);
-          btnTxt.on('pointerdown', selectLvl);
+    for (let s = 0; s < 6; s++) {
+      const sx = startSlotX + (s * slotGap);
+      const slotBox = this.add.rectangle(sx, gridY, slotWidth, slotWidth, 0x0f172a, 0.95);
+      const equippedItem = botEquip[s];
+      const strokeColor = equippedItem ? (equippedItem.color || 0xa855f7) : 0x334155;
+      slotBox.setStrokeStyle(1.2, strokeColor, equippedItem ? 0.9 : 0.4);
+
+      if (equippedItem) {
+        const iconKey = `item_${equippedItem.id}`;
+        if (this.textures.exists(iconKey)) {
+          const iconImg = this.add.image(sx, gridY, iconKey);
+          iconImg.setDisplaySize(26, 26);
         }
-
-        this.levelButtons.push(btnCircle);
+      } else {
+        this.add.text(sx, gridY, "—", { fontSize: '11px', fill: '#475569' }).setOrigin(0.5);
       }
     }
 
-    if (isInfinityMode) {
-      // Bot Inventory Section Header & 6-Slot Item Grid (No bot avatar portrait)
-      currentY += 24;
-
-      this.add.text(centerX, currentY, "BOT INVENTORY GEAR", {
-        fontSize: '11px',
-        fill: '#a855f7',
-        fontStyle: 'bold'
-      }).setOrigin(0.5);
-
-      const survivalLevel = this.registry.get('survivalLevel') || 1;
-      const botEquip = getBotEquipmentForLevel(survivalLevel);
-      const gridY = currentY + 28;
-      const slotWidth = 36;
-      const slotGap = 42;
-      const startSlotX = centerX - ((6 - 1) * slotGap) / 2;
-
-      for (let s = 0; s < 6; s++) {
-        const sx = startSlotX + (s * slotGap);
-        const slotBox = this.add.rectangle(sx, gridY, slotWidth, slotWidth, 0x0f172a, 0.95);
-        const equippedItem = botEquip[s];
-        const strokeColor = equippedItem ? (equippedItem.color || 0xa855f7) : 0x334155;
-        slotBox.setStrokeStyle(1.2, strokeColor, equippedItem ? 0.9 : 0.4);
-
-        if (equippedItem) {
-          const iconKey = `item_${equippedItem.id}`;
-          if (this.textures.exists(iconKey)) {
-            const iconImg = this.add.image(sx, gridY, iconKey);
-            iconImg.setDisplaySize(26, 26);
-          }
-        } else {
-          this.add.text(sx, gridY, "—", { fontSize: '11px', fill: '#475569' }).setOrigin(0.5);
-        }
-      }
-
-      currentY += 60;
-    } else {
-      // Campaign Mode Carousel with ◄ and ► buttons
-      const botHeroes = ['ezreal', 'lux', 'jinx', 'zed', 'riven'];
-      const currentBotHeroIndex = botHeroes.indexOf(currentBotHero) !== -1 ? botHeroes.indexOf(currentBotHero) : 0;
-
-      const selectBotByIndex = (idx) => {
-        const targetId = botHeroes[(idx + botHeroes.length) % botHeroes.length];
-        if (targetId !== currentBotHero) {
-          this.registry.set('selectedBotHero', targetId);
-          this.scene.restart();
-        }
-      };
-
-      const selectPrevBot = () => selectBotByIndex(currentBotHeroIndex - 1);
-      const selectNextBot = () => selectBotByIndex(currentBotHeroIndex + 1);
-
-      currentY += 45;
-      const botSlideY = currentY;
-
-      // PREVIOUS Button (◄)
-      const botPrevX = centerX - 105;
-      const botPrevBg = this.add.circle(botPrevX, botSlideY, 16, 0x1e293b).setInteractive({ useHandCursor: true });
-      botPrevBg.setStrokeStyle(1.2, 0xef4444, 0.7);
-      const botPrevTxt = this.add.text(botPrevX, botSlideY - 1, '◄', { fontSize: '15px', fill: '#ff8888', fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-      botPrevBg.on('pointerdown', selectPrevBot);
-      botPrevTxt.on('pointerdown', selectPrevBot);
-      botPrevBg.on('pointerover', () => this.tweens.add({ targets: [botPrevBg, botPrevTxt], scale: 1.2, duration: 100 }));
-      botPrevBg.on('pointerout', () => this.tweens.add({ targets: [botPrevBg, botPrevTxt], scale: 1.0, duration: 100 }));
-
-      // NEXT Button (►)
-      const botNextX = centerX + 105;
-      const botNextBg = this.add.circle(botNextX, botSlideY, 16, 0x1e293b).setInteractive({ useHandCursor: true });
-      botNextBg.setStrokeStyle(1.2, 0xef4444, 0.7);
-      const botNextTxt = this.add.text(botNextX, botSlideY - 1, '►', { fontSize: '15px', fill: '#ff8888', fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-      botNextBg.on('pointerdown', selectNextBot);
-      botNextTxt.on('pointerdown', selectNextBot);
-      botNextBg.on('pointerover', () => this.tweens.add({ targets: [botNextBg, botNextTxt], scale: 1.2, duration: 100 }));
-      botNextBg.on('pointerout', () => this.tweens.add({ targets: [botNextBg, botNextTxt], scale: 1.0, duration: 100 }));
-
-      // Center Bot Graphic Sprite with Snug Circle Mask & Colored Ring
-      this.add.circle(centerX, botSlideY, 34, botHeroData.color || 0xffffff, 0.25);
-      const botInnerCircle = this.add.circle(centerX, botSlideY, 30, 0x0f172a);
-      botInnerCircle.setStrokeStyle(1.0, botHeroData.color || 0xef4444, 0.5);
-
-      const botSpriteKey = `${currentBotHero}_spritesheet`;
-      if (this.textures.exists(botSpriteKey)) {
-        const botSprite = this.add.sprite(centerX, botSlideY, botSpriteKey, 0);
-        botSprite.setScale(1.0);
-
-        const botMaskGfx = this.make.graphics();
-        botMaskGfx.fillStyle(0xffffff, 1.0);
-        botMaskGfx.fillCircle(centerX, botSlideY, 30);
-        botSprite.setMask(botMaskGfx.createGeometryMask());
-
-        const animKey = `${currentBotHero}_idle`;
-        if (this.anims.exists(animKey)) {
-          botSprite.play(animKey);
-        }
-      }
-
-      const botBorder = this.add.circle(centerX, botSlideY, 30);
-      botBorder.setStrokeStyle(1.0, botHeroData.color || 0xef4444, 0.6);
-
-      currentY += 48;
-    }
+    currentY += 60;
 
     // Bot Stats Section (2 Columns)
     const scale = GAME_CONFIG.BOT_SCALING[selectedLevel] || GAME_CONFIG.BOT_SCALING[1];
@@ -357,21 +265,17 @@ export default class PreparationScene extends Phaser.Scene {
       armorPen: scale.armorPen
     };
 
-    if (isInfinityMode) {
-      const survivalLevel = this.registry.get('survivalLevel') || 1;
-      const botEquip = getBotEquipmentForLevel(survivalLevel);
-      botEquip.forEach(item => {
-        if (item.statsDict) {
-          if (item.statsDict.bonusHP) enemyStats.maxHp += item.statsDict.bonusHP;
-          if (item.statsDict.bonusDamage) enemyStats.atk += item.statsDict.bonusDamage;
-          if (item.statsDict.bonusSpeed) enemyStats.speed += item.statsDict.bonusSpeed;
-          if (item.statsDict.armor) enemyStats.armor += item.statsDict.armor;
-          if (item.statsDict.lifesteal) enemyStats.lifesteal += item.statsDict.lifesteal;
-          if (item.statsDict.critChance) enemyStats.critChance += item.statsDict.critChance;
-          if (item.statsDict.armorPen) enemyStats.armorPen += item.statsDict.armorPen;
-        }
-      });
-    }
+    botEquip.forEach(item => {
+      if (item.statsDict) {
+        if (item.statsDict.bonusHP) enemyStats.maxHp += item.statsDict.bonusHP;
+        if (item.statsDict.bonusDamage) enemyStats.atk += item.statsDict.bonusDamage;
+        if (item.statsDict.bonusSpeed) enemyStats.speed += item.statsDict.bonusSpeed;
+        if (item.statsDict.armor) enemyStats.armor += item.statsDict.armor;
+        if (item.statsDict.lifesteal) enemyStats.lifesteal += item.statsDict.lifesteal;
+        if (item.statsDict.critChance) enemyStats.critChance += item.statsDict.critChance;
+        if (item.statsDict.armorPen) enemyStats.armorPen += item.statsDict.armorPen;
+      }
+    });
 
     const col1IconX = centerX - 120;
     const col1TextX = centerX - 100;
@@ -582,20 +486,61 @@ export default class PreparationScene extends Phaser.Scene {
     this.add.image(startX, topY, 'bg_panel_2').setOrigin(0, 0).setDisplaySize(300, 668).setTint(0xcccccc);
     this.add.rectangle(startX, topY, 300, 668, 0x000000, 0.1).setOrigin(0, 0);
 
-    // Title (Shifted down slightly to fit frame ornament)
-    currentY += 54;
+    // Title
+    currentY += 36;
     this.add.text(centerX, currentY, "ITEM SHOP", {
-      fontSize: '22px',
+      fontSize: '20px',
       fill: '#ffcc00',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 3
     }).setOrigin(0.5);
 
-    this.shopItems = GAME_CONFIG.SHOP_ITEMS;
+    // Shop Category Tabs (⚔️ GEAR vs 🧪 ELIXIRS)
+    currentY += 28;
+    this.shopTab = 'gear';
 
-    // Grid properties for 20 items (3 cols x 7 rows)
-    currentY += 60;
+    const tabWidth = 115;
+    const tabHeight = 24;
+
+    const gearTabBg = this.add.rectangle(centerX - 62, currentY, tabWidth, tabHeight, 0x0284c7).setInteractive({ useHandCursor: true });
+    gearTabBg.setStrokeStyle(1.5, 0x38bdf8);
+    const gearTabTxt = this.add.text(centerX - 62, currentY, "⚔️ GEAR (20)", { fontSize: '11px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+
+    const elixirTabBg = this.add.rectangle(centerX + 62, currentY, tabWidth, tabHeight, 0x1e293b).setInteractive({ useHandCursor: true });
+    elixirTabBg.setStrokeStyle(1.5, 0x334155);
+    const elixirTabTxt = this.add.text(centerX + 62, currentY, "🧪 ELIXIRS (4)", { fontSize: '11px', fill: '#94a3b8', fontStyle: 'bold' }).setOrigin(0.5);
+
+    this.gearContainer = this.add.container(0, 0);
+    this.elixirContainer = this.add.container(0, 0).setVisible(false);
+
+    const switchTab = (tab) => {
+      this.shopTab = tab;
+      if (tab === 'gear') {
+        gearTabBg.setFillStyle(0x0284c7).setStrokeStyle(1.5, 0x38bdf8);
+        gearTabTxt.setColor('#ffffff');
+        elixirTabBg.setFillStyle(0x1e293b).setStrokeStyle(1.5, 0x334155);
+        elixirTabTxt.setColor('#94a3b8');
+        this.gearContainer.setVisible(true);
+        this.elixirContainer.setVisible(false);
+      } else {
+        elixirTabBg.setFillStyle(0xd97706).setStrokeStyle(1.5, 0xfbbf24);
+        elixirTabTxt.setColor('#ffffff');
+        gearTabBg.setFillStyle(0x1e293b).setStrokeStyle(1.5, 0x334155);
+        gearTabTxt.setColor('#94a3b8');
+        this.gearContainer.setVisible(false);
+        this.elixirContainer.setVisible(true);
+      }
+    };
+
+    gearTabBg.on('pointerdown', () => switchTab('gear'));
+    gearTabTxt.on('pointerdown', () => switchTab('gear'));
+    elixirTabBg.on('pointerdown', () => switchTab('elixirs'));
+    elixirTabTxt.on('pointerdown', () => switchTab('elixirs'));
+
+    // --- 1. GEAR ITEMS GRID ---
+    this.shopItems = GAME_CONFIG.SHOP_ITEMS;
+    let gridStartY = currentY + 52;
     let row = 0;
     let col = 0;
     const paddingX = 85;
@@ -603,25 +548,20 @@ export default class PreparationScene extends Phaser.Scene {
 
     this.itemButtons = [];
 
-    this.shopItems.forEach((item, index) => {
+    this.shopItems.forEach((item) => {
       const x = (centerX - 85) + (col * paddingX);
-      const y = currentY + (row * paddingY);
+      const y = gridStartY + (row * paddingY);
 
       const itemContainer = this.add.container(x, y);
 
-      // 3D Drop Shadow for Pop-out effect
       const shadow = this.add.rectangle(3, 3, 62, 62, 0x000000, 0.6);
-
-      // Main Item Box
       const box = this.add.rectangle(0, 0, 62, 62, 0x0f172a).setInteractive({ useHandCursor: true });
       box.setStrokeStyle(2, item.color || 0x38bdf8, 1);
 
-      // Enlarged Icon (50x50)
       const itemKey = `item_${item.id}`;
       const icon = this.add.image(0, -5, itemKey);
       icon.setDisplaySize(50, 50);
 
-      // Price Tag Badge
       const priceBg = this.add.rectangle(0, 20, 48, 15, 0x090d16, 0.85);
       priceBg.setStrokeStyle(1, 0x334155, 0.8);
       const priceText = this.add.text(0, 20, `${item.cost}G`, {
@@ -633,6 +573,7 @@ export default class PreparationScene extends Phaser.Scene {
       }).setOrigin(0.5);
 
       itemContainer.add([shadow, box, icon, priceBg, priceText]);
+      this.gearContainer.add(itemContainer);
 
       box.on('pointerover', () => {
         this.tweens.killTweensOf(itemContainer);
@@ -656,6 +597,71 @@ export default class PreparationScene extends Phaser.Scene {
       if (col > 2) {
         col = 0;
         row++;
+      }
+    });
+
+    // --- 2. STAT ELIXIRS GRID (Infinite Stat Training) ---
+    const elixirItems = GAME_CONFIG.ELIXIR_ITEMS || [];
+    let eRow = 0;
+    let eCol = 0;
+    const ePaddingX = 125;
+    const ePaddingY = 120;
+    const eStartY = gridStartY + 30;
+
+    elixirItems.forEach((elixir) => {
+      const x = (centerX - 62) + (eCol * ePaddingX);
+      const y = eStartY + (eRow * ePaddingY);
+
+      const eContainer = this.add.container(x, y);
+
+      const shadow = this.add.rectangle(4, 4, 110, 105, 0x000000, 0.6);
+      const box = this.add.rectangle(0, 0, 110, 105, 0x0f172a).setInteractive({ useHandCursor: true });
+      box.setStrokeStyle(2, elixir.color || 0xfacc15, 0.9);
+
+      const iconTxt = this.add.text(0, -28, elixir.icon || '🧪', { fontSize: '28px' }).setOrigin(0.5);
+      const nameTxt = this.add.text(0, -2, elixir.name, {
+        fontSize: '10px',
+        fill: '#ffffff',
+        fontStyle: 'bold',
+        align: 'center',
+        wordWrap: { width: 100 }
+      }).setOrigin(0.5);
+
+      const priceBg = this.add.rectangle(0, 32, 70, 18, 0x090d16, 0.9);
+      priceBg.setStrokeStyle(1, 0x334155, 0.8);
+      const priceText = this.add.text(0, 32, `${elixir.cost}G`, {
+        fontSize: '11px',
+        fill: '#facc15',
+        fontStyle: 'bold'
+      }).setOrigin(0.5);
+
+      eContainer.add([shadow, box, iconTxt, nameTxt, priceBg, priceText]);
+      this.elixirContainer.add(eContainer);
+
+      box.on('pointerover', () => {
+        this.tweens.killTweensOf(eContainer);
+        this.tweens.add({ targets: eContainer, scale: 1.10, duration: 120, ease: 'Power2' });
+      });
+      box.on('pointerout', () => {
+        this.tweens.killTweensOf(eContainer);
+        this.tweens.add({ targets: eContainer, scale: 1.0, duration: 120, ease: 'Power2' });
+      });
+
+      box.on('pointerdown', () => {
+        this.selectedItem = {
+          ...elixir,
+          isElixir: true,
+          statStr: elixir.desc
+        };
+        this.selectedInventoryIndex = null;
+        this.updateRightPanel();
+        this.updateInventoryView();
+      });
+
+      eCol++;
+      if (eCol > 1) {
+        eCol = 0;
+        eRow++;
       }
     });
   }
@@ -909,6 +915,31 @@ export default class PreparationScene extends Phaser.Scene {
 
     let gold = this.registry.get('gold');
     let inv = this.registry.get('inventory');
+
+    if (this.selectedItem.isElixir) {
+      if (gold >= this.selectedItem.cost) {
+        gold -= this.selectedItem.cost;
+        this.registry.set('gold', gold);
+
+        let stats = this.registry.get('playerStats');
+        if (this.selectedItem.statsDict) {
+          Object.keys(this.selectedItem.statsDict).forEach(k => {
+            stats[k] = (stats[k] || 0) + this.selectedItem.statsDict[k];
+          });
+        }
+        this.registry.set('playerStats', stats);
+
+        this.goldText.setText(`GOLD: ${gold}`);
+        this.updatePlayerStatsUI();
+
+        if (this.buyBtn) this.buyBtn.setTint(0x00ff88);
+        this.time.delayedCall(120, () => this.updateRightPanel());
+      } else {
+        if (this.buyBtn) this.buyBtn.setTint(0xff3333);
+        this.time.delayedCall(120, () => this.updateRightPanel());
+      }
+      return;
+    }
 
     if (gold >= this.selectedItem.cost && inv.length < 6) {
       // Deduct gold

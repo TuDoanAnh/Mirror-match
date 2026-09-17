@@ -191,6 +191,13 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
     const currentAngle = this.rotation;
     const angles = [currentAngle - 0.35, currentAngle + 0.35];
 
+    let targetGroup = null;
+    if (this.attacker && this.attacker.projectileGroup) {
+      targetGroup = this.attacker.projectileGroup;
+    } else if (this.scene) {
+      targetGroup = (this.attacker && this.attacker.isBot) ? this.scene.enemyProjectiles : this.scene.playerProjectiles;
+    }
+
     angles.forEach(ang => {
       const childConfig = {
         damage: Math.round(this.damage * 0.75),
@@ -201,8 +208,8 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
       const child = new Projectile(this.scene, this.x, this.y, this.type, childConfig, this.attacker, this.heroId);
       child.isSplitChild = true;
       child.hasSplit = true;
-      if (this.scene && this.scene.projectileGroup) {
-        this.scene.projectileGroup.add(child);
+      if (targetGroup) {
+        targetGroup.add(child);
       }
       child.fire(ang);
     });
@@ -212,6 +219,8 @@ export default class Projectile extends Phaser.Physics.Arcade.Sprite {
       flash.setBlendMode('ADD');
       this.scene.tweens.add({ targets: flash, scale: 2, alpha: 0, duration: 250, onComplete: () => flash.destroy() });
     }
+
+    this.destroy();
   }
 
   destroy() {

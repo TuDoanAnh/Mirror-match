@@ -73,6 +73,45 @@ export const ALL_AUGMENTS = [
   }
 ];
 
+export const REPEATABLE_STAT_AUGMENTS = [
+  {
+    id: 'stat_masteryOfArms',
+    isRepeatable: true,
+    name: 'Tối Thượng Vũ Khí',
+    desc: 'Tăng vĩnh viễn +25 ATK & +5% Crit Chance.',
+    icon: '🗡️',
+    color: 0xef4444,
+    statsDict: { bonusDamage: 25, critChance: 5 }
+  },
+  {
+    id: 'stat_colossusHeart',
+    isRepeatable: true,
+    name: 'Trái Tim Dũng Sĩ',
+    desc: 'Tăng vĩnh viễn +300 Max HP & +20 Armor.',
+    icon: '❤️',
+    color: 0x22c55e,
+    statsDict: { bonusHP: 300, armor: 20 }
+  },
+  {
+    id: 'stat_overdriveEnergy',
+    isRepeatable: true,
+    name: 'Overdrive Energy',
+    desc: 'Tăng vĩnh viễn +20 Speed & +8% Cooldown Reduction.',
+    icon: '⚡',
+    color: 0x38bdf8,
+    statsDict: { bonusSpeed: 20, cdr: 0.08 }
+  },
+  {
+    id: 'stat_eternalThirst',
+    isRepeatable: true,
+    name: 'Khát Máu Trường Sống',
+    desc: 'Tăng vĩnh viễn +8% Lifesteal & +10% Armor Pen.',
+    icon: '🩸',
+    color: 0xdc2626,
+    statsDict: { lifesteal: 8, armorPen: 10 }
+  }
+];
+
 export function getRandomAugments(count = 3, ownedAugments = [], heroId = 'ezreal') {
   const ownedIds = ownedAugments.map(a => a.id || a);
   const available = ALL_AUGMENTS.filter(a => {
@@ -88,7 +127,23 @@ export function getRandomAugments(count = 3, ownedAugments = [], heroId = 'ezrea
     return true;
   });
 
-  // Shuffle available augments
+  // Shuffle available unique augments
   const shuffled = [...available].sort(() => 0.5 - Math.random());
-  return shuffled.slice(0, count);
+  const selected = shuffled.slice(0, count);
+
+  // Fill remaining slots with Repeatable Stat Augments if needed
+  if (selected.length < count) {
+    const repeatableShuffled = [...REPEATABLE_STAT_AUGMENTS].sort(() => 0.5 - Math.random());
+    let repIdx = 0;
+    while (selected.length < count) {
+      const repItem = repeatableShuffled[repIdx % repeatableShuffled.length];
+      selected.push({
+        ...repItem,
+        instanceId: `${repItem.id}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`
+      });
+      repIdx++;
+    }
+  }
+
+  return selected;
 }
