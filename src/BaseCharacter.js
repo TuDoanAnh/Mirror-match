@@ -258,6 +258,7 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
   }
 
   applyRoot(duration = 1000) {
+    if (this.isStasis || this.hp <= 0) return;
     this.isRooted = true;
     this.setVelocity(0, 0);
 
@@ -333,24 +334,54 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     });
   }
 
-  applyStasis(duration = 2000) {
+  applyStasis(duration = 2500) {
     if (this.hp <= 0) return;
     this.isStasis = true;
     this.setVelocity(0, 0);
 
-    this.setTint(0xffd700); // Gold Stasis tint
+    this.setTint(0xfacc15); // Gold Stasis tint
     if (this.scene) {
       showDamageText(this.scene, this.x, this.y - 15, 'GOLDEN STASIS', 'shield');
+
+      const aura = this.scene.add.circle(this.x, this.y, 28, 0xfacc15, 0.4);
+      aura.setStrokeStyle(3, 0xffffff, 0.9);
+
+      // Floating golden sparkles particle effect
+      const particleTimer = this.scene.time.addEvent({
+        delay: 80,
+        callback: () => {
+          if (!this.active || !this.isStasis) return;
+          const px = this.x + Phaser.Math.Between(-20, 20);
+          const py = this.y + Phaser.Math.Between(-15, 20);
+          const spark = this.scene.add.circle(px, py, Phaser.Math.Between(2, 4), 0xfef08a, 0.9);
+          this.scene.tweens.add({
+            targets: spark,
+            y: py - Phaser.Math.Between(20, 40),
+            alpha: 0,
+            scale: 0.2,
+            duration: 500,
+            onComplete: () => spark.destroy()
+          });
+        },
+        loop: true
+      });
+
+      const updateTimer = this.scene.time.addEvent({
+        delay: 20,
+        callback: () => {
+          if (aura && aura.active) aura.setPosition(this.x, this.y);
+        },
+        loop: true
+      });
+
+      this.scene.time.delayedCall(duration, () => {
+        this.isStasis = false;
+        if (this.active) this.clearTint();
+        if (aura && aura.active) aura.destroy();
+        particleTimer.remove();
+        updateTimer.remove();
+      });
     }
-
-    const aura = this.scene.add.circle(this.x, this.y, 26, 0xffd700, 0.4);
-    aura.setStrokeStyle(3, 0xffffff);
-
-    this.scene.time.delayedCall(duration, () => {
-      this.isStasis = false;
-      if (this.active) this.clearTint();
-      if (aura && aura.active) aura.destroy();
-    });
   }
 
   heal(amount) {

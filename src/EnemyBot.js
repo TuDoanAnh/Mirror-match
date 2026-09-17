@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import Player from './Player';
-import { GAME_CONFIG } from './gameConfig';
+import { GAME_CONFIG, getBotEquipmentForLevel } from './gameConfig';
 import { MAP_OBSTACLES } from './mapObstacles';
 import { MAP_POLYGONS } from './mapPolygons';
 import { isPointInAnyPolygon, isSegmentIntersectingAnyPolygon } from './polygonCollision';
@@ -46,6 +46,25 @@ export default class EnemyBot extends Player {
       this.skills.SPACE.cooldown = heroData.skills.SPACE.cooldown * scale.cdrMult;
       if (this.skills.SPACE.config.speed) this.skills.SPACE.config.speed *= scale.projSpeedMult;
     }
+
+    // Equip items & apply item stats for higher level bots
+    this.inventory = getBotEquipmentForLevel(level);
+    this.inventory.forEach(item => {
+      if (item.statsDict) {
+        if (item.statsDict.bonusHP) {
+          this.maxHp += item.statsDict.bonusHP;
+          this.hp = this.maxHp;
+        }
+        if (item.statsDict.bonusSpeed) this.speed += item.statsDict.bonusSpeed;
+        if (item.statsDict.armor) this.armor += item.statsDict.armor;
+        if (item.statsDict.lifesteal) this.lifesteal += item.statsDict.lifesteal;
+        if (item.statsDict.critChance) this.critChance += item.statsDict.critChance;
+        if (item.statsDict.armorPen) this.armorPen += item.statsDict.armorPen;
+        if (item.statsDict.bonusDamage && this.skills.Q && this.skills.Q.config) {
+          this.skills.Q.config.damage += item.statsDict.bonusDamage;
+        }
+      }
+    });
   }
 
   setTarget(target) {

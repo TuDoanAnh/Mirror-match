@@ -174,7 +174,7 @@ export default class Player extends BaseCharacter {
 
     if (itemId === 'zhonya') {
       if (this.canUseActiveItem('zhonya', 30000)) {
-        this.applyStasis(2000);
+        this.applyStasis(2500);
         return true;
       }
     } else if (itemId === 'qss') {
@@ -185,9 +185,22 @@ export default class Player extends BaseCharacter {
         this.applySpeedBoost(1.35, 2500);
         if (this.scene) {
           showDamageText(this.scene, this.x, this.y - 15, 'CLEANSED!', 'heal');
-          const aura = this.scene.add.circle(this.x, this.y, 35, 0x38bdf8, 0.6);
-          aura.setStrokeStyle(3, 0xffffff);
-          this.scene.tweens.add({ targets: aura, scale: 2.0, alpha: 0, duration: 400, onComplete: () => aura.destroy() });
+
+          // Silver / Cyan Expanding Shockwave Explosion Ring
+          const aura = this.scene.add.circle(this.x, this.y, 25, 0x38bdf8, 0.7);
+          aura.setStrokeStyle(3, 0xffffff, 1.0);
+          this.scene.tweens.add({ targets: aura, scale: 2.5, alpha: 0, duration: 450, onComplete: () => aura.destroy() });
+
+          // Silver sparkle trail under feet during boost
+          this.scene.time.addEvent({
+            delay: 60,
+            callback: () => {
+              if (!this.active || this.hp <= 0 || !this.isSpeedBoosted) return;
+              const p = this.scene.add.circle(this.x + Phaser.Math.Between(-10, 10), this.y + 12, Phaser.Math.Between(2, 4), 0xe2e8f0, 0.8);
+              this.scene.tweens.add({ targets: p, y: p.y - 12, alpha: 0, duration: 300, onComplete: () => p.destroy() });
+            },
+            repeat: 35
+          });
         }
         return true;
       }
@@ -195,12 +208,28 @@ export default class Player extends BaseCharacter {
       if (this.canUseActiveItem('rocketbelt', 20000)) {
         const ptr = this.scene.input.activePointer;
         const angle = Phaser.Math.Angle.Between(this.x, this.y, ptr.worldX, ptr.worldY);
-        
+
+        // Dash Ghost Trail (3 images trailing behind)
+        if (this.scene) {
+          for (let g = 0; g < 3; g++) {
+            this.scene.time.delayedCall(g * 40, () => {
+              if (!this.active || this.hp <= 0) return;
+              const ghost = this.scene.add.sprite(this.x, this.y, this.texture.key, this.frame.name);
+              ghost.setOrigin(this.originX, this.originY);
+              ghost.setScale(this.scaleX, this.scaleY);
+              ghost.setFlipX(this.flipX);
+              ghost.setTint(0xec4899);
+              ghost.setAlpha(0.65);
+              this.scene.tweens.add({ targets: ghost, alpha: 0, scale: 1.2, duration: 250, onComplete: () => ghost.destroy() });
+            });
+          }
+        }
+
         // Rocket Dash forward 180px
         const dashDist = 180;
         const targetX = Phaser.Math.Clamp(this.x + Math.cos(angle) * dashDist, 50, 1486);
         const targetY = Phaser.Math.Clamp(this.y + Math.sin(angle) * dashDist, 50, 974);
-        
+
         this.setPosition(targetX, targetY);
         if (this.body) this.body.reset(targetX, targetY);
 
@@ -227,6 +256,7 @@ export default class Player extends BaseCharacter {
         if (this.scene) {
           showDamageText(this.scene, this.x, this.y - 15, 'HEX DASH!', 'crit');
           const ring = this.scene.add.circle(this.x, this.y, 40, 0xec4899, 0.7);
+          ring.setStrokeStyle(2, 0xffffff);
           this.scene.tweens.add({ targets: ring, scale: 2.2, alpha: 0, duration: 350, onComplete: () => ring.destroy() });
         }
         return true;
@@ -241,6 +271,29 @@ export default class Player extends BaseCharacter {
         }
 
         showDamageText(this.scene, this.x, this.y - 15, 'HEALTH POTION!', 'heal');
+
+        // Green rising particle bubbles for 5 seconds
+        if (this.scene) {
+          const potBubbleTimer = this.scene.time.addEvent({
+            delay: 100,
+            callback: () => {
+              if (!this.active || this.hp <= 0) return;
+              const px = this.x + Phaser.Math.Between(-16, 16);
+              const py = this.y + Phaser.Math.Between(-10, 15);
+              const bubble = this.scene.add.circle(px, py, Phaser.Math.Between(2, 4), 0x22c55e, 0.85);
+              this.scene.tweens.add({
+                targets: bubble,
+                y: py - Phaser.Math.Between(25, 45),
+                alpha: 0,
+                scale: 0.3,
+                duration: 600,
+                onComplete: () => bubble.destroy()
+              });
+            },
+            repeat: 50
+          });
+        }
+
         let ticks = 5;
         const regenTimer = this.scene.time.addEvent({
           delay: 1000,
@@ -263,9 +316,16 @@ export default class Player extends BaseCharacter {
 
   canUseActiveItem(itemId, cooldown = 20000) {
     if (!this.activeCooldowns) this.activeCooldowns = {};
+    if (!this.activeCooldownData) this.activeCooldownData = {};
+
     const now = this.scene.time.now;
     if (now >= (this.activeCooldowns[itemId] || 0)) {
       this.activeCooldowns[itemId] = now + cooldown;
+      this.activeCooldownData[itemId] = {
+        start: now,
+        duration: cooldown,
+        end: now + cooldown
+      };
       return true;
     }
     return false;

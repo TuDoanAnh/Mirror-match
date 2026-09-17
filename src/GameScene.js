@@ -13,8 +13,9 @@ import mapImageUrl from './assets/image/Map.png';
 import { MAP_OBSTACLES } from './mapObstacles';
 import { MAP_POLYGONS } from './mapPolygons';
 import { handleCharacterPolygonCollision, isPointInPolygon } from './polygonCollision';
-import { ALL_AUGMENTS } from './AugmentManager';
+import { ALL_AUGMENTS, getRandomAugments } from './AugmentManager';
 import { preloadShopItemAssets } from './shopItemLoader';
+import { showDamageText } from './FloatingDamage';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -38,6 +39,7 @@ export default class GameScene extends Phaser.Scene {
   init(data) {
     this.playerColor = data.color || 0x0088ff;
     this.level = data.level || 1;
+    this.gameMode = data.mode || this.registry.get('gameMode') || 'campaign';
     this.isGameOver = false;
     this.skillsFired = 0;
     this.skillsHit = 0;
@@ -54,6 +56,12 @@ export default class GameScene extends Phaser.Scene {
     createZedSkillAnimations(this);
     createRivenSkillAnimations(this);
     this.isGameOver = false;
+    this.isRespawningBot = false;
+    this.isWaveIntermission = false;
+    if (this.intermissionModal) {
+      this.intermissionModal.destroy();
+      this.intermissionModal = null;
+    }
     this.matchStartTime = this.time.now;
     playBattleBGM(this);
 
@@ -68,7 +76,7 @@ export default class GameScene extends Phaser.Scene {
       classType: Phaser.Physics.Arcade.Sprite,
       runChildUpdate: true
     });
-    
+
     this.enemyProjectiles = this.physics.add.group({
       classType: Phaser.Physics.Arcade.Sprite,
       runChildUpdate: true
@@ -86,38 +94,103 @@ export default class GameScene extends Phaser.Scene {
     this.obstacles = this.physics.add.staticGroup();
     this.createObstacles();
 
-    // Create entities at map spawn points
+    // Create Player 1 at left spawn point
     this.player = new Player(this, 280, 512, false, this.playerColor);
-    
-    // Bot Hero Selection: uses selectedBotHero or default level bot hero
-    const defaultBot = GAME_CONFIG.DEFAULT_BOT_HERO_BY_LEVEL[this.level] || 'ezreal';
-    const chosenBotHero = this.registry.get('selectedBotHero') || defaultBot;
-    this.bot = new EnemyBot(this, 1180, 512, this.level, chosenBotHero);
 
-    this.bot.setTarget(this.player);
+    if (this.gameMode === 'pvp') {
+      // Setup Player 2 (P2)
+      const p2Hero = this.registry.get('selectedBotHero') || 'lux';
+      this.player2 = new Player(this, 1180, 512, false, 0xef4444);
+      this.player2.heroId = p2Hero;
+      this.player2.setupHeroTexture();
 
-    // Entity Collisions
-    this.physics.add.overlap(this.playerProjectiles, this.bot, this.handleProjectileHit, null, this);
-    this.physics.add.overlap(this.enemyProjectiles, this.player, this.handleProjectileHit, null, this);
-    
-    // Creep Collisions
-    this.physics.add.overlap(this.playerProjectiles, this.creeps, this.handleProjectileHit, null, this);
-    this.physics.add.overlap(this.creepProjectiles, this.player, this.handleProjectileHit, null, this);
+      this.physics.add.overlap(this.playerProjectiles, this.player2, this.handleProjectileHit, null, this);
+      this.physics.add.overlap(this.enemyProjectiles, this.player, this.handleProjectileHit, null, this);
+      this.physics.add.collider(this.player, this.obstacles);
+      this.physics.add.collider(this.player2, this.obstacles);
 
-    // Obstacle & Creep Collisions
-    this.physics.add.collider(this.player, this.obstacles);
-    this.physics.add.collider(this.bot, this.obstacles);
-    this.physics.add.collider(this.creeps, this.obstacles);
-    this.physics.add.collider(this.creeps, this.creeps);
-    
-    // Use overlap instead of collider for projectiles so they don't get physically blocked!
+      // Setup Player 2 Keyboard Controls (Arrow keys + U/I/O)
+      this.p2Keys = this.input.keyboard.addKeys({
+        up: Phaser.Input.Keyboard.KeyCodes.UP,
+        down: Phaser.Input.Keyboard.KeyCodes.DOWN,
+        left: Phaser.Input.Keyboard.KeyCodes.LEFT,
+        right: Phaser.Input.Keyboard.KeyCodes.RIGHT,
+        u: Phaser.Input.Keyboard.KeyCodes.U,
+        i: Phaser.Input.Keyboard.KeyCodes.I,
+        o: Phaser.Input.Keyboard.KeyCodes.O
+      });
+
+      this.p2Keys.u.on('down', () => this.tryUseP2Skill('Q', this.time.now));
+      this.p2Keys.i.on('down', () => this.tryUseP2Skill('E', this.time.now));
+      this.p2Keys.o.on('down', () => this.tryUseP2Skill('SPACE', this.time.now));
+
+    } else if (this.gameMode === 'infinity') {
+      // Infinity Survival Mode Setup
+      const survivalLevel = this.registry.get('survivalLevel') || 1;
+      const defaultBot = GAME_CONFIG.DEFAULT_BOT_HERO_BY_LEVEL[survivalLevel] || 'ezreal';
+      const selectedBotHero = this.registry.get('selectedBotHero') || defaultBot;
+
+      this.bot = new EnemyBot(this, 1180, 512, survivalLevel, selectedBotHero);
+      this.bot.setTarget(this.player);
+
+      this.physics.add.overlap(this.playerProjectiles, this.bot, this.handleProjectileHit, null, this);
+      this.physics.add.overlap(this.enemyProjectiles, this.player, this.handleProjectileHit, null, this);
+      this.physics.add.overlap(this.playerProjectiles, this.creeps, this.handleProjectileHit, null, this);
+      this.physics.add.overlap(this.creepProjectiles, this.player, this.handleProjectileHit, null, this);
+      this.physics.add.collider(this.player, this.obstacles);
+      this.physics.add.collider(this.bot, this.obstacles);
+      this.physics.add.collider(this.creeps, this.obstacles);
+      this.physics.add.collider(this.creeps, this.creeps);
+
+      this.infinityWave = survivalLevel;
+      this.infinityScore = this.registry.get('infinityScore') || 0;
+      this.infinityKills = this.registry.get('infinityKills') || 0;
+
+      // Spawner timer for wave creeps (only runs if survivalLevel >= 3)
+      if (survivalLevel >= 3) {
+        this.time.addEvent({
+          delay: 6000,
+          callback: () => this.spawnInfinityWave(),
+          callbackScope: this,
+          loop: true
+        });
+      }
+
+    } else {
+      // Classic Campaign Mode Setup
+      const defaultBot = GAME_CONFIG.DEFAULT_BOT_HERO_BY_LEVEL[this.level] || 'ezreal';
+      const chosenBotHero = this.registry.get('selectedBotHero') || defaultBot;
+      this.bot = new EnemyBot(this, 1180, 512, this.level, chosenBotHero);
+      this.bot.setTarget(this.player);
+
+      this.physics.add.overlap(this.playerProjectiles, this.bot, this.handleProjectileHit, null, this);
+      this.physics.add.overlap(this.enemyProjectiles, this.player, this.handleProjectileHit, null, this);
+      this.physics.add.overlap(this.playerProjectiles, this.creeps, this.handleProjectileHit, null, this);
+      this.physics.add.overlap(this.creepProjectiles, this.player, this.handleProjectileHit, null, this);
+      this.physics.add.collider(this.player, this.obstacles);
+      this.physics.add.collider(this.bot, this.obstacles);
+      this.physics.add.collider(this.creeps, this.obstacles);
+      this.physics.add.collider(this.creeps, this.creeps);
+
+      if (this.level >= (GAME_CONFIG.CREEP_STATS.spawnMinLevel || 4)) {
+        this.time.delayedCall(1000, () => this.spawnCreepAroundBot());
+        this.time.delayedCall(2000, () => this.spawnCreepAroundBot());
+        this.time.addEvent({
+          delay: GAME_CONFIG.CREEP_STATS.spawnInterval || 6000,
+          callback: this.spawnCreepAroundBot,
+          callbackScope: this,
+          loop: true
+        });
+      }
+    }
+
+    // Use overlap for projectiles so they don't get physically blocked
     this.physics.add.overlap(this.playerProjectiles, this.obstacles, this.handleProjectileObstacleHit, null, this);
     this.physics.add.overlap(this.enemyProjectiles, this.obstacles, this.handleProjectileObstacleHit, null, this);
     this.physics.add.overlap(this.creepProjectiles, this.obstacles, this.handleProjectileObstacleHit, null, this);
 
-    // Ensure player/bot collide with bounds (1536 x 1024)
     this.physics.world.setBounds(0, 0, 1536, 1024);
-    
+
     // Wind Wall Group setup for Yasuo
     this.windWalls = this.physics.add.group();
     this.physics.add.overlap(this.playerProjectiles, this.windWalls, (proj, wall) => {
@@ -127,21 +200,6 @@ export default class GameScene extends Phaser.Scene {
       if (proj && wall && proj.attacker !== wall.owner) proj.destroy();
     });
 
-    // Creep Spawner for Level 4+
-    if (this.level >= (GAME_CONFIG.CREEP_STATS.spawnMinLevel || 4)) {
-      // Spawn initial 2 creeps
-      this.time.delayedCall(1000, () => this.spawnCreepAroundBot());
-      this.time.delayedCall(2000, () => this.spawnCreepAroundBot());
-
-      // Spawner timer loop
-      this.time.addEvent({
-        delay: GAME_CONFIG.CREEP_STATS.spawnInterval || 6000,
-        callback: this.spawnCreepAroundBot,
-        callbackScope: this,
-        loop: true
-      });
-    }
-    
     // UI Setup
     this.createUI();
     this.createDebugToggleButton();
@@ -159,16 +217,26 @@ export default class GameScene extends Phaser.Scene {
   }
 
   update(time, delta) {
-    if (this.player.hp > 0) {
+    if (this.player && this.player.hp > 0) {
       this.player.update(time, delta);
       handleCharacterPolygonCollision(this.player, MAP_POLYGONS);
       this.updateOcclusion(this.player);
       this.checkBulletTimeDodge(time);
     }
-    if (this.bot.hp > 0 && this.player.hp > 0) {
-      this.bot.update(time, delta);
-      handleCharacterPolygonCollision(this.bot, MAP_POLYGONS);
-      this.updateOcclusion(this.bot);
+
+    if (this.gameMode === 'pvp') {
+      if (this.player2 && this.player2.hp > 0) {
+        this.handleP2Input();
+        this.player2.update(time, delta);
+        handleCharacterPolygonCollision(this.player2, MAP_POLYGONS);
+        this.updateOcclusion(this.player2);
+      }
+    } else {
+      if (this.bot && this.bot.hp > 0 && this.player && this.player.hp > 0) {
+        this.bot.update(time, delta);
+        handleCharacterPolygonCollision(this.bot, MAP_POLYGONS);
+        this.updateOcclusion(this.bot);
+      }
     }
 
     if (this.creeps) {
@@ -178,34 +246,54 @@ export default class GameScene extends Phaser.Scene {
         }
       });
     }
-    
+
+    // Infinity Mode Wave Clear & Intermission on Boss Kill
+    if (this.gameMode === 'infinity' && !this.isGameOver && this.bot && this.bot.hp <= 0 && !this.isRespawningBot && !this.isWaveIntermission) {
+      this.isRespawningBot = true;
+      this.isWaveIntermission = true;
+      this.infinityKills = (this.infinityKills || 0) + 1;
+      this.infinityScore = (this.infinityScore || 0) + 1000;
+
+      const waveGold = 500 + (this.infinityWave || 1) * 100;
+      const curGold = this.registry.get('gold') || 0;
+      this.registry.set('gold', curGold + waveGold);
+
+      showDamageText(this, 768, 250, `WAVE ${this.infinityWave || 1} CLEARED! +${waveGold}G!`, 'heal');
+
+      // Clear all active creeps on map
+      if (this.creeps) this.creeps.clear(true, true);
+      if (this.creepProjectiles) this.creepProjectiles.clear(true, true);
+
+      this.time.delayedCall(1200, () => {
+        if (this.isGameOver) return;
+        this.showSurvivalIntermissionModal();
+      });
+    }
+
     this.updateUI(time);
-    
-    // Check Game Over
-    if (!this.isGameOver && (this.player.hp <= 0 || this.bot.hp <= 0)) {
+
+    // Check Game Over Condition
+    let isGameOverCondition = false;
+    if (this.gameMode === 'pvp') {
+      isGameOverCondition = (this.player.hp <= 0 || (this.player2 && this.player2.hp <= 0));
+    } else if (this.gameMode === 'infinity') {
+      isGameOverCondition = (this.player.hp <= 0);
+    } else {
+      isGameOverCondition = (this.player.hp <= 0 || (this.bot && this.bot.hp <= 0));
+    }
+
+    if (!this.isGameOver && isGameOverCondition) {
       this.isGameOver = true;
       stopBattleBGM(this);
-      const isWin = this.player.hp > 0;
-      const result = isWin ? 'win' : 'lose';
-      const loser = isWin ? this.bot : this.player;
 
-      // Snappy Slow-Motion Finish & Fast Camera Zoom
+      const durationSec = Math.max(1, Math.round((this.time.now - this.matchStartTime) / 1000));
+      const accuracy = this.skillsFired > 0 ? Math.round((this.skillsHit / this.skillsFired) * 100) : 100;
+
       this.time.timeScale = 0.35;
       if (this.physics && this.physics.world) {
         this.physics.world.timeScale = 2.86;
       }
 
-      if (loser && loser.active) {
-        this.cameras.main.pan(loser.x, loser.y, 350, 'Power2');
-        this.cameras.main.zoomTo(1.25, 350, 'Power2');
-      }
-
-      this.cameras.main.shake(200, 0.015);
-
-      const durationSec = Math.max(1, Math.round((this.time.now - this.matchStartTime) / 1000));
-      const accuracy = this.skillsFired > 0 ? Math.round((this.skillsHit / this.skillsFired) * 100) : 100;
-
-      // Fast transition (180ms scaled = ~500ms real time)
       this.time.delayedCall(180, () => {
         this.cameras.main.fadeOut(250, 0, 0, 0);
         this.time.delayedCall(100, () => {
@@ -213,19 +301,33 @@ export default class GameScene extends Phaser.Scene {
           if (this.physics && this.physics.world) {
             this.physics.world.timeScale = 1.0;
           }
-          this.cameras.main.setZoom(1.0);
-          this.scene.start('GameOverScene', {
-            result,
-            level: this.level,
-            stats: {
-              skillsFired: this.skillsFired,
-              skillsHit: this.skillsHit,
-              accuracy,
-              durationSec,
-              damageDealt: Math.round(this.totalDamageDealt),
-              damageTaken: Math.round(this.totalDamageTaken)
-            }
-          });
+
+          if (this.gameMode === 'pvp') {
+            const winner = this.player.hp > 0 ? 'PLAYER 1' : 'PLAYER 2';
+            this.scene.start('GameOverScene', {
+              mode: 'pvp',
+              winner,
+              result: this.player.hp > 0 ? 'win' : 'lose',
+              stats: { accuracy, durationSec, damageDealt: Math.round(this.totalDamageDealt), damageTaken: Math.round(this.totalDamageTaken) }
+            });
+          } else if (this.gameMode === 'infinity') {
+            this.scene.start('GameOverScene', {
+              mode: 'infinity',
+              finalWave: this.infinityWave || 1,
+              finalScore: this.infinityScore || 0,
+              finalKills: this.infinityKills || 0,
+              result: 'lose',
+              stats: { accuracy, durationSec, damageDealt: Math.round(this.totalDamageDealt), damageTaken: Math.round(this.totalDamageTaken) }
+            });
+          } else {
+            const isWin = this.player.hp > 0;
+            this.scene.start('GameOverScene', {
+              mode: 'campaign',
+              result: isWin ? 'win' : 'lose',
+              level: this.level,
+              stats: { accuracy, durationSec, damageDealt: Math.round(this.totalDamageDealt), damageTaken: Math.round(this.totalDamageTaken) }
+            });
+          }
         });
       });
     }
@@ -892,8 +994,244 @@ export default class GameScene extends Phaser.Scene {
     this.player.useSkill(skillKey, time, ptr.worldX, ptr.worldY);
   }
 
+  handleP2Input() {
+    if (!this.player2 || this.player2.hp <= 0 || !this.p2Keys) return;
+
+    let vx = 0;
+    let vy = 0;
+    if (this.p2Keys.left.isDown) vx -= 1;
+    if (this.p2Keys.right.isDown) vx += 1;
+    if (this.p2Keys.up.isDown) vy -= 1;
+    if (this.p2Keys.down.isDown) vy += 1;
+
+    if (vx !== 0 && vy !== 0) {
+      vx *= 0.7071;
+      vy *= 0.7071;
+    }
+
+    const speed = this.player2.speed || 200;
+    this.player2.setVelocity(vx * speed, vy * speed);
+
+    if (this.player && this.player.active) {
+      const angle = Phaser.Math.Angle.Between(this.player2.x, this.player2.y, this.player.x, this.player.y);
+      if (Math.abs(angle) > Math.PI / 2) {
+        this.player2.setFlipX(true);
+      } else {
+        this.player2.setFlipX(false);
+      }
+    }
+  }
+
+  tryUseP2Skill(skillType, time) {
+    if (!this.player2 || this.player2.hp <= 0) return;
+    const targetX = this.player ? this.player.x : 280;
+    const targetY = this.player ? this.player.y : 512;
+    const angle = Phaser.Math.Angle.Between(this.player2.x, this.player2.y, targetX, targetY);
+
+    if (skillType === 'Q') {
+      const qDamage = (this.player2.skills && this.player2.skills.Q && this.player2.skills.Q.config.damage) || 100;
+      const proj = new Projectile(this, this.player2.x, this.player2.y, angle, 800, qDamage, false, 0xef4444, this.player2);
+      proj.setDisplaySize(20, 20);
+      this.enemyProjectiles.add(proj);
+    } else if (skillType === 'E') {
+      const dashDist = 180;
+      const tx = Phaser.Math.Clamp(this.player2.x + Math.cos(angle) * dashDist, 50, 1486);
+      const ty = Phaser.Math.Clamp(this.player2.y + Math.sin(angle) * dashDist, 50, 974);
+      this.player2.setPosition(tx, ty);
+      if (this.player2.body) this.player2.body.reset(tx, ty);
+    } else if (skillType === 'SPACE') {
+      const ultDamage = 250;
+      const proj = new Projectile(this, this.player2.x, this.player2.y, angle, 950, ultDamage, true, 0xef4444, this.player2);
+      proj.setDisplaySize(36, 36);
+      this.enemyProjectiles.add(proj);
+    }
+  }
+
+  spawnInfinityWave() {
+    if (this.isGameOver || this.gameMode !== 'infinity') return;
+    const survivalLevel = this.registry.get('survivalLevel') || 1;
+
+    // Levels 1 and 2 have ZERO creeps (1v1 Pure Duel against Bot Champion)
+    if (survivalLevel <= 2) return;
+
+    // Levels 3+ capped creep spawning logic
+    const maxCreeps = Math.min(5, Math.floor((survivalLevel - 1) / 2) + 1);
+    const activeCreeps = this.creeps ? this.creeps.countActive() : 0;
+    if (activeCreeps >= maxCreeps) return;
+
+    const waveMult = 1 + (survivalLevel - 1) * 0.10;
+    const edge = Phaser.Math.Between(0, 3);
+    let cx = 100, cy = 100;
+    if (edge === 0) { cx = Phaser.Math.Between(100, 1400); cy = 80; }
+    else if (edge === 1) { cx = 1450; cy = Phaser.Math.Between(100, 900); }
+    else if (edge === 2) { cx = Phaser.Math.Between(100, 1400); cy = 950; }
+    else { cx = 80; cy = Phaser.Math.Between(100, 900); }
+
+    const creep = new Creep(this, cx, cy);
+    creep.maxHp = Math.floor(creep.maxHp * waveMult);
+    creep.hp = creep.maxHp;
+    creep.damage = Math.floor(creep.damage * waveMult);
+    if (creep.updateHpBar) creep.updateHpBar();
+
+    this.creeps.add(creep);
+  }
+
+  showSurvivalIntermissionModal() {
+    if (this.intermissionModal) this.intermissionModal.destroy();
+
+    const width = GAME_CONFIG.CANVAS.WIDTH;
+    const height = GAME_CONFIG.CANVAS.HEIGHT;
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    this.intermissionModal = this.add.container(0, 0).setDepth(5000).setScrollFactor(0);
+
+    // Dark Glassmorphism Overlay
+    const overlay = this.add.rectangle(0, 0, width, height, 0x090d16, 0.90).setOrigin(0).setInteractive();
+
+    // Main Frame
+    const boxWidth = 860;
+    const boxHeight = 460;
+    const mainBox = this.add.rectangle(centerX, centerY, boxWidth, boxHeight, 0x0f172a, 0.98);
+    mainBox.setStrokeStyle(2, 0xa855f7);
+
+    const survivalLevel = this.registry.get('survivalLevel') || 1;
+    const titleTxt = this.add.text(centerX, centerY - 190, `🏆 SURVIVAL LEVEL ${survivalLevel} CLEARED! 🏆`, {
+      fontSize: '26px',
+      fill: '#facc15',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 5
+    }).setOrigin(0.5);
+
+    const goldEarned = 500 + survivalLevel * 100;
+    let currentGold = this.registry.get('gold') || 0;
+    const subTxt = this.add.text(centerX, centerY - 152, `Reward: +${goldEarned}G  •  Total Gold: ${currentGold}G  •  Score: ${this.infinityScore || 0}`, {
+      fontSize: '14px',
+      fill: '#38bdf8',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    this.intermissionModal.add([overlay, mainBox, titleTxt, subTxt]);
+
+    // Augment Perk Cards
+    const perksTitle = this.add.text(centerX, centerY - 115, "🎁 CHOOSE 1 FREE AUGMENT PERK", {
+      fontSize: '16px',
+      fill: '#a855f7',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+    this.intermissionModal.add(perksTitle);
+
+    const heroId = this.player ? this.player.heroId : 'ezreal';
+    const ownedAugments = this.registry.get('augments') || [];
+    const randomAugments = getRandomAugments(3, ownedAugments, heroId);
+
+    let selectedAugmentId = null;
+    const cardWidth = 260;
+    const cardHeight = 150;
+    const cardY = centerY - 15;
+    const perkCards = [];
+
+    randomAugments.forEach((aug, idx) => {
+      const cardX = centerX - 280 + (idx * 280);
+      const cardContainer = this.add.container(cardX, cardY);
+
+      const cardBg = this.add.rectangle(0, 0, cardWidth, cardHeight, 0x1e293b, 0.95).setInteractive({ useHandCursor: true });
+      cardBg.setStrokeStyle(1.5, aug.color || 0x38bdf8, 0.8);
+
+      const iconTxt = this.add.text(0, -48, aug.icon || '⚡', { fontSize: '28px' }).setOrigin(0.5);
+      const nameTxt = this.add.text(0, -18, aug.name, { fontSize: '15px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+      const descTxt = this.add.text(0, 18, aug.desc, { fontSize: '11px', fill: '#cbd5e1', align: 'center', wordWrap: { width: 230 } }).setOrigin(0.5);
+
+      const selectBtn = this.add.rectangle(0, 52, 180, 26, aug.color || 0x38bdf8, 0.8).setInteractive({ useHandCursor: true });
+      selectBtn.setStrokeStyle(1, 0xffffff);
+      const selectTxt = this.add.text(0, 52, "CHOOSE PERK", { fontSize: '11px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+
+      cardContainer.add([cardBg, iconTxt, nameTxt, descTxt, selectBtn, selectTxt]);
+      this.intermissionModal.add(cardContainer);
+
+      const onSelectAug = () => {
+        if (selectedAugmentId === aug.id) return;
+        selectedAugmentId = aug.id;
+
+        perkCards.forEach(pc => {
+          if (pc.augId === aug.id) {
+            pc.bg.setStrokeStyle(3, 0xfacc15, 1.0);
+            pc.btn.setFillStyle(0x22c55e, 1.0);
+            pc.btnTxt.setText("✓ SELECTED");
+          } else {
+            pc.bg.setStrokeStyle(1.5, 0x334155, 0.5);
+            pc.btn.setFillStyle(0x475569, 0.5);
+            pc.btnTxt.setText("CHOOSE PERK");
+          }
+        });
+
+        const augList = this.registry.get('augments') || [];
+        if (!augList.some(a => (a.id || a) === aug.id)) {
+          augList.push(aug);
+          this.registry.set('augments', augList);
+        }
+      };
+
+      cardBg.on('pointerdown', onSelectAug);
+      selectBtn.on('pointerdown', onSelectAug);
+
+      perkCards.push({ augId: aug.id, bg: cardBg, btn: selectBtn, btnTxt: selectTxt });
+    });
+
+    // Return to Preparation Button
+    const btnY = centerY + 155;
+    const returnBtn = this.add.rectangle(centerX, btnY, 320, 48, 0x22c55e).setInteractive({ useHandCursor: true });
+    returnBtn.setStrokeStyle(2, 0xffffff);
+    const returnTxt = this.add.text(centerX, btnY, `➡️ RETURN TO PREPARATION`, {
+      fontSize: '16px',
+      fill: '#ffffff',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5);
+
+    returnBtn.on('pointerover', () => this.tweens.add({ targets: [returnBtn, returnTxt], scale: 1.05, duration: 100 }));
+    returnBtn.on('pointerout', () => this.tweens.add({ targets: [returnBtn, returnTxt], scale: 1.0, duration: 100 }));
+
+    returnBtn.on('pointerdown', () => {
+      // Advance to next survival level
+      const nextLevel = survivalLevel + 1;
+      this.registry.set('survivalLevel', nextLevel);
+      this.registry.set('infinityScore', this.infinityScore || 0);
+      this.registry.set('infinityKills', this.infinityKills || 0);
+
+      stopBattleBGM(this);
+      this.cameras.main.fadeOut(400, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('PreparationScene');
+      });
+    });
+
+    this.intermissionModal.add([returnBtn, returnTxt]);
+  }
+
   createUI() {
     this.createSkillIconsTextures();
+
+    if (this.gameMode === 'infinity') {
+      const survivalLevel = this.registry.get('survivalLevel') || 1;
+      this.modeBannerTxt = this.add.text(768, 22, `SURVIVAL LEVEL ${survivalLevel}  •  SCORE: ${this.infinityScore || 0}  •  KILLS: ${this.infinityKills || 0}`, {
+        fontSize: '16px',
+        fill: '#facc15',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 4
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(200);
+    } else if (this.gameMode === 'pvp') {
+      this.modeBannerTxt = this.add.text(768, 22, "⚔️ 1v1 LOCAL PVP ARENA ⚔️", {
+        fontSize: '16px',
+        fill: '#ef4444',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 4
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(200);
+    }
 
     const heroId = this.registry.get('selectedHero') || 'ezreal';
     const heroData = GAME_CONFIG.CHARACTERS[heroId] || GAME_CONFIG.CHARACTERS.ezreal;
@@ -1051,7 +1389,10 @@ export default class GameScene extends Phaser.Scene {
       itemIcon.setDisplaySize(28, 28);
 
       // Dark Overlay on Cooldown
-      const itemDarkOverlay = this.add.rectangle(ix, iy, 36, 36, 0x000000, 0.6).setOrigin(0.5).setVisible(false);
+      const itemDarkOverlay = this.add.rectangle(ix, iy, 36, 36, 0x000000, 0.4).setOrigin(0.5).setVisible(false);
+
+      // Radial Pie Cooldown Arc Sweep Graphics
+      const itemSweepGfx = this.add.graphics();
 
       // Border Graphics
       const itemBorderGfx = this.add.graphics();
@@ -1066,14 +1407,14 @@ export default class GameScene extends Phaser.Scene {
 
       // Cooldown text
       const itemCdTxt = this.add.text(ix, iy, '', {
-        fontSize: '13px',
+        fontSize: '11px',
         fill: '#ffffff',
         fontStyle: 'bold',
         stroke: '#000000',
         strokeThickness: 3
       }).setOrigin(0.5).setVisible(false);
 
-      this.uiContainer.add([itemBoxBg, itemIcon, itemDarkOverlay, itemBorderGfx, itemBadgeBg, itemBadgeTxt, itemCdTxt]);
+      this.uiContainer.add([itemBoxBg, itemIcon, itemDarkOverlay, itemSweepGfx, itemBorderGfx, itemBadgeBg, itemBadgeTxt, itemCdTxt]);
 
       itemBoxBg.on('pointerdown', () => {
         if (this.player && this.player.active) {
@@ -1085,6 +1426,7 @@ export default class GameScene extends Phaser.Scene {
         boxBg: itemBoxBg,
         icon: itemIcon,
         darkOverlay: itemDarkOverlay,
+        sweepGfx: itemSweepGfx,
         borderGfx: itemBorderGfx,
         cdTxt: itemCdTxt,
         index: i
@@ -1094,6 +1436,11 @@ export default class GameScene extends Phaser.Scene {
 
   updateUI(time) {
     if (!this.player || this.player.hp <= 0) return;
+
+    if (this.gameMode === 'infinity' && this.modeBannerTxt) {
+      const survivalLevel = this.registry.get('survivalLevel') || 1;
+      this.modeBannerTxt.setText(`SURVIVAL LEVEL ${survivalLevel}  •  SCORE: ${this.infinityScore || 0}  •  KILLS: ${this.infinityKills || 0}`);
+    }
 
     ['Q', 'E', 'SPACE'].forEach(skillKey => {
       const slot = this.skillSlots[skillKey];
@@ -1152,6 +1499,9 @@ export default class GameScene extends Phaser.Scene {
     const inv = this.registry.get('inventory') || [];
     if (this.itemSlots) {
       this.itemSlots.forEach((slot, i) => {
+        if (slot.sweepGfx) slot.sweepGfx.clear();
+        if (slot.borderGfx) slot.borderGfx.clear();
+
         if (i < inv.length) {
           const item = inv[i];
           const iconKey = `item_${item.id}`;
@@ -1162,18 +1512,43 @@ export default class GameScene extends Phaser.Scene {
           }
 
           const isActiveItem = ['zhonya', 'qss', 'rocketbelt', 'healthPotion'].includes(item.id);
+          const cdData = (isActiveItem && this.player.activeCooldownData) ? this.player.activeCooldownData[item.id] : null;
           const cdMs = (isActiveItem && this.player.activeCooldowns && this.player.activeCooldowns[item.id]) ? (this.player.activeCooldowns[item.id] - time) : 0;
 
-          slot.borderGfx.clear();
-          if (cdMs > 0) {
+          if (cdMs > 0 && cdData) {
             slot.darkOverlay.setVisible(true);
+
+            // Clockwise Radial Sweep Pie Slice Overlay for Active Item
+            const totalCd = cdData.duration || 20000;
+            const progress = Math.min(1, Math.max(0, cdMs / totalCd));
+            const radius = 24;
+            const startAngle = -Math.PI / 2;
+            const endAngle = startAngle + (progress * Math.PI * 2);
+
+            slot.sweepGfx.fillStyle(0x000000, 0.65);
+            slot.sweepGfx.beginPath();
+            slot.sweepGfx.moveTo(slot.boxBg.x, slot.boxBg.y);
+            slot.sweepGfx.arc(slot.boxBg.x, slot.boxBg.y, radius, startAngle, endAngle, false);
+            slot.sweepGfx.closePath();
+            slot.sweepGfx.fillPath();
+
+            // Border stroke during cooldown (dim slate)
             slot.borderGfx.lineStyle(1.5, 0x475569, 1);
             slot.borderGfx.strokeRect(slot.boxBg.x - 18, slot.boxBg.y - 18, 36, 36);
-            slot.cdTxt.setText(Math.ceil(cdMs / 1000)).setVisible(true);
+
+            // Remaining seconds text
+            const sec = (cdMs / 1000).toFixed(1);
+            slot.cdTxt.setText(sec).setVisible(true);
+
           } else if (isActiveItem) {
             slot.darkOverlay.setVisible(false);
-            slot.borderGfx.lineStyle(1.5, 0x38bdf8, 1);
+
+            // Bright Cyan Glowing Border stroke when READY
+            slot.borderGfx.lineStyle(2, 0x38bdf8, 1);
             slot.borderGfx.strokeRect(slot.boxBg.x - 18, slot.boxBg.y - 18, 36, 36);
+            slot.borderGfx.lineStyle(1, 0xffffff, 0.7);
+            slot.borderGfx.strokeRect(slot.boxBg.x - 19, slot.boxBg.y - 19, 38, 38);
+
             slot.cdTxt.setVisible(false);
           } else {
             slot.darkOverlay.setVisible(false);
@@ -1185,7 +1560,6 @@ export default class GameScene extends Phaser.Scene {
           slot.icon.setVisible(false);
           slot.darkOverlay.setVisible(false);
           slot.cdTxt.setVisible(false);
-          slot.borderGfx.clear();
           slot.borderGfx.lineStyle(1, 0x1e293b, 0.5);
           slot.borderGfx.strokeRect(slot.boxBg.x - 18, slot.boxBg.y - 18, 36, 36);
         }

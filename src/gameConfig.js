@@ -1,3 +1,19 @@
+export function getBotEquipmentForLevel(level) {
+  const findItem = (id) => GAME_CONFIG.SHOP_ITEMS.find(i => i.id === id);
+  const items = [];
+
+  if (level >= 2) items.push(findItem('doransBlade'));
+  if (level >= 3) items.push(findItem('berserkers'));
+  if (level >= 4) items.push(findItem('vampScepter'));
+  if (level >= 5) items.push(findItem('infinityEdge'));
+  if (level >= 6) items.push(findItem('bloodthirster'));
+  if (level >= 7) items.push(findItem('zhonya'));
+  if (level >= 8) items.push(findItem('lordDominik'));
+  if (level >= 9) items.push(findItem('trinityForce'));
+
+  return items.filter(Boolean).slice(0, 6);
+}
+
 export const GAME_CONFIG = {
   CANVAS: {
     WIDTH: 1536,

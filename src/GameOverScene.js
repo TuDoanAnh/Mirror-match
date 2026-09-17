@@ -7,8 +7,13 @@ export default class GameOverScene extends Phaser.Scene {
   }
 
   init(data) {
+    this.mode = data.mode || this.registry.get('gameMode') || 'campaign';
     this.result = data.result || 'lose'; // 'win' or 'lose'
     this.level = data.level || 1;
+    this.winner = data.winner || 'PLAYER 1';
+    this.finalWave = data.finalWave || 1;
+    this.finalScore = data.finalScore || 0;
+    this.finalKills = data.finalKills || 0;
     this.stats = data.stats || {
       skillsFired: 0,
       skillsHit: 0,
@@ -50,21 +55,29 @@ export default class GameOverScene extends Phaser.Scene {
 
     const isWin = this.result === 'win';
     const gradeInfo = this.calculateGrade();
-    
+
     let titleStr = "DEFEAT";
     let titleColor = "#ef4444";
     let subStr = "No Gold Reward Earned";
-    
-    if (isWin) {
+
+    if (this.mode === 'pvp') {
+      titleStr = `${this.winner} VICTORY!`;
+      titleColor = this.winner === 'PLAYER 1' ? "#38bdf8" : "#ef4444";
+      subStr = "Epic 1v1 Local Showdown!";
+    } else if (this.mode === 'infinity') {
+      titleStr = `SURVIVED ${this.finalWave} WAVES!`;
+      titleColor = "#a855f7";
+      subStr = `Final Score: ${this.finalScore} Points  •  Bot Kills: ${this.finalKills}`;
+    } else if (isWin) {
       const rewardsTable = GAME_CONFIG.ECONOMY.LEVEL_WIN_REWARDS || {};
       const goldEarned = rewardsTable[this.level] || (this.level * 500);
       let currentGold = this.registry.get('gold') || 0;
       this.registry.set('gold', currentGold + goldEarned);
-      
+
       titleStr = "VICTORY!";
       titleColor = "#34d399";
       subStr = `Reward +${goldEarned} Gold!`;
-      
+
       let unlocked = this.registry.get('unlockedLevel') || 1;
       if (this.level === unlocked && unlocked < (GAME_CONFIG.ECONOMY.MAX_LEVEL || 10)) {
         this.registry.set('unlockedLevel', unlocked + 1);
@@ -73,8 +86,8 @@ export default class GameOverScene extends Phaser.Scene {
     }
 
     // Title Header Text
-    this.add.text(centerX, 180, titleStr, {
-      fontSize: '56px',
+    this.add.text(centerX, 160, titleStr, {
+      fontSize: '52px',
       fill: titleColor,
       fontStyle: 'bold',
       stroke: '#000000',
@@ -82,7 +95,7 @@ export default class GameOverScene extends Phaser.Scene {
       align: 'center'
     }).setOrigin(0.5);
 
-    this.add.text(centerX, 240, subStr, {
+    this.add.text(centerX, 220, subStr, {
       fontSize: '16px',
       fill: '#fde047',
       fontStyle: 'bold'
@@ -111,7 +124,7 @@ export default class GameOverScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    // Pulsing animation for Rank Badge S+ / S
+    // Pulsing animation for Rank Badge
     if (['S+', 'S'].includes(gradeInfo.grade)) {
       this.tweens.add({
         targets: gradeText,
@@ -150,22 +163,38 @@ export default class GameOverScene extends Phaser.Scene {
       statY += 28;
     });
 
-    // Return to Menu Button
-    const btnY = centerY + 200;
-    const btnBg = this.add.rectangle(centerX, btnY, 280, 52, 0x1e293b).setInteractive({ useHandCursor: true });
-    btnBg.setStrokeStyle(2, 0x38bdf8);
+    // Action Buttons Area
+    const btnY = centerY + 185;
 
-    const btnLabel = isWin ? "CHOOSE AUGMENT (ENTER)" : "RETURN TO MENU (ENTER)";
-    const btnTxt = this.add.text(centerX, btnY, btnLabel, {
-      fontSize: '18px',
-      fill: '#ffffff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
+    // Primary Action Button (Play Again / Choose Augment)
+    let btnLabel = "RETRY LEVEL (ENTER)";
+    if (this.mode === 'pvp') btnLabel = "PLAY AGAIN (ENTER)";
+    else if (this.mode === 'infinity') btnLabel = "SURVIVE AGAIN (ENTER)";
+    else if (isWin) btnLabel = "CHOOSE AUGMENT (ENTER)";
 
-    const onReturn = () => {
+    const btn1Bg = this.add.rectangle(centerX - 120, btnY, 220, 46, 0x1e293b).setInteractive({ useHandCursor: true });
+    btn1Bg.setStrokeStyle(2, 0x38bdf8);
+    const btn1Txt = this.add.text(centerX - 120, btnY, btnLabel, { fontSize: '13px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+
+    btn1Bg.on('pointerover', () => {
+      this.tweens.add({ targets: [btn1Bg, btn1Txt], scale: 1.05, duration: 150 });
+      btn1Bg.setFillStyle(0x0284c7);
+    });
+    btn1Bg.on('pointerout', () => {
+      this.tweens.add({ targets: [btn1Bg, btn1Txt], scale: 1.0, duration: 150 });
+      btn1Bg.setFillStyle(0x1e293b);
+    });
+
+    const onPrimaryAction = () => {
       this.cameras.main.fadeOut(300, 0, 0, 0);
       this.cameras.main.once('camerafadeoutcomplete', () => {
-        if (isWin) {
+        if (this.mode === 'infinity') {
+          this.registry.set('survivalLevel', 1);
+          this.registry.set('gold', 1000);
+          this.registry.set('inventory', []);
+          this.registry.set('augments', []);
+          this.scene.start('PreparationScene');
+        } else if (this.mode === 'campaign' && isWin) {
           this.scene.start('AugmentSelectScene', { nextLevel: this.level + 1 });
         } else {
           this.scene.start('PreparationScene');
@@ -173,19 +202,33 @@ export default class GameOverScene extends Phaser.Scene {
       });
     };
 
-    btnBg.on('pointerover', () => {
-      this.tweens.add({ targets: [btnBg, btnTxt], scale: 1.05, duration: 150, ease: 'Power2' });
-      btnBg.setFillStyle(0x0284c7);
+    btn1Bg.on('pointerdown', onPrimaryAction);
+    this.input.keyboard.once('keydown-ENTER', onPrimaryAction);
+
+    // Main Menu Button
+    const btn2Bg = this.add.rectangle(centerX + 120, btnY, 200, 46, 0x1e293b).setInteractive({ useHandCursor: true });
+    btn2Bg.setStrokeStyle(2, 0xfacc15);
+    const btn2Txt = this.add.text(centerX + 120, btnY, "🏠 MAIN MENU", { fontSize: '13px', fill: '#facc15', fontStyle: 'bold' }).setOrigin(0.5);
+
+    btn2Bg.on('pointerover', () => {
+      this.tweens.add({ targets: [btn2Bg, btn2Txt], scale: 1.05, duration: 150 });
+      btn2Bg.setFillStyle(0xd97706);
+    });
+    btn2Bg.on('pointerout', () => {
+      this.tweens.add({ targets: [btn2Bg, btn2Txt], scale: 1.0, duration: 150 });
+      btn2Bg.setFillStyle(0x1e293b);
     });
 
-    btnBg.on('pointerout', () => {
-      this.tweens.add({ targets: [btnBg, btnTxt], scale: 1.0, duration: 150, ease: 'Power2' });
-      btnBg.setFillStyle(0x1e293b);
-    });
+    const onMainMenu = () => {
+      this.cameras.main.fadeOut(300, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('StartScene');
+      });
+    };
 
-    btnBg.on('pointerdown', onReturn);
-    this.input.keyboard.once('keydown-ENTER', onReturn);
+    btn2Bg.on('pointerdown', onMainMenu);
 
     this.cameras.main.fadeIn(400, 0, 0, 0);
   }
 }
+
