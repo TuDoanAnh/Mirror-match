@@ -16,6 +16,7 @@ import { handleCharacterPolygonCollision, isPointInPolygon } from './polygonColl
 import { ALL_AUGMENTS, getRandomAugments } from './AugmentManager';
 import { preloadShopItemAssets } from './shopItemLoader';
 import { showDamageText } from './FloatingDamage';
+import { preloadSkillIconAssets, createSkillIconTextures } from './skillIconLoader';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -31,6 +32,7 @@ export default class GameScene extends Phaser.Scene {
     preloadRivenSkillAssets(this);
     preloadShopItemAssets(this);
     preloadCharacterSFX(this);
+    preloadSkillIconAssets(this);
     if (!this.textures.exists('battle_map')) {
       this.load.image('battle_map', mapImageUrl);
     }
@@ -55,6 +57,7 @@ export default class GameScene extends Phaser.Scene {
     createJinxAnimations(this);
     createZedSkillAnimations(this);
     createRivenSkillAnimations(this);
+    createSkillIconTextures(this);
     this.isGameOver = false;
     this.isRespawningBot = false;
     this.isWaveIntermission = false;
@@ -1225,7 +1228,7 @@ export default class GameScene extends Phaser.Scene {
   }
 
   createUI() {
-    this.createSkillIconsTextures();
+    createSkillIconTextures(this);
 
     if (this.gameMode === 'infinity') {
       const survivalLevel = this.registry.get('survivalLevel') || 1;
@@ -1320,6 +1323,7 @@ export default class GameScene extends Phaser.Scene {
       
       // Icon Sprite
       const iconSprite = this.add.sprite(skill.x, 3, iconKey).setOrigin(0.5);
+      iconSprite.setDisplaySize(52, 52);
 
       // Dark Overlay (Visible during cooldown)
       const darkOverlay = this.add.rectangle(skill.x, 3, 56, 56, 0x000000, 0.5).setOrigin(0.5);
@@ -1580,180 +1584,7 @@ export default class GameScene extends Phaser.Scene {
     }
   }
 
-  createSkillIconsTextures() {
-    const size = 56;
 
-    const makeIcon = (key, drawFn) => {
-      if (this.textures.exists(key)) return;
-      const g = this.make.graphics({ x: 0, y: 0, add: false });
-      drawFn(g, size);
-      g.generateTexture(key, size, size);
-      g.destroy();
-    };
-
-    // 1. Ezreal Q - Mystic Shot (Cyan Bolt)
-    makeIcon('icon_ezreal_Q', (g, s) => {
-      g.fillStyle(0x0a192f, 1);
-      g.fillRect(0, 0, s, s);
-      g.lineStyle(2, 0x38bdf8, 1);
-      g.strokeRect(1, 1, s - 2, s - 2);
-      g.fillStyle(0x00ffff, 1);
-      g.beginPath();
-      g.moveTo(s * 0.75, s * 0.25);
-      g.lineTo(s * 0.25, s * 0.55);
-      g.lineTo(s * 0.45, s * 0.75);
-      g.closePath();
-      g.fillPath();
-      g.lineStyle(3, 0x38bdf8, 0.8);
-      g.beginPath();
-      g.moveTo(s * 0.2, s * 0.8);
-      g.lineTo(s * 0.5, s * 0.5);
-      g.strokePath();
-    });
-
-    // 2. Ezreal E - Arcane Shift (Golden Wings / Teleport)
-    makeIcon('icon_ezreal_E', (g, s) => {
-      g.fillStyle(0x1e1b4b, 1);
-      g.fillRect(0, 0, s, s);
-      g.lineStyle(2, 0xf59e0b, 1);
-      g.strokeRect(1, 1, s - 2, s - 2);
-      g.fillStyle(0xfbbf24, 1);
-      g.beginPath();
-      g.moveTo(s * 0.5, s * 0.2);
-      g.lineTo(s * 0.8, s * 0.5);
-      g.lineTo(s * 0.65, s * 0.5);
-      g.lineTo(s * 0.5, s * 0.35);
-      g.lineTo(s * 0.35, s * 0.5);
-      g.lineTo(s * 0.2, s * 0.5);
-      g.closePath();
-      g.fillPath();
-
-      g.fillStyle(0xf59e0b, 1);
-      g.beginPath();
-      g.moveTo(s * 0.5, s * 0.45);
-      g.lineTo(s * 0.8, s * 0.75);
-      g.lineTo(s * 0.65, s * 0.75);
-      g.lineTo(s * 0.5, s * 0.6);
-      g.lineTo(s * 0.35, s * 0.75);
-      g.lineTo(s * 0.2, s * 0.75);
-      g.closePath();
-      g.fillPath();
-    });
-
-    // 3. Ezreal SPACE - Trueshot Barrage (Golden Crescent Wave)
-    makeIcon('icon_ezreal_SPACE', (g, s) => {
-      g.fillStyle(0x2d1202, 1);
-      g.fillRect(0, 0, s, s);
-      g.lineStyle(2, 0xf59e0b, 1);
-      g.strokeRect(1, 1, s - 2, s - 2);
-      g.fillStyle(0xfde047, 1);
-      g.beginPath();
-      g.arc(s * 0.5, s * 0.5, s * 0.35, -Math.PI * 0.6, Math.PI * 0.6, false);
-      g.lineTo(s * 0.5, s * 0.5);
-      g.closePath();
-      g.fillPath();
-    });
-
-    // 4. Lux Q - Light Binding (Star Sphere)
-    makeIcon('icon_lux_Q', (g, s) => {
-      g.fillStyle(0x2e2300, 1);
-      g.fillRect(0, 0, s, s);
-      g.lineStyle(2, 0xfacc15, 1);
-      g.strokeRect(1, 1, s - 2, s - 2);
-      g.fillStyle(0xfffde7, 1);
-      g.fillCircle(s * 0.5, s * 0.5, s * 0.25);
-      g.lineStyle(3, 0xfacc15, 0.9);
-      g.beginPath();
-      g.moveTo(s * 0.15, s * 0.5); g.lineTo(s * 0.85, s * 0.5);
-      g.moveTo(s * 0.5, s * 0.15); g.lineTo(s * 0.5, s * 0.85);
-      g.strokePath();
-    });
-
-    // 5. Lux E - Prismatic Barrier (Prism Shield)
-    makeIcon('icon_lux_E', (g, s) => {
-      g.fillStyle(0x032b2b, 1);
-      g.fillRect(0, 0, s, s);
-      g.lineStyle(2, 0x2dd4bf, 1);
-      g.strokeRect(1, 1, s - 2, s - 2);
-      g.fillStyle(0x99f6e4, 0.9);
-      g.beginPath();
-      g.moveTo(s * 0.5, s * 0.18);
-      g.lineTo(s * 0.82, s * 0.4);
-      g.lineTo(s * 0.5, s * 0.82);
-      g.lineTo(s * 0.18, s * 0.4);
-      g.closePath();
-      g.fillPath();
-    });
-
-    // 6. Lux SPACE - Final Spark (Mega Beam)
-    makeIcon('icon_lux_SPACE', (g, s) => {
-      g.fillStyle(0x3b3300, 1);
-      g.fillRect(0, 0, s, s);
-      g.lineStyle(2, 0xfef08a, 1);
-      g.strokeRect(1, 1, s - 2, s - 2);
-      g.fillStyle(0xfde047, 0.6);
-      g.fillRect(0, s * 0.3, s, s * 0.4);
-      g.fillStyle(0xffffff, 1);
-      g.fillRect(0, s * 0.42, s, s * 0.16);
-      g.fillCircle(s * 0.5, s * 0.5, s * 0.28);
-    });
-
-    // 7. Jinx Q - Fishbones Rockets (Triple Rocket Spread)
-    makeIcon('icon_jinx_Q', (g, s) => {
-      g.fillStyle(0x3b072c, 1);
-      g.fillRect(0, 0, s, s);
-      g.lineStyle(2, 0xf43f5e, 1);
-      g.strokeRect(1, 1, s - 2, s - 2);
-      [0.3, 0.5, 0.7].forEach(ratio => {
-        g.fillStyle(0xf43f5e, 1);
-        g.fillRect(s * ratio - 3, s * 0.35, 6, 18);
-        g.beginPath();
-        g.moveTo(s * ratio, s * 0.2);
-        g.lineTo(s * ratio - 4, s * 0.35);
-        g.lineTo(s * ratio + 4, s * 0.35);
-        g.closePath();
-        g.fillPath();
-      });
-    });
-
-    // 8. Jinx E - Zap / Speed Rush (Lightning Bolt)
-    makeIcon('icon_jinx_E', (g, s) => {
-      g.fillStyle(0x062c43, 1);
-      g.fillRect(0, 0, s, s);
-      g.lineStyle(2, 0x06b6d4, 1);
-      g.strokeRect(1, 1, s - 2, s - 2);
-      g.fillStyle(0x22d3ee, 1);
-      g.beginPath();
-      g.moveTo(s * 0.55, s * 0.15);
-      g.lineTo(s * 0.25, s * 0.52);
-      g.lineTo(s * 0.48, s * 0.52);
-      g.lineTo(s * 0.42, s * 0.85);
-      g.lineTo(s * 0.75, s * 0.45);
-      g.lineTo(s * 0.52, s * 0.45);
-      g.closePath();
-      g.fillPath();
-    });
-
-    // 9. Jinx SPACE - Super Mega Death Rocket (Giant Rocket Tip)
-    makeIcon('icon_jinx_SPACE', (g, s) => {
-      g.fillStyle(0x450a0a, 1);
-      g.fillRect(0, 0, s, s);
-      g.lineStyle(2, 0xef4444, 1);
-      g.strokeRect(1, 1, s - 2, s - 2);
-      g.fillStyle(0xd97706, 1);
-      g.fillRect(s * 0.35, s * 0.4, s * 0.3, s * 0.45);
-      g.fillStyle(0xdc2626, 1);
-      g.beginPath();
-      g.moveTo(s * 0.5, s * 0.15);
-      g.lineTo(s * 0.28, s * 0.42);
-      g.lineTo(s * 0.72, s * 0.42);
-      g.closePath();
-      g.fillPath();
-      g.fillStyle(0xffffff, 1);
-      g.fillCircle(s * 0.42, s * 0.5, 3);
-      g.fillCircle(s * 0.58, s * 0.5, 3);
-    });
-  }
 
   createProjectilesTextures() {
     // Generate Trail Particle Texture ('proj_particle')

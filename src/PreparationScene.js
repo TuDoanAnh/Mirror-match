@@ -9,6 +9,7 @@ import { preloadRivenSkillAssets, createRivenSkillAnimations } from './rivenAnim
 import { preloadCharacterSFX, playPreparationBGM, stopPreparationBGM } from './soundManager';
 import { ALL_AUGMENTS } from './AugmentManager';
 import { preloadShopItemAssets } from './shopItemLoader';
+import { preloadSkillIconAssets, createSkillIconTextures } from './skillIconLoader';
 
 import buyBtnUrl from './assets/image/Buy.png';
 import sellBtnUrl from './assets/image/Sell.png';
@@ -39,6 +40,7 @@ export default class PreparationScene extends Phaser.Scene {
     preloadRivenSkillAssets(this);
     preloadShopItemAssets(this);
     preloadCharacterSFX(this);
+    preloadSkillIconAssets(this);
 
     this.load.image('btn_buy', buyBtnUrl);
     this.load.image('btn_sell', sellBtnUrl);
@@ -63,6 +65,7 @@ export default class PreparationScene extends Phaser.Scene {
     createJinxAnimations(this);
     createZedSkillAnimations(this);
     createRivenSkillAnimations(this);
+    createSkillIconTextures(this);
     playPreparationBGM(this);
 
     // Registry initialization
