@@ -7,6 +7,7 @@ import { preloadJinxAssets, createJinxAnimations } from './jinxAnimations';
 import { preloadZedSkillAssets, createZedSkillAnimations } from './zedAnimations';
 import { preloadRivenSkillAssets, createRivenSkillAnimations } from './rivenAnimations';
 import { preloadCharacterSFX, playPreparationBGM, stopPreparationBGM } from './soundManager';
+import { createTopRightBar } from './topRightBar';
 import { ALL_AUGMENTS } from './AugmentManager';
 import { preloadShopItemAssets } from './shopItemLoader';
 import { preloadSkillIconAssets, createSkillIconTextures } from './skillIconLoader';
@@ -67,6 +68,7 @@ export default class PreparationScene extends Phaser.Scene {
     createRivenSkillAnimations(this);
     createSkillIconTextures(this);
     playPreparationBGM(this);
+    createTopRightBar(this);
 
     // Registry initialization
     if (!this.registry.has('unlockedLevel')) {

@@ -9,6 +9,7 @@ import { preloadJinxAssets, createJinxAnimations } from './jinxAnimations';
 import { preloadZedSkillAssets, createZedSkillAnimations } from './zedAnimations';
 import { preloadRivenSkillAssets, createRivenSkillAnimations } from './rivenAnimations';
 import { preloadCharacterSFX, playHitSFX, playCustomSFX, playBattleBGM, stopBattleBGM } from './soundManager';
+import { createTopRightBar } from './topRightBar';
 import mapImageUrl from './assets/image/Map.png';
 import { MAP_OBSTACLES } from './mapObstacles';
 import { MAP_POLYGONS } from './mapPolygons';
@@ -67,6 +68,7 @@ export default class GameScene extends Phaser.Scene {
     }
     this.matchStartTime = this.time.now;
     playBattleBGM(this);
+    createTopRightBar(this);
 
     // Map Image Background (1536 x 1024) with soft contrast tinting
     this.add.image(768, 512, 'battle_map').setDepth(-20).setTint(0xf0f0f0);

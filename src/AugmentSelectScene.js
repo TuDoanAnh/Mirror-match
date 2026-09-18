@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from './gameConfig';
 import { getRandomAugments } from './AugmentManager';
+import { createTopRightBar } from './topRightBar';
 
 export default class AugmentSelectScene extends Phaser.Scene {
   constructor() {
@@ -13,6 +14,7 @@ export default class AugmentSelectScene extends Phaser.Scene {
   }
 
   create() {
+    createTopRightBar(this);
     const width = GAME_CONFIG.CANVAS.WIDTH;
     const height = GAME_CONFIG.CANVAS.HEIGHT;
     this.centerX = width / 2;

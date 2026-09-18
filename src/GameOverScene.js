@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from './gameConfig';
+import { createTopRightBar } from './topRightBar';
 
 export default class GameOverScene extends Phaser.Scene {
   constructor() {
@@ -46,6 +47,7 @@ export default class GameOverScene extends Phaser.Scene {
   }
 
   create() {
+    createTopRightBar(this);
     const width = GAME_CONFIG.CANVAS.WIDTH;
     const height = GAME_CONFIG.CANVAS.HEIGHT;
     const centerX = width / 2;
