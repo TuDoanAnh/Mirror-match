@@ -1,6 +1,7 @@
 export const ALL_AUGMENTS = [
   {
     id: 'mysticSplit',
+    tier: 'gold',
     name: 'Mystic Split',
     desc: 'Skillshot Q splits into 2 diagonal bolts after traveling 350px.',
     icon: '⚡',
@@ -9,6 +10,7 @@ export const ALL_AUGMENTS = [
   },
   {
     id: 'arcaneMine',
+    tier: 'diamond',
     name: 'Arcane Mine',
     desc: 'Dash E leaves an explosive mine at your departure point.',
     icon: '💣',
@@ -17,6 +19,7 @@ export const ALL_AUGMENTS = [
   },
   {
     id: 'bladeFury',
+    tier: 'gold',
     name: 'Blade Resonance',
     desc: 'Hitting enemies with skills grants +25% Speed & 15% Lifesteal for 4s.',
     icon: '⚔️',
@@ -24,6 +27,7 @@ export const ALL_AUGMENTS = [
   },
   {
     id: 'giantSlayer',
+    tier: 'silver',
     name: 'Giant Slayer',
     desc: 'Deal +30% bonus damage against enemies with higher max HP.',
     icon: '🏹',
@@ -31,6 +35,7 @@ export const ALL_AUGMENTS = [
   },
   {
     id: 'vampiricSoul',
+    tier: 'gold',
     name: 'Vampiric Soul',
     desc: 'Gain 18% Spell Vamp & heal for 15% of all skill damage dealt.',
     icon: '🩸',
@@ -38,6 +43,7 @@ export const ALL_AUGMENTS = [
   },
   {
     id: 'runicShield',
+    tier: 'silver',
     name: 'Runic Valor',
     desc: 'Using E or Shield skills grants +30% Speed & +150 extra Shield.',
     icon: '🛡️',
@@ -45,6 +51,7 @@ export const ALL_AUGMENTS = [
   },
   {
     id: 'bulletTime',
+    tier: 'silver',
     name: 'Bullet Time',
     desc: 'Dodging close skillshots grants +40% Speed & instant reaction.',
     icon: '⏱️',
@@ -52,6 +59,7 @@ export const ALL_AUGMENTS = [
   },
   {
     id: 'adrenaline',
+    tier: 'gold',
     name: 'Adrenaline Rush',
     desc: 'Falling below 25% HP instantly resets cooldowns & grants 300 Shield.',
     icon: '💔',
@@ -59,6 +67,7 @@ export const ALL_AUGMENTS = [
   },
   {
     id: 'glassCannon',
+    tier: 'diamond',
     name: 'Glass Cannon',
     desc: 'Deal +40% Damage, but your Max HP is reduced by 20%.',
     icon: '🗡️',
@@ -66,6 +75,7 @@ export const ALL_AUGMENTS = [
   },
   {
     id: 'staticShock',
+    tier: 'diamond',
     name: 'Static Shock',
     desc: 'Every 3 skillshot hits releases a chain lightning nova dealing 120 DMG.',
     icon: '⚡',
@@ -76,6 +86,7 @@ export const ALL_AUGMENTS = [
 export const REPEATABLE_STAT_AUGMENTS = [
   {
     id: 'stat_masteryOfArms',
+    tier: 'silver',
     isRepeatable: true,
     name: 'Tối Thượng Vũ Khí',
     desc: 'Tăng vĩnh viễn +25 ATK & +5% Crit Chance.',
@@ -85,6 +96,7 @@ export const REPEATABLE_STAT_AUGMENTS = [
   },
   {
     id: 'stat_colossusHeart',
+    tier: 'silver',
     isRepeatable: true,
     name: 'Trái Tim Dũng Sĩ',
     desc: 'Tăng vĩnh viễn +300 Max HP & +20 Armor.',
@@ -94,6 +106,7 @@ export const REPEATABLE_STAT_AUGMENTS = [
   },
   {
     id: 'stat_overdriveEnergy',
+    tier: 'silver',
     isRepeatable: true,
     name: 'Overdrive Energy',
     desc: 'Tăng vĩnh viễn +20 Speed & +8% Cooldown Reduction.',
@@ -103,6 +116,7 @@ export const REPEATABLE_STAT_AUGMENTS = [
   },
   {
     id: 'stat_eternalThirst',
+    tier: 'gold',
     isRepeatable: true,
     name: 'Khát Máu Trường Sống',
     desc: 'Tăng vĩnh viễn +8% Lifesteal & +10% Armor Pen.',

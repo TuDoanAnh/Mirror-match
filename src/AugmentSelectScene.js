@@ -2,10 +2,15 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from './gameConfig';
 import { getRandomAugments } from './AugmentManager';
 import { createTopRightBar } from './topRightBar';
+import { preloadAugmentFrameAssets, getAugmentFrameKey, getAugmentTierBadgeText } from './augmentFrameLoader';
 
 export default class AugmentSelectScene extends Phaser.Scene {
   constructor() {
     super('AugmentSelectScene');
+  }
+
+  preload() {
+    preloadAugmentFrameAssets(this);
   }
 
   init(data) {
@@ -78,40 +83,40 @@ export default class AugmentSelectScene extends Phaser.Scene {
 
       // Card Background (interactive)
       const cardBg = this.add.rectangle(0, 0, cardWidth, cardHeight, 0x0f172a).setInteractive({ useHandCursor: true });
-      cardBg.setStrokeStyle(3, aug.color || 0x38bdf8, 0.9);
+
+      // Card Frame Texture Overlay
+      const frameKey = getAugmentFrameKey(aug);
+      let frameImg = null;
+      if (this.textures.exists(frameKey)) {
+        frameImg = this.add.image(0, 0, frameKey).setOrigin(0.5);
+        frameImg.setDisplaySize(cardWidth, cardHeight);
+      }
 
       // Icon Circle
-      const iconBg = this.add.circle(0, -80, 36, aug.color || 0x38bdf8, 0.2);
+      const iconBg = this.add.circle(0, -75, 36, aug.color || 0x38bdf8, 0.2);
       iconBg.setStrokeStyle(2, aug.color || 0x38bdf8);
 
-      const iconTxt = this.add.text(0, -80, aug.icon, { fontSize: '32px' }).setOrigin(0.5);
+      const iconTxt = this.add.text(0, -75, aug.icon, { fontSize: '32px' }).setOrigin(0.5);
 
       // Augment Name
-      const nameTxt = this.add.text(0, -15, aug.name, {
+      const nameTxt = this.add.text(0, -10, aug.name, {
         fontSize: '18px',
         fill: '#ffffff',
         fontStyle: 'bold'
       }).setOrigin(0.5);
 
       // Description Box
-      const descTxt = this.add.text(0, 45, aug.desc, {
+      const descTxt = this.add.text(0, 35, aug.desc, {
         fontSize: '13px',
         fill: '#cbd5e1',
         align: 'center',
-        wordWrap: { width: 200 }
+        wordWrap: { width: 175 }
       }).setOrigin(0.5, 0);
 
-      // Select Button Visual
-      const selectBtn = this.add.rectangle(0, 120, 160, 36, 0x1e293b);
-      selectBtn.setStrokeStyle(1.5, aug.color || 0x38bdf8);
-
-      const selectTxt = this.add.text(0, 120, "SELECT", {
-        fontSize: '14px',
-        fill: '#ffffff',
-        fontStyle: 'bold'
-      }).setOrigin(0.5);
-
-      container.add([cardBg, iconBg, iconTxt, nameTxt, descTxt, selectBtn, selectTxt]);
+      const elements = [cardBg];
+      if (frameImg) elements.push(frameImg);
+      elements.push(iconBg, iconTxt, nameTxt, descTxt);
+      container.add(elements);
 
       // Pop in animation for cards
       container.setScale(0.8);
@@ -134,8 +139,6 @@ export default class AugmentSelectScene extends Phaser.Scene {
           ease: 'Power2'
         });
         cardBg.setFillStyle(0x1e293b);
-        const hoverColor = typeof aug.color === 'string' ? Phaser.Display.Color.HexStringToColor(aug.color).color : (aug.color || 0x38bdf8);
-        selectBtn.setFillStyle(hoverColor);
       });
 
       cardBg.on('pointerout', () => {
@@ -147,7 +150,6 @@ export default class AugmentSelectScene extends Phaser.Scene {
           ease: 'Power2'
         });
         cardBg.setFillStyle(0x0f172a);
-        selectBtn.setFillStyle(0x1e293b);
       });
 
       const onSelect = () => {

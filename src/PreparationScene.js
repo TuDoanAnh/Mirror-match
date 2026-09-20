@@ -11,6 +11,7 @@ import { createTopRightBar } from './topRightBar';
 import { ALL_AUGMENTS } from './AugmentManager';
 import { preloadShopItemAssets } from './shopItemLoader';
 import { preloadSkillIconAssets, createSkillIconTextures } from './skillIconLoader';
+import { preloadAugmentFrameAssets, getAugmentFrameKey, getAugmentTierBadgeText } from './augmentFrameLoader';
 
 import buyBtnUrl from './assets/image/Buy.png';
 import sellBtnUrl from './assets/image/Sell.png';
@@ -42,6 +43,7 @@ export default class PreparationScene extends Phaser.Scene {
     preloadShopItemAssets(this);
     preloadCharacterSFX(this);
     preloadSkillIconAssets(this);
+    preloadAugmentFrameAssets(this);
 
     this.load.image('btn_buy', buyBtnUrl);
     this.load.image('btn_sell', sellBtnUrl);
@@ -1069,6 +1071,12 @@ export default class PreparationScene extends Phaser.Scene {
       const box = this.add.rectangle(x, currentY + 12, 34, 34, 0x0f172a).setInteractive({ useHandCursor: true });
       box.setStrokeStyle(1.5, augData.color || 0x38bdf8);
 
+      const frameKey = getAugmentFrameKey(augData);
+      if (this.textures.exists(frameKey)) {
+        const frameImg = this.add.image(x, currentY + 12, frameKey).setOrigin(0.5);
+        frameImg.setDisplaySize(38, 38);
+      }
+
       const icon = this.add.text(x, currentY + 12, augData.icon || '⚡', { fontSize: '18px' }).setOrigin(0.5);
 
       box.on('pointerover', (ptr) => {
@@ -1088,19 +1096,20 @@ export default class PreparationScene extends Phaser.Scene {
     this.activeAugTooltip = this.add.container(x + 10, y + 10);
     this.activeAugTooltip.setDepth(3000);
 
-    const bg = this.add.rectangle(0, 0, 220, 70, 0x090d16, 0.95).setOrigin(0);
+    const bg = this.add.rectangle(0, 0, 230, 76, 0x090d16, 0.95).setOrigin(0);
     bg.setStrokeStyle(1.5, augData.color || 0x38bdf8);
 
-    const title = this.add.text(10, 8, `${augData.icon} ${augData.name}`, {
-      fontSize: '13px',
+    const tierBadge = getAugmentTierBadgeText(augData);
+    const title = this.add.text(10, 8, `${augData.icon} ${augData.name} (${tierBadge})`, {
+      fontSize: '12px',
       fill: '#ffffff',
       fontStyle: 'bold'
     });
 
-    const desc = this.add.text(10, 28, augData.desc, {
+    const desc = this.add.text(10, 30, augData.desc, {
       fontSize: '11px',
       fill: '#cbd5e1',
-      wordWrap: { width: 200 }
+      wordWrap: { width: 210 }
     });
 
     this.activeAugTooltip.add([bg, title, desc]);

@@ -16,8 +16,9 @@ import { MAP_POLYGONS } from './mapPolygons';
 import { handleCharacterPolygonCollision, isPointInPolygon } from './polygonCollision';
 import { ALL_AUGMENTS, getRandomAugments } from './AugmentManager';
 import { preloadShopItemAssets } from './shopItemLoader';
-import { showDamageText } from './FloatingDamage';
 import { preloadSkillIconAssets, createSkillIconTextures } from './skillIconLoader';
+import { showDamageText } from './FloatingDamage';
+import { preloadAugmentFrameAssets, getAugmentFrameKey, getAugmentTierBadgeText } from './augmentFrameLoader';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -34,6 +35,7 @@ export default class GameScene extends Phaser.Scene {
     preloadShopItemAssets(this);
     preloadCharacterSFX(this);
     preloadSkillIconAssets(this);
+    preloadAugmentFrameAssets(this);
     if (!this.textures.exists('battle_map')) {
       this.load.image('battle_map', mapImageUrl);
     }
@@ -1141,18 +1143,24 @@ export default class GameScene extends Phaser.Scene {
       const cardX = centerX - 280 + (idx * 280);
       const cardContainer = this.add.container(cardX, cardY);
 
-      const cardBg = this.add.rectangle(0, 0, cardWidth, cardHeight, 0x1e293b, 0.95).setInteractive({ useHandCursor: true });
-      cardBg.setStrokeStyle(1.5, aug.color || 0x38bdf8, 0.8);
+      const cardBg = this.add.rectangle(0, 0, cardWidth, cardHeight, 0x0f172a, 0.95).setInteractive({ useHandCursor: true });
 
-      const iconTxt = this.add.text(0, -48, aug.icon || '⚡', { fontSize: '28px' }).setOrigin(0.5);
-      const nameTxt = this.add.text(0, -18, aug.name, { fontSize: '15px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
-      const descTxt = this.add.text(0, 18, aug.desc, { fontSize: '11px', fill: '#cbd5e1', align: 'center', wordWrap: { width: 230 } }).setOrigin(0.5);
+      const frameKey = getAugmentFrameKey(aug);
+      let frameImg = null;
+      if (this.textures.exists(frameKey)) {
+        frameImg = this.add.image(0, 0, frameKey);
+        frameImg.setDisplaySize(cardWidth, cardHeight);
+      }
 
-      const selectBtn = this.add.rectangle(0, 52, 180, 26, aug.color || 0x38bdf8, 0.8).setInteractive({ useHandCursor: true });
-      selectBtn.setStrokeStyle(1, 0xffffff);
-      const selectTxt = this.add.text(0, 52, "CHOOSE PERK", { fontSize: '11px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+      const iconTxt = this.add.text(0, -35, aug.icon || '⚡', { fontSize: '26px' }).setOrigin(0.5);
+      const nameTxt = this.add.text(0, 0, aug.name, { fontSize: '15px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+      const descTxt = this.add.text(0, 28, aug.desc, { fontSize: '11px', fill: '#cbd5e1', align: 'center', wordWrap: { width: 200 } }).setOrigin(0.5, 0);
 
-      cardContainer.add([cardBg, iconTxt, nameTxt, descTxt, selectBtn, selectTxt]);
+      const elements = [cardBg];
+      if (frameImg) elements.push(frameImg);
+      elements.push(iconTxt, nameTxt, descTxt);
+
+      cardContainer.add(elements);
       this.intermissionModal.add(cardContainer);
 
       const onSelectAug = () => {
@@ -1161,13 +1169,9 @@ export default class GameScene extends Phaser.Scene {
 
         perkCards.forEach(pc => {
           if (pc.augId === aug.id) {
-            pc.bg.setStrokeStyle(3, 0xfacc15, 1.0);
-            pc.btn.setFillStyle(0x22c55e, 1.0);
-            pc.btnTxt.setText("✓ SELECTED");
+            pc.bg.setFillStyle(0x1e293b, 1.0);
           } else {
-            pc.bg.setStrokeStyle(1.5, 0x334155, 0.5);
-            pc.btn.setFillStyle(0x475569, 0.5);
-            pc.btnTxt.setText("CHOOSE PERK");
+            pc.bg.setFillStyle(0x0f172a, 0.7);
           }
         });
 
@@ -1192,9 +1196,8 @@ export default class GameScene extends Phaser.Scene {
       };
 
       cardBg.on('pointerdown', onSelectAug);
-      selectBtn.on('pointerdown', onSelectAug);
 
-      perkCards.push({ augId: aug.id, bg: cardBg, btn: selectBtn, btnTxt: selectTxt });
+      perkCards.push({ augId: aug.id, bg: cardBg });
     });
 
     // Return to Preparation Button
