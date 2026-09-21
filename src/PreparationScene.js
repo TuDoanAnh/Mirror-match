@@ -16,6 +16,9 @@ import { preloadAugmentFrameAssets, getAugmentFrameKey, getAugmentTierBadgeText 
 import buyBtnUrl from './assets/image/Buy.png';
 import sellBtnUrl from './assets/image/Sell.png';
 import readyBtnUrl from './assets/image/Ready.png';
+import backBtnUrl from './assets/image/Back.png';
+import equipBtnUrl from './assets/image/Equip.png';
+import elixirBtnUrl from './assets/image/Elixir.png';
 import bg1Url from './assets/image/BG_1.png';
 import bg2Url from './assets/image/BG_2.png';
 import bgMainUrl from './assets/image/Background.png';
@@ -48,6 +51,9 @@ export default class PreparationScene extends Phaser.Scene {
     this.load.image('btn_buy', buyBtnUrl);
     this.load.image('btn_sell', sellBtnUrl);
     this.load.image('btn_ready', readyBtnUrl);
+    this.load.image('btn_back', backBtnUrl);
+    this.load.image('btn_equip', equipBtnUrl);
+    this.load.image('btn_elixir', elixirBtnUrl);
     this.load.image('bg_panel_1', bg1Url);
     this.load.image('bg_panel_2', bg2Url);
     this.load.image('bg_main', bgMainUrl);
@@ -126,13 +132,14 @@ export default class PreparationScene extends Phaser.Scene {
     this.selectedItem = null;
     this.selectedInventoryIndex = null;
 
-    // Main Menu Back Button
-    const backBtn = this.add.rectangle(120, 45, 140, 36, 0x1e293b, 0.95).setInteractive({ useHandCursor: true });
-    backBtn.setStrokeStyle(1.5, 0x38bdf8);
-    const backTxt = this.add.text(120, 45, "⬅ MAIN MENU", { fontSize: '13px', fill: '#38bdf8', fontStyle: 'bold' }).setOrigin(0.5);
+    // Main Menu Back Button (Back.png)
+    const backBtn = this.add.image(120, 45, 'btn_back').setInteractive({ useHandCursor: true });
+    backBtn.setDisplaySize(140, 40);
+    const backScaleX = backBtn.scaleX;
+    const backScaleY = backBtn.scaleY;
 
-    backBtn.on('pointerover', () => this.tweens.add({ targets: [backBtn, backTxt], scale: 1.05, duration: 100 }));
-    backBtn.on('pointerout', () => this.tweens.add({ targets: [backBtn, backTxt], scale: 1.0, duration: 100 }));
+    backBtn.on('pointerover', () => this.tweens.add({ targets: backBtn, scaleX: backScaleX * 1.06, scaleY: backScaleY * 1.06, duration: 100 }));
+    backBtn.on('pointerout', () => this.tweens.add({ targets: backBtn, scaleX: backScaleX, scaleY: backScaleY, duration: 100 }));
     backBtn.on('pointerdown', () => {
       stopPreparationBGM(this);
       this.scene.start('StartScene');
@@ -505,20 +512,18 @@ export default class PreparationScene extends Phaser.Scene {
       strokeThickness: 3
     }).setOrigin(0.5);
 
-    // Shop Category Tabs (⚔️ GEAR vs 🧪 ELIXIRS)
+    // Shop Category Tabs (Equip.png vs Elixir.png)
     currentY += 28;
     this.shopTab = 'gear';
 
-    const tabWidth = 115;
-    const tabHeight = 24;
+    const tabWidth = 125;
+    const tabHeight = 36;
 
-    const gearTabBg = this.add.rectangle(centerX - 62, currentY, tabWidth, tabHeight, 0x0284c7).setInteractive({ useHandCursor: true });
-    gearTabBg.setStrokeStyle(1.5, 0x38bdf8);
-    const gearTabTxt = this.add.text(centerX - 62, currentY, "⚔️ GEAR (20)", { fontSize: '11px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+    const gearTabBtn = this.add.image(centerX - 68, currentY, 'btn_equip').setInteractive({ useHandCursor: true });
+    gearTabBtn.setDisplaySize(tabWidth, tabHeight);
 
-    const elixirTabBg = this.add.rectangle(centerX + 62, currentY, tabWidth, tabHeight, 0x1e293b).setInteractive({ useHandCursor: true });
-    elixirTabBg.setStrokeStyle(1.5, 0x334155);
-    const elixirTabTxt = this.add.text(centerX + 62, currentY, "🧪 ELIXIRS (4)", { fontSize: '11px', fill: '#94a3b8', fontStyle: 'bold' }).setOrigin(0.5);
+    const elixirTabBtn = this.add.image(centerX + 68, currentY, 'btn_elixir').setInteractive({ useHandCursor: true });
+    elixirTabBtn.setDisplaySize(tabWidth, tabHeight);
 
     this.gearContainer = this.add.container(0, 0);
     this.elixirContainer = this.add.container(0, 0).setVisible(false);
@@ -526,26 +531,27 @@ export default class PreparationScene extends Phaser.Scene {
     const switchTab = (tab) => {
       this.shopTab = tab;
       if (tab === 'gear') {
-        gearTabBg.setFillStyle(0x0284c7).setStrokeStyle(1.5, 0x38bdf8);
-        gearTabTxt.setColor('#ffffff');
-        elixirTabBg.setFillStyle(0x1e293b).setStrokeStyle(1.5, 0x334155);
-        elixirTabTxt.setColor('#94a3b8');
+        gearTabBtn.setAlpha(1.0).clearTint();
+        elixirTabBtn.setAlpha(0.5).setTint(0x777777);
         this.gearContainer.setVisible(true);
         this.elixirContainer.setVisible(false);
       } else {
-        elixirTabBg.setFillStyle(0xd97706).setStrokeStyle(1.5, 0xfbbf24);
-        elixirTabTxt.setColor('#ffffff');
-        gearTabBg.setFillStyle(0x1e293b).setStrokeStyle(1.5, 0x334155);
-        gearTabTxt.setColor('#94a3b8');
+        elixirTabBtn.setAlpha(1.0).clearTint();
+        gearTabBtn.setAlpha(0.5).setTint(0x777777);
         this.gearContainer.setVisible(false);
         this.elixirContainer.setVisible(true);
       }
     };
 
-    gearTabBg.on('pointerdown', () => switchTab('gear'));
-    gearTabTxt.on('pointerdown', () => switchTab('gear'));
-    elixirTabBg.on('pointerdown', () => switchTab('elixirs'));
-    elixirTabTxt.on('pointerdown', () => switchTab('elixirs'));
+    switchTab('gear');
+
+    gearTabBtn.on('pointerdown', () => switchTab('gear'));
+    elixirTabBtn.on('pointerdown', () => switchTab('elixirs'));
+
+    gearTabBtn.on('pointerover', () => { if (this.shopTab !== 'gear') gearTabBtn.setAlpha(0.85); });
+    gearTabBtn.on('pointerout', () => { if (this.shopTab !== 'gear') gearTabBtn.setAlpha(0.5); });
+    elixirTabBtn.on('pointerover', () => { if (this.shopTab !== 'elixirs') elixirTabBtn.setAlpha(0.85); });
+    elixirTabBtn.on('pointerout', () => { if (this.shopTab !== 'elixirs') elixirTabBtn.setAlpha(0.5); });
 
     // --- 1. GEAR ITEMS GRID ---
     this.shopItems = GAME_CONFIG.SHOP_ITEMS;
