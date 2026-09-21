@@ -1061,31 +1061,35 @@ export default class PreparationScene extends Phaser.Scene {
     if (ownedAugs.length === 0) return startY;
 
     let currentY = startY;
-    this.add.text(centerX, currentY, "⚡ ACTIVE AUGMENTS", {
+    this.add.text(centerX, currentY, `⚡ ACTIVE AUGMENTS (${ownedAugs.length})`, {
       fontSize: '13px',
       fill: '#fde047',
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    currentY += 22;
-    const startX = centerX - ((ownedAugs.length - 1) * 22);
+    currentY += 24;
+
+    const maxPerRow = 6;
+    const itemGapX = 40;
+    const itemGapY = 40;
+    const totalRows = Math.ceil(ownedAugs.length / maxPerRow);
 
     ownedAugs.forEach((aug, i) => {
       const augData = typeof aug === 'string' ? ALL_AUGMENTS.find(a => a.id === aug) : aug;
       if (!augData) return;
 
-      const x = startX + (i * 44);
+      const rowIndex = Math.floor(i / maxPerRow);
+      const colIndex = i % maxPerRow;
+      const rowCount = Math.min(maxPerRow, ownedAugs.length - (rowIndex * maxPerRow));
 
-      const box = this.add.rectangle(x, currentY + 12, 34, 34, 0x0f172a).setInteractive({ useHandCursor: true });
+      const rowStartX = centerX - ((rowCount - 1) * (itemGapX / 2));
+      const x = rowStartX + (colIndex * itemGapX);
+      const y = currentY + (rowIndex * itemGapY);
+
+      const box = this.add.rectangle(x, y, 32, 32, 0x0f172a, 0.9).setInteractive({ useHandCursor: true });
       box.setStrokeStyle(1.5, augData.color || 0x38bdf8);
 
-      const frameKey = getAugmentFrameKey(augData);
-      if (this.textures.exists(frameKey)) {
-        const frameImg = this.add.image(x, currentY + 12, frameKey).setOrigin(0.5);
-        frameImg.setDisplaySize(38, 38);
-      }
-
-      const icon = this.add.text(x, currentY + 12, augData.icon || '⚡', { fontSize: '18px' }).setOrigin(0.5);
+      const icon = this.add.text(x, y, augData.icon || '⚡', { fontSize: '18px' }).setOrigin(0.5);
 
       box.on('pointerover', (ptr) => {
         this.showAugmentTooltip(augData, ptr.worldX, ptr.worldY);
@@ -1095,7 +1099,8 @@ export default class PreparationScene extends Phaser.Scene {
       });
     });
 
-    return currentY + 38;
+    const totalHeight = (totalRows * itemGapY);
+    return currentY + totalHeight + 10;
   }
 
   showAugmentTooltip(augData, x, y) {
