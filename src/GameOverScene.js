@@ -80,11 +80,15 @@ export default class GameOverScene extends Phaser.Scene {
       titleColor = "#34d399";
       subStr = `Reward +${goldEarned} Gold!`;
 
+      const maxLevel = GAME_CONFIG.ECONOMY.MAX_LEVEL || 20;
+      const nextLevel = Math.min(this.level + 1, maxLevel);
       let unlocked = this.registry.get('unlockedLevel') || 1;
-      if (this.level === unlocked && unlocked < (GAME_CONFIG.ECONOMY.MAX_LEVEL || 10)) {
-        this.registry.set('unlockedLevel', unlocked + 1);
-        subStr += ` • UNLOCKED LEVEL ${unlocked + 1}!`;
+      if (nextLevel > unlocked) {
+        unlocked = nextLevel;
+        this.registry.set('unlockedLevel', unlocked);
+        subStr += ` • UNLOCKED LEVEL ${unlocked}!`;
       }
+      this.registry.set('selectedLevel', nextLevel);
     }
 
     // Title Header Text
@@ -197,7 +201,9 @@ export default class GameOverScene extends Phaser.Scene {
           this.registry.set('augments', []);
           this.scene.start('PreparationScene');
         } else if (this.mode === 'campaign' && isWin) {
-          this.scene.start('AugmentSelectScene', { nextLevel: this.level + 1 });
+          const maxLevel = GAME_CONFIG.ECONOMY.MAX_LEVEL || 20;
+          const nextLevel = Math.min(this.level + 1, maxLevel);
+          this.scene.start('AugmentSelectScene', { nextLevel });
         } else {
           this.scene.start('PreparationScene');
         }

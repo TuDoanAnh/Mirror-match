@@ -164,6 +164,14 @@ export default class AugmentSelectScene extends Phaser.Scene {
           this.registry.set('playerStats', stats);
         }
 
+        if (this.nextLevel) {
+          this.registry.set('selectedLevel', this.nextLevel);
+          const unlocked = this.registry.get('unlockedLevel') || 1;
+          if (this.nextLevel > unlocked) {
+            this.registry.set('unlockedLevel', this.nextLevel);
+          }
+        }
+
         this.cameras.main.fadeOut(400, 0, 0, 0);
         this.cameras.main.once('camerafadeoutcomplete', () => {
           this.scene.start('PreparationScene');

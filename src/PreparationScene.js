@@ -140,7 +140,7 @@ export default class PreparationScene extends Phaser.Scene {
 
     // Top Mode Title Banner
     const mode = this.registry.get('gameMode') || 'campaign';
-    let modeTitleStr = "10-LEVEL BOT CAMPAIGN";
+    let modeTitleStr = "";
     let modeColorStr = "#38bdf8";
     if (mode === 'pvp') {
       modeTitleStr = "⚔️ 1v1 LOCAL PVP ARENA";
@@ -150,13 +150,15 @@ export default class PreparationScene extends Phaser.Scene {
       modeColorStr = "#a855f7";
     }
 
-    this.add.text(width / 2, 45, modeTitleStr, {
-      fontSize: '22px',
-      fill: modeColorStr,
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 4
-    }).setOrigin(0.5);
+    if (modeTitleStr) {
+      this.add.text(width / 2, 45, modeTitleStr, {
+        fontSize: '22px',
+        fill: modeColorStr,
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 4
+      }).setOrigin(0.5);
+    }
 
     this.drawLeftPanel();
     this.drawCenterPanel();

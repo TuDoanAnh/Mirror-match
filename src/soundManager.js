@@ -1,5 +1,6 @@
 // Import Background Music
 import bgMusicAudio from './assets/music/Background.mp3';
+import battleMusicAudio from './assets/music/Battle.mp3';
 
 // Import Ezreal SFX
 import ezrealQAudio from './assets/sfx/Ezreal/Q-sfx.mp3';
@@ -73,6 +74,9 @@ export function preloadCharacterSFX(scene) {
   // Background Music
   if (!scene.cache.audio.exists('bg_prep_music')) {
     scene.load.audio('bg_prep_music', bgMusicAudio);
+  }
+  if (!scene.cache.audio.exists('bg_battle_music')) {
+    scene.load.audio('bg_battle_music', battleMusicAudio);
   }
 
   // Ezreal
@@ -243,20 +247,35 @@ export function stopPreparationBGM(scene) {
 
 export function playBattleBGM(scene) {
   if (!scene || !scene.sound) return;
-  if (!scene.cache.audio.exists('bg_prep_music')) return;
+  if (!scene.cache.audio.exists('bg_battle_music')) return;
 
-  let existing = scene.sound.get('bg_prep_music');
-  if (!existing) {
-    existing = scene.sound.add('bg_prep_music', { loop: true, volume: 0.75 });
-  }
-  if (!existing.isPlaying) {
-    existing.play({ loop: true, volume: 0.75 });
+  const startMusic = () => {
+    let existing = scene.sound.get('bg_battle_music');
+    if (!existing) {
+      existing = scene.sound.add('bg_battle_music', { loop: true, volume: 0.75 });
+    }
+    if (!existing.isPlaying) {
+      existing.play({ loop: true, volume: 0.75 });
+    }
+  };
+
+  startMusic();
+
+  if (scene.sound.context && scene.sound.context.state === 'suspended') {
+    const unlockHandler = () => {
+      if (scene.sound.context.state === 'suspended') {
+        scene.sound.context.resume().then(() => startMusic());
+      } else {
+        startMusic();
+      }
+    };
+    scene.input.once('pointerdown', unlockHandler);
   }
 }
 
 export function stopBattleBGM(scene) {
   if (!scene || !scene.sound) return;
-  const existing = scene.sound.get('bg_prep_music');
+  const existing = scene.sound.get('bg_battle_music');
   if (existing && existing.isPlaying) {
     existing.stop();
   }
