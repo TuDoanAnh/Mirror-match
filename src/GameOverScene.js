@@ -172,11 +172,14 @@ export default class GameOverScene extends Phaser.Scene {
     // Action Buttons Area
     const btnY = centerY + 185;
 
-    // Primary Action Button (Play Again / Choose Augment)
+    // Primary Action Button (Play Again / Choose Augment / Next Level)
+    const isAugmentRound = ((this.level - 1) % 3 === 0);
     let btnLabel = "RETRY LEVEL (ENTER)";
     if (this.mode === 'pvp') btnLabel = "PLAY AGAIN (ENTER)";
     else if (this.mode === 'infinity') btnLabel = "SURVIVE AGAIN (ENTER)";
-    else if (isWin) btnLabel = "CHOOSE AUGMENT (ENTER)";
+    else if (isWin) {
+      btnLabel = isAugmentRound ? "CHOOSE AUGMENT (ENTER)" : "NEXT LEVEL (ENTER)";
+    }
 
     const btn1Bg = this.add.rectangle(centerX - 120, btnY, 220, 46, 0x1e293b).setInteractive({ useHandCursor: true });
     btn1Bg.setStrokeStyle(2, 0x38bdf8);
@@ -200,7 +203,7 @@ export default class GameOverScene extends Phaser.Scene {
           this.registry.set('inventory', []);
           this.registry.set('augments', []);
           this.scene.start('PreparationScene');
-        } else if (this.mode === 'campaign' && isWin) {
+        } else if (this.mode === 'campaign' && isWin && isAugmentRound) {
           const maxLevel = GAME_CONFIG.ECONOMY.MAX_LEVEL || 20;
           const nextLevel = Math.min(this.level + 1, maxLevel);
           this.scene.start('AugmentSelectScene', { nextLevel });
