@@ -221,7 +221,7 @@ export default class PreparationScene extends Phaser.Scene {
 
     if (!isInfinityMode) {
       const stageNum = Math.floor((selectedLevel - 1) / 5) + 1;
-      this.levelTitleText = this.add.text(centerX, currentY, `LEVEL ${selectedLevel}: VS ${botHeroData.name.toUpperCase()} (STAGE ${stageNum}/4)`, {
+      this.levelTitleText = this.add.text(centerX, currentY, `LEVEL ${selectedLevel}: VS ${botHeroData.name.toUpperCase()} (STAGE ${stageNum}/5)`, {
         fontSize: '12px',
         fill: '#facc15',
         fontStyle: 'bold',
@@ -622,6 +622,7 @@ export default class PreparationScene extends Phaser.Scene {
     const ePaddingX = 125;
     const ePaddingY = 120;
     const eStartY = gridStartY + 30;
+    this.elixirPriceTexts = [];
 
     elixirItems.forEach((elixir) => {
       const x = (centerX - 62) + (eCol * ePaddingX);
@@ -642,13 +643,15 @@ export default class PreparationScene extends Phaser.Scene {
         wordWrap: { width: 100 }
       }).setOrigin(0.5);
 
+      const curCost = this.getElixirCost();
       const priceBg = this.add.rectangle(0, 32, 70, 18, 0x090d16, 0.9);
       priceBg.setStrokeStyle(1, 0x334155, 0.8);
-      const priceText = this.add.text(0, 32, `${elixir.cost}G`, {
+      const priceText = this.add.text(0, 32, `${curCost}G`, {
         fontSize: '11px',
         fill: '#facc15',
         fontStyle: 'bold'
       }).setOrigin(0.5);
+      this.elixirPriceTexts.push(priceText);
 
       eContainer.add([shadow, box, iconTxt, nameTxt, priceBg, priceText]);
       this.elixirContainer.add(eContainer);
@@ -663,10 +666,12 @@ export default class PreparationScene extends Phaser.Scene {
       });
 
       box.on('pointerdown', () => {
+        const cost = this.getElixirCost();
         this.selectedItem = {
           ...elixir,
+          cost: cost,
           isElixir: true,
-          statStr: elixir.desc
+          statStr: `${elixir.desc} (Tăng +100G mỗi lần mua)`
         };
         this.selectedInventoryIndex = null;
         this.updateRightPanel();
@@ -910,19 +915,49 @@ export default class PreparationScene extends Phaser.Scene {
     const stats = this.registry.get('playerStats');
     const heroId = this.registry.get('selectedHero') || 'ezreal';
     const heroData = GAME_CONFIG.CHARACTERS[heroId] || GAME_CONFIG.CHARACTERS.ezreal;
+    const caps = GAME_CONFIG.STAT_CAPS || { MAX_CDR: 0.60, MAX_ARMOR_PEN: 60, MAX_CRIT_CHANCE: 100, MAX_LIFESTEAL: 60 };
 
     const baseHp = heroData.baseStats.hp;
     const baseAtk = heroData.skills.Q.config.damage;
     const baseSpeed = heroData.baseStats.speed;
 
+    const rawCrit = heroData.baseStats.critChance + stats.critChance;
+    const cappedCrit = Math.min(caps.MAX_CRIT_CHANCE, rawCrit);
+
+    const rawCdrPct = Math.round((stats.cdr || 0) * 100);
+    const maxCdrPct = Math.round(caps.MAX_CDR * 100);
+    const cappedCdrPct = Math.min(maxCdrPct, rawCdrPct);
+
+    const rawLifesteal = heroData.baseStats.lifesteal + stats.lifesteal;
+    const cappedLifesteal = Math.min(caps.MAX_LIFESTEAL, rawLifesteal);
+
+    const rawArmPen = stats.armorPen || 0;
+    const cappedArmPen = Math.min(caps.MAX_ARMOR_PEN, rawArmPen);
+
     this.statTexts.hp.setText(`HP: ${baseHp + stats.bonusHP}`);
     this.statTexts.atk.setText(`ATK: ${baseAtk + stats.bonusDamage}`);
     this.statTexts.armor.setText(`Armor: ${heroData.baseStats.armor + stats.armor}`);
     this.statTexts.speed.setText(`Speed: ${baseSpeed + stats.bonusSpeed}`);
-    this.statTexts.crit.setText(`Crit: ${heroData.baseStats.critChance + stats.critChance}%`);
-    this.statTexts.cdr.setText(`CDR: ${Math.round(stats.cdr * 100)}%`);
-    this.statTexts.lifesteal.setText(`Lifesteal: ${heroData.baseStats.lifesteal + stats.lifesteal}%`);
-    this.statTexts.armPen.setText(`Arm Pen: ${stats.armorPen}%`);
+
+    this.statTexts.crit.setText(`Crit: ${cappedCrit}%${rawCrit >= caps.MAX_CRIT_CHANCE ? ' (MAX)' : ''}`);
+    this.statTexts.cdr.setText(`CDR: ${cappedCdrPct}%${rawCdrPct >= maxCdrPct ? ' (MAX)' : ''}`);
+    this.statTexts.lifesteal.setText(`Lifesteal: ${cappedLifesteal}%${rawLifesteal >= caps.MAX_LIFESTEAL ? ' (MAX)' : ''}`);
+    this.statTexts.armPen.setText(`Arm Pen: ${cappedArmPen}%${rawArmPen >= caps.MAX_ARMOR_PEN ? ' (MAX)' : ''}`);
+  }
+
+  getElixirCost() {
+    const count = this.registry.get('elixirBuyCount') || 0;
+    const baseCost = 500;
+    const increment = 100;
+    return baseCost + (count * increment);
+  }
+
+  updateElixirPriceTexts() {
+    if (!this.elixirPriceTexts) return;
+    const curCost = this.getElixirCost();
+    this.elixirPriceTexts.forEach(txt => {
+      txt.setText(`${curCost}G`);
+    });
   }
 
   buyItem() {
@@ -932,9 +967,13 @@ export default class PreparationScene extends Phaser.Scene {
     let inv = this.registry.get('inventory');
 
     if (this.selectedItem.isElixir) {
-      if (gold >= this.selectedItem.cost) {
-        gold -= this.selectedItem.cost;
+      const currentCost = this.getElixirCost();
+      if (gold >= currentCost) {
+        gold -= currentCost;
         this.registry.set('gold', gold);
+
+        const buyCount = this.registry.get('elixirBuyCount') || 0;
+        this.registry.set('elixirBuyCount', buyCount + 1);
 
         let stats = this.registry.get('playerStats');
         if (this.selectedItem.statsDict) {
@@ -946,6 +985,9 @@ export default class PreparationScene extends Phaser.Scene {
 
         this.goldText.setText(`GOLD: ${gold}`);
         this.updatePlayerStatsUI();
+        this.updateElixirPriceTexts();
+
+        this.selectedItem.cost = this.getElixirCost();
 
         if (this.buyBtn) this.buyBtn.setTint(0x00ff88);
         this.time.delayedCall(120, () => this.updateRightPanel());

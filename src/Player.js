@@ -42,21 +42,28 @@ export default class Player extends BaseCharacter {
       this.skills[k].lastUsed = -999999;
     });
 
+    const caps = GAME_CONFIG.STAT_CAPS || { MAX_CDR: 0.60, MAX_ARMOR_PEN: 60, MAX_CRIT_CHANCE: 100, MAX_LIFESTEAL: 60 };
+
     if (!isBot && scene.registry.has('playerStats')) {
       const stats = scene.registry.get('playerStats');
       this.maxHp += (stats.bonusHP || 0);
       this.hp = this.maxHp;
       this.speed += (stats.bonusSpeed || 0);
       this.armor += (stats.armor || 0);
-      this.lifesteal += (stats.lifesteal || 0);
-      this.critChance += (stats.critChance || 0);
-      this.armorPen += (stats.armorPen || 0);
+      this.lifesteal = Math.min(caps.MAX_LIFESTEAL, heroData.baseStats.lifesteal + (stats.lifesteal || 0));
+      this.critChance = Math.min(caps.MAX_CRIT_CHANCE, heroData.baseStats.critChance + (stats.critChance || 0));
+      this.armorPen = Math.min(caps.MAX_ARMOR_PEN, heroData.baseStats.armorPen + (stats.armorPen || 0));
 
-      const cdrMult = Math.max(0.1, 1 - (stats.cdr || 0));
+      const cappedCdr = Math.min(caps.MAX_CDR, stats.cdr || 0);
+      const cdrMult = Math.max(1 - caps.MAX_CDR, 1 - cappedCdr);
       Object.values(this.skills).forEach(skill => {
-        if (skill.cooldown) skill.cooldown *= cdrMult;
+        if (skill.cooldown) skill.cooldown = Math.max(500, Math.round(skill.cooldown * cdrMult));
         if (skill.config && skill.config.damage) skill.config.damage += (stats.bonusDamage || 0);
       });
+    } else {
+      this.lifesteal = Math.min(caps.MAX_LIFESTEAL, this.lifesteal);
+      this.critChance = Math.min(caps.MAX_CRIT_CHANCE, this.critChance);
+      this.armorPen = Math.min(caps.MAX_ARMOR_PEN, this.armorPen);
     }
 
     // Parse Owned Augments

@@ -785,7 +785,9 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // 2. Armor & ArmorPen Logic
-    const armorPen = attacker ? (attacker.armorPen || 0) : 0;
+    const maxArmPen = GAME_CONFIG.STAT_CAPS ? GAME_CONFIG.STAT_CAPS.MAX_ARMOR_PEN : 60;
+    const rawPen = attacker ? (attacker.armorPen || 0) : 0;
+    const armorPen = Math.min(maxArmPen, rawPen);
     const effectiveArmor = Math.max(0, (entity.armor || 0) * (1 - armorPen / 100));
     const finalDamage = baseDamage * (100 / (100 + effectiveArmor));
 

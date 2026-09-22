@@ -24,26 +24,29 @@ export default class EnemyBot extends Player {
   setLevel(level) {
     const scale = GAME_CONFIG.BOT_SCALING[level] || GAME_CONFIG.BOT_SCALING[1];
     const heroData = GAME_CONFIG.CHARACTERS[this.heroId] || GAME_CONFIG.CHARACTERS.ezreal;
+    const caps = GAME_CONFIG.STAT_CAPS || { MAX_CDR: 0.60, MAX_ARMOR_PEN: 60, MAX_CRIT_CHANCE: 100, MAX_LIFESTEAL: 60 };
 
     this.speed = heroData.baseStats.speed * scale.speedMult;
     this.maxHp = heroData.baseStats.hp * scale.hpMult;
     this.hp = this.maxHp;
     this.armor = scale.armor;
-    this.armorPen = scale.armorPen;
-    this.critChance = scale.critChance;
-    this.lifesteal = scale.lifesteal;
+    this.armorPen = Math.min(caps.MAX_ARMOR_PEN, scale.armorPen);
+    this.critChance = Math.min(caps.MAX_CRIT_CHANCE, scale.critChance);
+    this.lifesteal = Math.min(caps.MAX_LIFESTEAL, scale.lifesteal);
+
+    const botCdrMult = Math.max(1 - caps.MAX_CDR, scale.cdrMult);
 
     if (this.skills.Q && this.skills.Q.config) {
       this.skills.Q.config.damage = (heroData.skills.Q.config.damage || 100) * scale.dmgMult;
-      this.skills.Q.cooldown = heroData.skills.Q.cooldown * scale.cdrMult;
+      this.skills.Q.cooldown = Math.max(500, Math.round(heroData.skills.Q.cooldown * botCdrMult));
       if (this.skills.Q.config.speed) this.skills.Q.config.speed *= scale.projSpeedMult;
     }
     if (this.skills.E) {
-      this.skills.E.cooldown = heroData.skills.E.cooldown * scale.cdrMult;
+      this.skills.E.cooldown = Math.max(500, Math.round(heroData.skills.E.cooldown * botCdrMult));
     }
     if (this.skills.SPACE && this.skills.SPACE.config) {
       this.skills.SPACE.config.damage = (heroData.skills.SPACE.config.damage || 400) * scale.dmgMult;
-      this.skills.SPACE.cooldown = heroData.skills.SPACE.cooldown * scale.cdrMult;
+      this.skills.SPACE.cooldown = Math.max(500, Math.round(heroData.skills.SPACE.cooldown * botCdrMult));
       if (this.skills.SPACE.config.speed) this.skills.SPACE.config.speed *= scale.projSpeedMult;
     }
 
@@ -57,14 +60,29 @@ export default class EnemyBot extends Player {
         }
         if (item.statsDict.bonusSpeed) this.speed += item.statsDict.bonusSpeed;
         if (item.statsDict.armor) this.armor += item.statsDict.armor;
-        if (item.statsDict.lifesteal) this.lifesteal += item.statsDict.lifesteal;
-        if (item.statsDict.critChance) this.critChance += item.statsDict.critChance;
-        if (item.statsDict.armorPen) this.armorPen += item.statsDict.armorPen;
+        if (item.statsDict.lifesteal) this.lifesteal = Math.min(caps.MAX_LIFESTEAL, this.lifesteal + item.statsDict.lifesteal);
+        if (item.statsDict.critChance) this.critChance = Math.min(caps.MAX_CRIT_CHANCE, this.critChance + item.statsDict.critChance);
+        if (item.statsDict.armorPen) this.armorPen = Math.min(caps.MAX_ARMOR_PEN, this.armorPen + item.statsDict.armorPen);
         if (item.statsDict.bonusDamage && this.skills.Q && this.skills.Q.config) {
           this.skills.Q.config.damage += item.statsDict.bonusDamage;
         }
       }
     });
+
+    // Late Game Bot Power Boost (Level >= 5) to match player's full-build + elixir scaling
+    if (level >= 5) {
+      const bonusDmg = (level - 4) * 25;
+      const bonusHp = (level - 4) * 350;
+      this.maxHp += bonusHp;
+      this.hp = this.maxHp;
+
+      if (this.skills.Q && this.skills.Q.config) {
+        this.skills.Q.config.damage += bonusDmg;
+      }
+      if (this.skills.SPACE && this.skills.SPACE.config) {
+        this.skills.SPACE.config.damage += bonusDmg * 2;
+      }
+    }
   }
 
   setTarget(target) {
