@@ -840,7 +840,7 @@ export default class GameScene extends Phaser.Scene {
     spawnX = Phaser.Math.Clamp(spawnX, 200, 1220);
     spawnY = Phaser.Math.Clamp(spawnY, 150, 880);
 
-    const creep = new Creep(this, spawnX, spawnY);
+    const creep = new Creep(this, spawnX, spawnY, this.level);
     this.creeps.add(creep);
   }
 

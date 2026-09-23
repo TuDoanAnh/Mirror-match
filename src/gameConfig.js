@@ -24,6 +24,23 @@ export function getBotEquipmentForLevel(level) {
   return items.filter(Boolean).slice(0, 6);
 }
 
+export function getCreepStatsForLevel(level = 4) {
+  const base = GAME_CONFIG.CREEP_STATS;
+  const l = Math.max(1, level);
+  const scaleFactor = Math.max(0, l - 4);
+
+  return {
+    hp: Math.round(base.hp * (1 + scaleFactor * 0.35)),
+    atk: Math.round(base.atk * (1 + scaleFactor * 0.25)),
+    armor: Math.round(base.armor + scaleFactor * 6),
+    speed: Math.round(base.speed * (1 + scaleFactor * 0.015)),
+    bulletSpeed: Math.round(400 * (1 + scaleFactor * 0.025)),
+    shootCooldown: Math.max(1200, Math.round(2500 - scaleFactor * 50)),
+    color: base.color,
+    goldReward: base.goldReward
+  };
+}
+
 export const GAME_CONFIG = {
   CANVAS: {
     WIDTH: 1536,

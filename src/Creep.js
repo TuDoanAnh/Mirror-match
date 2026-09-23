@@ -1,16 +1,18 @@
 import Phaser from 'phaser';
 import BaseCharacter from './BaseCharacter';
-import { GAME_CONFIG } from './gameConfig';
+import { GAME_CONFIG, getCreepStatsForLevel } from './gameConfig';
 import { MAP_OBSTACLES } from './mapObstacles';
 import { MAP_POLYGONS } from './mapPolygons';
 import { isPointInAnyPolygon, isSegmentIntersectingAnyPolygon } from './polygonCollision';
 
 export default class Creep extends BaseCharacter {
-  constructor(scene, x, y) {
-    super(scene, x, y, true, GAME_CONFIG.CREEP_STATS.color || 0xcc3333, 'creep');
+  constructor(scene, x, y, level = 4) {
+    const currentLevel = level || (scene && scene.level) || 4;
+    const stats = getCreepStatsForLevel(currentLevel);
 
-    const stats = GAME_CONFIG.CREEP_STATS;
+    super(scene, x, y, true, stats.color || 0xcc3333, 'creep');
 
+    this.level = currentLevel;
     this.maxHp = stats.hp;
     this.hp = this.maxHp;
     this.speed = stats.speed;
@@ -19,7 +21,8 @@ export default class Creep extends BaseCharacter {
     this.goldReward = stats.goldReward;
 
     this.lastShootTime = 0;
-    this.shootCooldown = 2500; // Shoots every 2.5s
+    this.shootCooldown = stats.shootCooldown || 2500;
+    this.bulletSpeed = stats.bulletSpeed || 400;
     this.lastChosenSign = 1; // Hysteresis flag for Creep steering
 
     this.setDepth(10);
@@ -287,7 +290,7 @@ export default class Creep extends BaseCharacter {
     bullet.passesThrough = false;
 
     this.scene.creepProjectiles.add(bullet);
-    this.scene.physics.velocityFromRotation(angle, 400, bullet.body.velocity);
+    this.scene.physics.velocityFromRotation(angle, this.bulletSpeed || 400, bullet.body.velocity);
 
     // Auto cleanup out of bounds (1536 x 1024)
     bullet.preUpdate = (time, delta) => {
