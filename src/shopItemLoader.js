@@ -18,6 +18,10 @@ import zhonyaUrl from './assets/image/item_zhonya.png';
 import qssUrl from './assets/image/item_qss.png';
 import rylaiUrl from './assets/image/item_rylai.png';
 import rocketbeltUrl from './assets/image/item_rocketbelt.png';
+import elixirMightUrl from './assets/image/Might.png';
+import elixirIronUrl from './assets/image/Iron.png';
+import elixirVampirismUrl from './assets/image/Vampirism.png';
+import elixirHasteUrl from './assets/image/Haste.png';
 
 const ITEM_URLS = {
   doransBlade: doransBladeUrl,
@@ -39,7 +43,11 @@ const ITEM_URLS = {
   zhonya: zhonyaUrl,
   qss: qssUrl,
   rylai: rylaiUrl,
-  rocketbelt: rocketbeltUrl
+  rocketbelt: rocketbeltUrl,
+  elixir_strength: elixirMightUrl,
+  elixir_titan: elixirIronUrl,
+  elixir_vamp: elixirVampirismUrl,
+  elixir_agility: elixirHasteUrl
 };
 
 export function preloadShopItemAssets(scene) {

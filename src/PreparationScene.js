@@ -634,8 +634,16 @@ export default class PreparationScene extends Phaser.Scene {
       const box = this.add.rectangle(0, 0, 110, 105, 0x0f172a).setInteractive({ useHandCursor: true });
       box.setStrokeStyle(2, elixir.color || 0xfacc15, 0.9);
 
-      const iconTxt = this.add.text(0, -28, elixir.icon || '🧪', { fontSize: '28px' }).setOrigin(0.5);
-      const nameTxt = this.add.text(0, -2, elixir.name, {
+      const iconKey = `item_${elixir.id}`;
+      let iconObj;
+      if (this.textures.exists(iconKey)) {
+        iconObj = this.add.image(0, -22, iconKey);
+        iconObj.setDisplaySize(44, 44);
+      } else {
+        iconObj = this.add.text(0, -28, elixir.icon || '🧪', { fontSize: '28px' }).setOrigin(0.5);
+      }
+
+      const nameTxt = this.add.text(0, 7, elixir.name, {
         fontSize: '10px',
         fill: '#ffffff',
         fontStyle: 'bold',
@@ -653,7 +661,7 @@ export default class PreparationScene extends Phaser.Scene {
       }).setOrigin(0.5);
       this.elixirPriceTexts.push(priceText);
 
-      eContainer.add([shadow, box, iconTxt, nameTxt, priceBg, priceText]);
+      eContainer.add([shadow, box, iconObj, nameTxt, priceBg, priceText]);
       this.elixirContainer.add(eContainer);
 
       box.on('pointerover', () => {
@@ -671,7 +679,7 @@ export default class PreparationScene extends Phaser.Scene {
           ...elixir,
           cost: cost,
           isElixir: true,
-          statStr: `${elixir.desc} (Tăng +100G mỗi lần mua)`
+          statStr: `${elixir.desc} (+100G per purchase)`
         };
         this.selectedInventoryIndex = null;
         this.updateRightPanel();

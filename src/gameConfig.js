@@ -133,10 +133,10 @@ export const GAME_CONFIG = {
     { id: 'rocketbelt', iconFrame: 19, name: 'Arcane Rocket Belt', statStr: 'Active (Slot Key): Rocket Dash & Arcane Bolts', cost: 2600, color: 0xec4899, statsDict: { bonusHP: 300, bonusSpeed: 25 } }
   ],
   ELIXIR_ITEMS: [
-    { id: 'elixir_strength', name: 'Dược Phẩm Sức Mạnh', desc: '+15 ATK (Bonus Damage)', cost: 500, color: 0xef4444, icon: '🗡️', statsDict: { bonusDamage: 15 } },
-    { id: 'elixir_titan', name: 'Dược Phẩm Vệ Thần', desc: '+150 Max HP, +15 Armor', cost: 500, color: 0x22c55e, icon: '🛡️', statsDict: { bonusHP: 150, armor: 15 } },
-    { id: 'elixir_vamp', name: 'Dược Phẩm Tẩy Tủy', desc: '+5% Lifesteal, +5% Armor Pen', cost: 500, color: 0xdc2626, icon: '🩸', statsDict: { lifesteal: 5, armorPen: 5 } },
-    { id: 'elixir_agility', name: 'Dược Phẩm Cuồng Thần', desc: '+15 Speed, +5% CDR', cost: 500, color: 0x38bdf8, icon: '⚡', statsDict: { bonusSpeed: 15, cdr: 0.05 } }
+    { id: 'elixir_strength', name: 'Elixir of Might', desc: '+15 ATK (Bonus Damage)', cost: 500, color: 0xef4444, icon: '🗡️', statsDict: { bonusDamage: 15 } },
+    { id: 'elixir_titan', name: 'Elixir of Iron', desc: '+150 Max HP, +15 Armor', cost: 500, color: 0x22c55e, icon: '🛡️', statsDict: { bonusHP: 150, armor: 15 } },
+    { id: 'elixir_vamp', name: 'Elixir of Vampirism', desc: '+5% Lifesteal, +5% Armor Pen', cost: 500, color: 0xdc2626, icon: '🩸', statsDict: { lifesteal: 5, armorPen: 5 } },
+    { id: 'elixir_agility', name: 'Elixir of Haste', desc: '+15 Speed, +5% CDR', cost: 500, color: 0x38bdf8, icon: '⚡', statsDict: { bonusSpeed: 15, cdr: 0.05 } }
   ],
   BOT_SCALING: {
     1:  { speedMult: 1.0,  hpMult: 1.0,  armor: 0,   armorPen: 0,  critChance: 0,  lifesteal: 0,  dmgMult: 1.0,  cdrMult: 1.0,  projSpeedMult: 1.0 },
