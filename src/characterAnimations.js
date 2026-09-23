@@ -18,9 +18,10 @@ export function preloadCharacterAssets(scene) {
   Object.keys(HERO_URLS).forEach(heroId => {
     const key = `${heroId}_spritesheet`;
     if (!scene.textures.exists(key)) {
+      const isEzreal = (heroId === 'ezreal');
       scene.load.spritesheet(key, HERO_URLS[heroId], {
-        frameWidth: 48,
-        frameHeight: 56
+        frameWidth: isEzreal ? 146 : 48,
+        frameHeight: isEzreal ? 170 : 56
       });
     }
   });
@@ -34,11 +35,11 @@ export function createCharacterAnimations(scene) {
     const keyPrefix = heroId;
     const sheetKey = `${heroId}_spritesheet`;
 
-    if (scene.anims.exists(`${keyPrefix}_idle`)) return;
+    const isEzreal = (heroId === 'ezreal');
 
     scene.anims.create({
       key: `${keyPrefix}_idle`,
-      frames: scene.anims.generateFrameNumbers(sheetKey, { start: 0, end: 3 }),
+      frames: scene.anims.generateFrameNumbers(sheetKey, isEzreal ? { start: 4, end: 7 } : { start: 0, end: 3 }),
       frameRate: 6,
       repeat: -1
     });
@@ -52,7 +53,7 @@ export function createCharacterAnimations(scene) {
 
     scene.anims.create({
       key: `${keyPrefix}_walk_up`,
-      frames: scene.anims.generateFrameNumbers(sheetKey, { start: 8, end: 11 }),
+      frames: scene.anims.generateFrameNumbers(sheetKey, isEzreal ? { start: 0, end: 3 } : { start: 8, end: 11 }),
       frameRate: 8,
       repeat: -1
     });

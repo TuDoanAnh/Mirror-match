@@ -425,8 +425,8 @@ export default class PreparationScene extends Phaser.Scene {
       const sheetKey = `${currentHero}_spritesheet`;
       const idleKey = `${currentHero}_idle`;
       if (this.textures.exists(sheetKey)) {
-        const heroSprite = this.add.sprite(centerX, slideY, sheetKey, 0);
-        heroSprite.setScale(1.0);
+        const heroSprite = this.add.sprite(centerX, slideY, sheetKey, currentHero === 'ezreal' ? 4 : 0);
+        heroSprite.setScale(currentHero === 'ezreal' ? 0.33 : 1.0);
 
         // Geometry Mask to contain sprite strictly inside circle frame
         const heroMaskGfx = this.make.graphics();

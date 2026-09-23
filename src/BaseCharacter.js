@@ -102,10 +102,15 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     }
 
     if (this.scene.textures.exists(sheetKey)) {
-      this.setTexture(sheetKey, 0);
+      this.setTexture(sheetKey, this.heroId === 'ezreal' ? 4 : 0);
       this.setOrigin(0.5, 0.6);
-      this.body.setCircle(16, 8, 12);
-      this.setScale(1.1);
+      if (this.heroId === 'ezreal') {
+        this.setScale(0.36);
+        this.body.setCircle(45, 28, 57);
+      } else {
+        this.setScale(1.1);
+        this.body.setCircle(16, 8, 12);
+      }
       this.clearTint();
 
       const animPrefix = ['ezreal', 'lux', 'jinx', 'riven', 'zed'].includes(this.heroId) ? this.heroId : 'ezreal';
