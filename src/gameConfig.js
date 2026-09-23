@@ -88,32 +88,32 @@ export const GAME_CONFIG = {
   },
   SHOP_ITEMS: [
     // Starter / Basic Items
-    { id: 'doransBlade', iconFrame: 0, name: "Doran's Blade", statStr: '+15 ATK, +100 HP, +3% Vamp', cost: 450, color: 0xef4444, statsDict: { bonusDamage: 15, bonusHP: 100, lifesteal: 3 } },
+    { id: 'doransBlade', iconFrame: 0, name: "Traveler's Blade", statStr: '+15 ATK, +100 HP, +3% Vamp', cost: 450, color: 0xef4444, statsDict: { bonusDamage: 15, bonusHP: 100, lifesteal: 3 } },
     { id: 'boots', iconFrame: 1, name: 'Boots of Speed', statStr: '+30 Speed', cost: 300, color: 0x94a3b8, statsDict: { bonusSpeed: 30 } },
     { id: 'longSword', iconFrame: 2, name: 'Long Sword', statStr: '+15 ATK', cost: 350, color: 0xf87171, statsDict: { bonusDamage: 15 } },
     { id: 'clothArmor', iconFrame: 3, name: 'Cloth Armor', statStr: '+15 Armor', cost: 300, color: 0x22c55e, statsDict: { armor: 15 } },
 
     // Epic / Mid-Tier Items
-    { id: 'berserkers', iconFrame: 4, name: "Berserker's Greaves", statStr: '+50 Speed, +10 ATK', cost: 1100, color: 0xfbbf24, statsDict: { bonusSpeed: 50, bonusDamage: 10 } },
-    { id: 'vampScepter', iconFrame: 5, name: 'Vampiric Scepter', statStr: '+10% Lifesteal, +15 ATK', cost: 900, color: 0xdc2626, statsDict: { lifesteal: 10, bonusDamage: 15 } },
-    { id: 'lastWhisper', iconFrame: 6, name: 'Last Whisper', statStr: '+18% Armor Pen, +20 ATK', cost: 1450, color: 0x06b6d4, statsDict: { armorPen: 18, bonusDamage: 20 } },
+    { id: 'berserkers', iconFrame: 4, name: "Warlord's Greaves", statStr: '+50 Speed, +10 ATK', cost: 1100, color: 0xfbbf24, statsDict: { bonusSpeed: 50, bonusDamage: 10 } },
+    { id: 'vampScepter', iconFrame: 5, name: 'Bloodfang Scepter', statStr: '+10% Lifesteal, +15 ATK', cost: 900, color: 0xdc2626, statsDict: { lifesteal: 10, bonusDamage: 15 } },
+    { id: 'lastWhisper', iconFrame: 6, name: 'Phantom Bow', statStr: '+18% Armor Pen, +20 ATK', cost: 1450, color: 0x06b6d4, statsDict: { armorPen: 18, bonusDamage: 20 } },
     { id: 'cloakAgility', iconFrame: 7, name: 'Cloak of Agility', statStr: '+15% Crit Chance', cost: 600, color: 0xa855f7, statsDict: { critChance: 15 } },
-    { id: 'fiendishCodex', iconFrame: 8, name: 'Fiendish Codex', statStr: '+10% CDR, +20 ATK', cost: 900, color: 0x8b5cf6, statsDict: { cdr: 0.10, bonusDamage: 20 } },
+    { id: 'fiendishCodex', iconFrame: 8, name: 'Arcane Codex', statStr: '+10% CDR, +20 ATK', cost: 900, color: 0x8b5cf6, statsDict: { cdr: 0.10, bonusDamage: 20 } },
 
-    // Legendary / Core LoL Masterpieces
-    { id: 'infinityEdge', iconFrame: 9, name: 'Infinity Edge', statStr: '+70 ATK, +25% Crit', cost: 3400, color: 0xf59e0b, statsDict: { bonusDamage: 70, critChance: 25 } },
-    { id: 'bloodthirster', iconFrame: 10, name: 'Bloodthirster', statStr: '+18% Lifesteal, +55 ATK', cost: 3200, color: 0xb91c1c, statsDict: { lifesteal: 18, bonusDamage: 55 } },
-    { id: 'lordDominik', iconFrame: 11, name: "Lord Dominik's Regards", statStr: '+35% Armor Pen, +45 ATK', cost: 3000, color: 0x0284c7, statsDict: { armorPen: 35, bonusDamage: 45 } },
-    { id: 'thornmail', iconFrame: 12, name: 'Thornmail', statStr: '+60 Armor, +250 HP', cost: 2700, color: 0x15803d, statsDict: { armor: 60, bonusHP: 250 } },
-    { id: 'trinityForce', iconFrame: 13, name: 'Trinity Force', statStr: '+300 HP, +40 ATK, +30 Speed, +10% CDR', cost: 3333, color: 0xeab308, statsDict: { bonusHP: 300, bonusDamage: 40, bonusSpeed: 30, cdr: 0.10 } },
-    { id: 'navori', iconFrame: 14, name: 'Navori Quickblades', statStr: '+25% Crit, +60 ATK, +15% CDR', cost: 3400, color: 0xec4899, statsDict: { critChance: 25, bonusDamage: 60, cdr: 0.15 } },
+    // Legendary / Core Masterpieces
+    { id: 'infinityEdge', iconFrame: 9, name: 'Edge of Eternity', statStr: '+70 ATK, +25% Crit', cost: 3400, color: 0xf59e0b, statsDict: { bonusDamage: 70, critChance: 25 } },
+    { id: 'bloodthirster', iconFrame: 10, name: 'Bloodbound Saber', statStr: '+18% Lifesteal, +55 ATK', cost: 3200, color: 0xb91c1c, statsDict: { lifesteal: 18, bonusDamage: 55 } },
+    { id: 'lordDominik', iconFrame: 11, name: "Vanquisher's Crossbow", statStr: '+35% Armor Pen, +45 ATK', cost: 3000, color: 0x0284c7, statsDict: { armorPen: 35, bonusDamage: 45 } },
+    { id: 'thornmail', iconFrame: 12, name: 'Spike Cuirass', statStr: '+60 Armor, +250 HP', cost: 2700, color: 0x15803d, statsDict: { armor: 60, bonusHP: 250 } },
+    { id: 'trinityForce', iconFrame: 13, name: 'Triumvirate Core', statStr: '+300 HP, +40 ATK, +30 Speed, +10% CDR', cost: 3333, color: 0xeab308, statsDict: { bonusHP: 300, bonusDamage: 40, bonusSpeed: 30, cdr: 0.10 } },
+    { id: 'navori', iconFrame: 14, name: 'Swiftblade Essence', statStr: '+25% Crit, +60 ATK, +15% CDR', cost: 3400, color: 0xec4899, statsDict: { critChance: 25, bonusDamage: 60, cdr: 0.15 } },
 
     // Active & Utility Items
     { id: 'healthPotion', iconFrame: 15, name: 'Health Potion', statStr: 'Consumable: Restores 250 HP over 5s', cost: 50, color: 0xef4444, statsDict: { bonusHP: 50 } },
-    { id: 'zhonya', iconFrame: 16, name: "Zhonya's Hourglass", statStr: 'Active (Slot Key): Golden Stasis (2s Invulnerable)', cost: 2800, color: 0xfacc15, statsDict: { bonusDamage: 55, cdr: 0.10 } },
-    { id: 'qss', iconFrame: 17, name: 'Quicksilver Sash (QSS)', statStr: 'Active (Slot Key): Cleanse CC & +35% Speed', cost: 1300, color: 0x38bdf8, statsDict: { armor: 30 } },
-    { id: 'rylai', iconFrame: 18, name: "Rylai's Crystal Scepter", statStr: 'Passive: Skillshots Slow 25% for 1.5s', cost: 2600, color: 0x0284c7, statsDict: { bonusHP: 250, bonusDamage: 30 } },
-    { id: 'rocketbelt', iconFrame: 19, name: 'Hextech Rocketbelt', statStr: 'Active (Slot Key): Rocket Dash & Hextech Bolts', cost: 2600, color: 0xec4899, statsDict: { bonusHP: 300, bonusSpeed: 25 } }
+    { id: 'zhonya', iconFrame: 16, name: "Stasis Hourglass", statStr: 'Active (Slot Key): Golden Stasis (2s Invulnerable)', cost: 2800, color: 0xfacc15, statsDict: { bonusDamage: 55, cdr: 0.10 } },
+    { id: 'qss', iconFrame: 17, name: 'Cleansing Sash', statStr: 'Active (Slot Key): Cleanse CC & +35% Speed', cost: 1300, color: 0x38bdf8, statsDict: { armor: 30 } },
+    { id: 'rylai', iconFrame: 18, name: "Frost Crystal Staff", statStr: 'Passive: Skillshots Slow 25% for 1.5s', cost: 2600, color: 0x0284c7, statsDict: { bonusHP: 250, bonusDamage: 30 } },
+    { id: 'rocketbelt', iconFrame: 19, name: 'Arcane Rocket Belt', statStr: 'Active (Slot Key): Rocket Dash & Arcane Bolts', cost: 2600, color: 0xec4899, statsDict: { bonusHP: 300, bonusSpeed: 25 } }
   ],
   ELIXIR_ITEMS: [
     { id: 'elixir_strength', name: 'Dược Phẩm Sức Mạnh', desc: '+15 ATK (Bonus Damage)', cost: 500, color: 0xef4444, icon: '🗡️', statsDict: { bonusDamage: 15 } },
@@ -163,77 +163,77 @@ export const GAME_CONFIG = {
   CHARACTERS: {
     ezreal: {
       id: 'ezreal',
-      name: 'Ezreal',
-      title: 'The Prodigal Explorer',
+      name: 'Elion',
+      title: 'The Starbound Explorer',
       color: 0x0088ff,
       projColor: 0x00ffff,
       ultColor: 0xffaa00,
       description: 'High mobility explorer with precision skillshots & global ultimate.',
       baseStats: { hp: 1000, speed: 200, armor: 0, lifesteal: 0, critChance: 0, armorPen: 0 },
       skills: {
-        Q: { type: 'PROJECTILE', name: 'Mystic Shot', cooldown: 2000, config: { damage: 100, speed: 600, isPiercing: false } },
-        E: { type: 'DASH', name: 'Arcane Shift', cooldown: 8000, config: { dashDistance: 150 } },
-        SPACE: { type: 'PROJECTILE', name: 'Trueshot Barrage', cooldown: 16000, config: { damage: 400, speed: 600, isPiercing: true, channelTime: 500 } }
+        Q: { type: 'PROJECTILE', name: 'Mystic Pulse', cooldown: 2000, config: { damage: 100, speed: 600, isPiercing: false } },
+        E: { type: 'DASH', name: 'Flash Step', cooldown: 8000, config: { dashDistance: 150 } },
+        SPACE: { type: 'PROJECTILE', name: 'Starshot Barrage', cooldown: 16000, config: { damage: 400, speed: 600, isPiercing: true, channelTime: 500 } }
       }
     },
     lux: {
       id: 'lux',
-      name: 'Lux',
-      title: 'Lady of Luminosity',
+      name: 'Lumina',
+      title: 'The Radiant Lightweaver',
       color: 0xffdd00,
       projColor: 0xffff88,
       ultColor: 0xffffff,
       description: 'Long-range mage with piercing light bolts & prismatic barrier shield.',
       baseStats: { hp: 900, speed: 190, armor: 0, lifesteal: 0, critChance: 0, armorPen: 0 },
       skills: {
-        Q: { type: 'PROJECTILE', name: 'Light Binding', cooldown: 2000, config: { damage: 140, speed: 550, isPiercing: true, rootDuration: 1000 } },
-        E: { type: 'SHIELD', name: 'Prismatic Barrier', cooldown: 7000, config: { shieldHp: 250, duration: 3000 } },
-        SPACE: { type: 'LUX_BEAM', name: 'Final Spark', cooldown: 14000, config: { damage: 750, channelTime: 500, beamWidth: 50 } }
+        Q: { type: 'PROJECTILE', name: 'Radiant Binding', cooldown: 2000, config: { damage: 140, speed: 550, isPiercing: true, rootDuration: 1000 } },
+        E: { type: 'SHIELD', name: 'Prismatic Shield', cooldown: 7000, config: { shieldHp: 250, duration: 3000 } },
+        SPACE: { type: 'LUX_BEAM', name: 'Lumina Beam', cooldown: 14000, config: { damage: 750, channelTime: 500, beamWidth: 50 } }
       }
     },
     jinx: {
       id: 'jinx',
-      name: 'Jinx',
-      title: 'The Loose Cannon',
+      name: 'Kira',
+      title: 'The Rebel Cannon',
       color: 0xff00ff,
       projColor: 0xff0088,
       ultColor: 0xff0044,
       description: 'Aggressive maniac firing rocket spreads & hyper speed boosts.',
       baseStats: { hp: 950, speed: 210, armor: 0, lifesteal: 0, critChance: 5, armorPen: 0 },
       skills: {
-        Q: { type: 'SPREAD_SHOT', name: 'Fishbones Rockets', cooldown: 2000, config: { count: 3, spreadAngle: 0.25, damage: 70, speed: 650 } },
-        E: { type: 'JINX_SPEED_BUFF', name: 'Get Excited! / Speed Boost', cooldown: 8000, config: { speedBonus: 60, duration: 4000 } },
-        SPACE: { type: 'PROJECTILE', name: 'Super Mega Death Rocket', cooldown: 15000, config: { damage: 650, speed: 1000, isPiercing: false, isExplosive: true, explosionRadius: 165, channelTime: 200 } }
+        Q: { type: 'SPREAD_SHOT', name: 'Chaos Rockets', cooldown: 2000, config: { count: 3, spreadAngle: 0.25, damage: 70, speed: 650 } },
+        E: { type: 'JINX_SPEED_BUFF', name: 'Adrenaline Rush', cooldown: 8000, config: { speedBonus: 60, duration: 4000 } },
+        SPACE: { type: 'PROJECTILE', name: 'Doom Rocket', cooldown: 15000, config: { damage: 650, speed: 1000, isPiercing: false, isExplosive: true, explosionRadius: 165, channelTime: 200 } }
       }
     },
     zed: {
       id: 'zed',
-      name: 'Zed',
-      title: 'The Master of Shadows',
+      name: 'Kage',
+      title: 'Master of Shadows',
       color: 0x991b1b,
       projColor: 0xef4444,
       ultColor: 0x7f1d1d,
       description: 'Shadow assassin swapping places with shadow clones & detonating Death Marks.',
       baseStats: { hp: 980, speed: 215, armor: 5, lifesteal: 0, critChance: 5, armorPen: 10 },
       skills: {
-        Q: { type: 'ZED_SHURIKEN', name: 'Razor Shuriken', cooldown: 2500, config: { damage: 135, speed: 750, isPiercing: true, maxRange: 550 } },
-        E: { type: 'ZED_SHADOW', name: 'Living Shadow', cooldown: 8000, config: { maxDistance: 280 } },
-        SPACE: { type: 'ZED_DEATHMARK', name: 'Death Mark', cooldown: 15000, config: { damage: 250, markDuration: 4150, castRange: 280 } }
+        Q: { type: 'ZED_SHURIKEN', name: 'Shadow Shuriken', cooldown: 2500, config: { damage: 135, speed: 750, isPiercing: true, maxRange: 550 } },
+        E: { type: 'ZED_SHADOW', name: 'Shadow Clone', cooldown: 8000, config: { maxDistance: 280 } },
+        SPACE: { type: 'ZED_DEATHMARK', name: 'Mark of Death', cooldown: 15000, config: { damage: 250, markDuration: 4150, castRange: 280 } }
       }
     },
     riven: {
       id: 'riven',
-      name: 'Riven',
-      title: 'The Exile',
+      name: 'Rivia',
+      title: 'The Swordmaster Exile',
       color: 0x10b981,
       projColor: 0x34d399,
       ultColor: 0x059669,
       description: 'Melee combo swordmistress with short dashes, knockup slashes & wind wave shockwaves.',
       baseStats: { hp: 1050, speed: 220, armor: 15, lifesteal: 0, critChance: 5, armorPen: 0 },
       skills: {
-        Q: { type: 'RIVEN_Q', name: 'Broken Wings', cooldown: 4000, config: { damage: 110, dashDistance: 110, slashArc: 110, knockupDuration: 600 } },
-        E: { type: 'RIVEN_E', name: 'Valor', cooldown: 6000, config: { dashDistance: 160, shieldHp: 220, duration: 2500 } },
-        SPACE: { type: 'RIVEN_WINDSLASH', name: 'Wind Slash', cooldown: 14000, config: { damage: 480, range: 360, angleWidth: 60, channelTime: 500 } }
+        Q: { type: 'RIVEN_Q', name: 'Rune Slashes', cooldown: 4000, config: { damage: 110, dashDistance: 110, slashArc: 110, knockupDuration: 600 } },
+        E: { type: 'RIVEN_E', name: 'Valiant Shield', cooldown: 6000, config: { dashDistance: 160, shieldHp: 220, duration: 2500 } },
+        SPACE: { type: 'RIVEN_WINDSLASH', name: 'Windwave Slash', cooldown: 14000, config: { damage: 480, range: 360, angleWidth: 60, channelTime: 500 } }
       }
     }
   }
