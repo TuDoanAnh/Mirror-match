@@ -173,7 +173,7 @@ export default class GameOverScene extends Phaser.Scene {
     const btnY = centerY + 185;
 
     // Primary Action Button (Play Again / Choose Augment / Next Level)
-    const isAugmentRound = ((this.level - 1) % 3 === 0);
+    const isAugmentRound = (this.level % 4 === 0);
     let btnLabel = "RETRY LEVEL (ENTER)";
     if (this.mode === 'pvp') btnLabel = "PLAY AGAIN (ENTER)";
     else if (this.mode === 'infinity') btnLabel = "SURVIVE AGAIN (ENTER)";

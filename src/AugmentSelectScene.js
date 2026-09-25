@@ -92,6 +92,16 @@ export default class AugmentSelectScene extends Phaser.Scene {
         frameImg.setDisplaySize(cardWidth, cardHeight);
       }
 
+      // Tier Badge
+      const tierBadgeStr = getAugmentTierBadgeText(aug);
+      const tierTxt = this.add.text(0, -cardHeight / 2 + 24, tierBadgeStr, {
+        fontSize: '12px',
+        fill: '#fde047',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 3
+      }).setOrigin(0.5);
+
       // Icon Circle
       const iconBg = this.add.circle(0, -75, 36, aug.color || 0x38bdf8, 0.2);
       iconBg.setStrokeStyle(2, aug.color || 0x38bdf8);
@@ -115,7 +125,7 @@ export default class AugmentSelectScene extends Phaser.Scene {
 
       const elements = [cardBg];
       if (frameImg) elements.push(frameImg);
-      elements.push(iconBg, iconTxt, nameTxt, descTxt);
+      elements.push(tierTxt, iconBg, iconTxt, nameTxt, descTxt);
       container.add(elements);
 
       // Pop in animation for cards

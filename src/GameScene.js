@@ -19,6 +19,8 @@ import { preloadShopItemAssets } from './shopItemLoader';
 import { preloadSkillIconAssets, createSkillIconTextures } from './skillIconLoader';
 import { showDamageText } from './FloatingDamage';
 import { preloadAugmentFrameAssets, getAugmentFrameKey, getAugmentTierBadgeText } from './augmentFrameLoader';
+import endlessWindowUrl from './assets/image/Endless_Window.png';
+import endlessReturnBtnUrl from './assets/image/Endless_Return_to_preparation.png';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -38,6 +40,12 @@ export default class GameScene extends Phaser.Scene {
     preloadAugmentFrameAssets(this);
     if (!this.textures.exists('battle_map')) {
       this.load.image('battle_map', mapImageUrl);
+    }
+    if (!this.textures.exists('endless_window_bg')) {
+      this.load.image('endless_window_bg', endlessWindowUrl);
+    }
+    if (!this.textures.exists('endless_return_btn')) {
+      this.load.image('endless_return_btn', endlessReturnBtnUrl);
     }
   }
 
@@ -1096,128 +1104,250 @@ export default class GameScene extends Phaser.Scene {
     this.intermissionModal = this.add.container(0, 0).setDepth(5000).setScrollFactor(0);
 
     // Dark Glassmorphism Overlay
-    const overlay = this.add.rectangle(0, 0, width, height, 0x090d16, 0.90).setOrigin(0).setInteractive();
-
-    // Main Frame
-    const boxWidth = 860;
-    const boxHeight = 460;
-    const mainBox = this.add.rectangle(centerX, centerY, boxWidth, boxHeight, 0x0f172a, 0.98);
-    mainBox.setStrokeStyle(2, 0xa855f7);
+    const overlay = this.add.rectangle(0, 0, width, height, 0x090d16, 0.92).setOrigin(0).setInteractive();
 
     const survivalLevel = this.registry.get('survivalLevel') || 1;
-    const titleTxt = this.add.text(centerX, centerY - 190, `🏆 SURVIVAL LEVEL ${survivalLevel} CLEARED! 🏆`, {
-      fontSize: '26px',
+    const isAugmentWave = (survivalLevel % 4 === 0);
+
+    // Main Window Frame Image (Endless_Window.png)
+    const boxWidth = 1180;
+    const boxHeight = isAugmentWave ? 640 : 440;
+    let mainBox;
+    if (this.textures.exists('endless_window_bg')) {
+      mainBox = this.add.image(centerX, centerY, 'endless_window_bg');
+      mainBox.setDisplaySize(boxWidth, boxHeight);
+    } else {
+      mainBox = this.add.rectangle(centerX, centerY, boxWidth, boxHeight, 0x0f172a, 0.98);
+      mainBox.setStrokeStyle(3, isAugmentWave ? 0xa855f7 : 0x38bdf8);
+    }
+
+    const titleY = centerY - (boxHeight / 2) + 55;
+    const titleTxt = this.add.text(centerX, titleY, `🏆 SURVIVAL LEVEL ${survivalLevel} CLEARED! 🏆`, {
+      fontSize: '32px',
       fill: '#facc15',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 5
+      strokeThickness: 6
     }).setOrigin(0.5);
 
     const goldEarned = 500 + survivalLevel * 100;
     let currentGold = this.registry.get('gold') || 0;
-    const subTxt = this.add.text(centerX, centerY - 152, `Reward: +${goldEarned}G  •  Total Gold: ${currentGold}G  •  Score: ${this.infinityScore || 0}`, {
-      fontSize: '14px',
+    const subTxt = this.add.text(centerX, titleY + 42, `Reward: +${goldEarned}G  •  Total Gold: ${currentGold}G  •  Score: ${this.infinityScore || 0}`, {
+      fontSize: '16px',
       fill: '#38bdf8',
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
     this.intermissionModal.add([overlay, mainBox, titleTxt, subTxt]);
 
-    // Augment Perk Cards
-    const perksTitle = this.add.text(centerX, centerY - 115, "🎁 CHOOSE 1 FREE AUGMENT PERK", {
-      fontSize: '16px',
-      fill: '#a855f7',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-    this.intermissionModal.add(perksTitle);
+    let selectedAugmentObj = null;
 
-    const heroId = this.player ? this.player.heroId : 'ezreal';
-    const ownedAugments = this.registry.get('augments') || [];
-    const randomAugments = getRandomAugments(3, ownedAugments, heroId);
+    if (isAugmentWave) {
+      // Augment Perk Selection Section (Every 4 Waves)
+      const perksTitle = this.add.text(centerX, titleY + 85, "🎁 CHOOSE 1 FREE AUGMENT PERK", {
+        fontSize: '22px',
+        fill: '#a855f7',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 3
+      }).setOrigin(0.5);
+      this.intermissionModal.add(perksTitle);
 
-    let selectedAugmentId = null;
-    const cardWidth = 260;
-    const cardHeight = 150;
-    const cardY = centerY - 15;
-    const perkCards = [];
+      const heroId = this.player ? this.player.heroId : 'ezreal';
+      const ownedAugments = this.registry.get('augments') || [];
+      const randomAugments = getRandomAugments(3, ownedAugments, heroId);
 
-    randomAugments.forEach((aug, idx) => {
-      const cardX = centerX - 280 + (idx * 280);
-      const cardContainer = this.add.container(cardX, cardY);
+      const cardWidth = 330;
+      const cardHeight = 350;
+      const cardY = titleY + 280;
+      const cardGap = 360;
+      const startCardX = centerX - cardGap;
 
-      const cardBg = this.add.rectangle(0, 0, cardWidth, cardHeight, 0x0f172a, 0.95).setInteractive({ useHandCursor: true });
+      const cardItems = [];
 
-      const frameKey = getAugmentFrameKey(aug);
-      let frameImg = null;
-      if (this.textures.exists(frameKey)) {
-        frameImg = this.add.image(0, 0, frameKey);
-        frameImg.setDisplaySize(cardWidth, cardHeight);
-      }
+      randomAugments.forEach((aug, idx) => {
+        const cardX = startCardX + (idx * cardGap);
+        const cardContainer = this.add.container(cardX, cardY);
 
-      const iconTxt = this.add.text(0, -35, aug.icon || '⚡', { fontSize: '26px' }).setOrigin(0.5);
-      const nameTxt = this.add.text(0, 0, aug.name, { fontSize: '15px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
-      const descTxt = this.add.text(0, 28, aug.desc, { fontSize: '11px', fill: '#cbd5e1', align: 'center', wordWrap: { width: 200 } }).setOrigin(0.5, 0);
+        // Interactive Card Frame Box
+        const cardBg = this.add.rectangle(0, 0, cardWidth, cardHeight, 0x0f172a, 0.95).setInteractive({ useHandCursor: true });
+        cardBg.setStrokeStyle(2, aug.color || 0x38bdf8, 0.8);
 
-      const elements = [cardBg];
-      if (frameImg) elements.push(frameImg);
-      elements.push(iconTxt, nameTxt, descTxt);
+        // Frame Image Overlay (Silver / Gold / Diamond PNG frame)
+        const frameKey = getAugmentFrameKey(aug);
+        let frameImg = null;
+        if (this.textures.exists(frameKey)) {
+          frameImg = this.add.image(0, 0, frameKey);
+          frameImg.setDisplaySize(cardWidth, cardHeight);
+        }
 
-      cardContainer.add(elements);
-      this.intermissionModal.add(cardContainer);
+        // Augment Tier Badge (Silver / Gold / Diamond)
+        const tierBadgeStr = getAugmentTierBadgeText(aug);
+        const tierTxt = this.add.text(0, -cardHeight / 2 + 30, tierBadgeStr, {
+          fontSize: '13px',
+          fill: '#fde047',
+          fontStyle: 'bold',
+          stroke: '#000000',
+          strokeThickness: 3
+        }).setOrigin(0.5);
 
-      const onSelectAug = () => {
-        if (selectedAugmentId === aug.id) return;
-        selectedAugmentId = aug.id;
+        // Augment Icon Display
+        const iconBg = this.add.circle(0, -70, 36, aug.color || 0x38bdf8, 0.25);
+        iconBg.setStrokeStyle(2, aug.color || 0x38bdf8, 0.9);
+        const iconTxt = this.add.text(0, -70, aug.icon || '⚡', { fontSize: '36px' }).setOrigin(0.5);
 
-        perkCards.forEach(pc => {
-          if (pc.augId === aug.id) {
-            pc.bg.setFillStyle(0x1e293b, 1.0);
+        // Augment Name
+        const nameTxt = this.add.text(0, -12, aug.name, {
+          fontSize: '20px',
+          fill: '#ffffff',
+          fontStyle: 'bold',
+          stroke: '#000000',
+          strokeThickness: 3
+        }).setOrigin(0.5);
+
+        // Divider Line
+        const divLine = this.add.rectangle(0, 16, 220, 1.5, 0x38bdf8, 0.5);
+
+        // Augment Description Text
+        const descTxt = this.add.text(0, 32, aug.desc, {
+          fontSize: '13px',
+          fill: '#cbd5e1',
+          align: 'center',
+          wordWrap: { width: 250 }
+        }).setOrigin(0.5, 0);
+
+        const elements = [cardBg];
+        if (frameImg) elements.push(frameImg);
+        elements.push(tierTxt, iconBg, iconTxt, nameTxt, divLine, descTxt);
+
+        cardContainer.add(elements);
+        this.intermissionModal.add(cardContainer);
+
+        // Highlight selection helper
+        const setCardHighlight = (isSelected) => {
+          if (isSelected) {
+            cardBg.setStrokeStyle(4, 0xfacc15, 1.0);
+            cardBg.setFillStyle(0x1e293b, 1.0);
+            cardContainer.setScale(1.04);
           } else {
-            pc.bg.setFillStyle(0x0f172a, 0.7);
+            cardBg.setStrokeStyle(2, aug.color || 0x38bdf8, 0.6);
+            cardBg.setFillStyle(0x0f172a, 0.95);
+            cardContainer.setScale(1.0);
+          }
+        };
+
+        // Default select first card
+        if (idx === 0) {
+          selectedAugmentObj = aug;
+          setCardHighlight(true);
+        }
+
+        cardBg.on('pointerdown', () => {
+          selectedAugmentObj = aug;
+          cardItems.forEach(ci => ci.setHighlight(ci.augObj === aug));
+        });
+
+        cardBg.on('pointerover', () => {
+          if (selectedAugmentObj !== aug) {
+            cardBg.setStrokeStyle(3, 0xffffff, 0.9);
+          }
+        });
+        cardBg.on('pointerout', () => {
+          if (selectedAugmentObj !== aug) {
+            cardBg.setStrokeStyle(2, aug.color || 0x38bdf8, 0.6);
           }
         });
 
+        cardItems.push({ augObj: aug, setHighlight: setCardHighlight });
+      });
+
+    } else {
+      // Non-Augment Wave Intermission (Waves 1, 2, 3, 5, 6, 7...)
+      const nextAugmentWaveCount = 4 - (survivalLevel % 4);
+      const noticeTxt = this.add.text(centerX, centerY - 15, `🛡️ WAVE ${survivalLevel} CLEARED!`, {
+        fontSize: '24px',
+        fill: '#38bdf8',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 4
+      }).setOrigin(0.5);
+
+      const infoTxt = this.add.text(centerX, centerY + 30, `🎁 Lõi Nâng Cấp tiếp theo sẽ xuất hiện sau ${nextAugmentWaveCount} wave nữa!`, {
+        fontSize: '16px',
+        fill: '#94a3b8',
+        fontStyle: 'bold'
+      }).setOrigin(0.5);
+
+      this.intermissionModal.add([noticeTxt, infoTxt]);
+    }
+
+    // Return to Preparation Image Button (Endless_Return_to_preparation.png)
+    const btnY = centerY + (boxHeight / 2) - 52;
+    let returnBtn;
+    let returnTxt;
+
+    if (this.textures.exists('endless_return_btn')) {
+      returnBtn = this.add.image(centerX, btnY, 'endless_return_btn').setInteractive({ useHandCursor: true });
+      returnBtn.setDisplaySize(380, 58);
+      returnTxt = this.add.text(centerX, btnY, `➡️ RETURN TO PREPARATION`, {
+        fontSize: '17px',
+        fill: '#ffffff',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 4
+      }).setOrigin(0.5);
+    } else {
+      returnBtn = this.add.rectangle(centerX, btnY, 360, 52, 0x22c55e).setInteractive({ useHandCursor: true });
+      returnBtn.setStrokeStyle(2, 0xffffff);
+      returnTxt = this.add.text(centerX, btnY, `➡️ RETURN TO PREPARATION`, {
+        fontSize: '18px',
+        fill: '#ffffff',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 3
+      }).setOrigin(0.5);
+    }
+
+    const baseBtnScaleX = returnBtn.scaleX;
+    const baseBtnScaleY = returnBtn.scaleY;
+
+    returnBtn.on('pointerover', () => {
+      this.tweens.killTweensOf(returnBtn);
+      this.tweens.add({ targets: returnBtn, scaleX: baseBtnScaleX * 1.05, scaleY: baseBtnScaleY * 1.05, duration: 100 });
+      this.tweens.killTweensOf(returnTxt);
+      this.tweens.add({ targets: returnTxt, scale: 1.05, duration: 100 });
+    });
+
+    returnBtn.on('pointerout', () => {
+      this.tweens.killTweensOf(returnBtn);
+      this.tweens.add({ targets: returnBtn, scaleX: baseBtnScaleX, scaleY: baseBtnScaleY, duration: 100 });
+      this.tweens.killTweensOf(returnTxt);
+      this.tweens.add({ targets: returnTxt, scale: 1.0, duration: 100 });
+    });
+
+    returnBtn.on('pointerdown', () => {
+      // Save selected augment if on augment wave
+      if (isAugmentWave && selectedAugmentObj) {
         const augList = this.registry.get('augments') || [];
-        if (aug.isRepeatable) {
-          augList.push(aug);
+        if (selectedAugmentObj.isRepeatable) {
+          augList.push(selectedAugmentObj);
           this.registry.set('augments', augList);
 
-          let stats = this.registry.get('playerStats');
-          if (aug.statsDict) {
-            Object.keys(aug.statsDict).forEach(k => {
-              stats[k] = (stats[k] || 0) + aug.statsDict[k];
+          let stats = this.registry.get('playerStats') || {};
+          if (selectedAugmentObj.statsDict) {
+            Object.keys(selectedAugmentObj.statsDict).forEach(k => {
+              stats[k] = (stats[k] || 0) + selectedAugmentObj.statsDict[k];
             });
           }
           this.registry.set('playerStats', stats);
         } else {
-          if (!augList.some(a => (a.id || a) === aug.id)) {
-            augList.push(aug);
+          if (!augList.some(a => (a.id || a) === selectedAugmentObj.id)) {
+            augList.push(selectedAugmentObj);
             this.registry.set('augments', augList);
           }
         }
-      };
+      }
 
-      cardBg.on('pointerdown', onSelectAug);
-
-      perkCards.push({ augId: aug.id, bg: cardBg });
-    });
-
-    // Return to Preparation Button
-    const btnY = centerY + 155;
-    const returnBtn = this.add.rectangle(centerX, btnY, 320, 48, 0x22c55e).setInteractive({ useHandCursor: true });
-    returnBtn.setStrokeStyle(2, 0xffffff);
-    const returnTxt = this.add.text(centerX, btnY, `➡️ RETURN TO PREPARATION`, {
-      fontSize: '16px',
-      fill: '#ffffff',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 3
-    }).setOrigin(0.5);
-
-    returnBtn.on('pointerover', () => this.tweens.add({ targets: [returnBtn, returnTxt], scale: 1.05, duration: 100 }));
-    returnBtn.on('pointerout', () => this.tweens.add({ targets: [returnBtn, returnTxt], scale: 1.0, duration: 100 }));
-
-    returnBtn.on('pointerdown', () => {
       // Advance to next survival level
       const nextLevel = survivalLevel + 1;
       this.registry.set('survivalLevel', nextLevel);
