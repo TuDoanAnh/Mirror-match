@@ -1110,8 +1110,8 @@ export default class GameScene extends Phaser.Scene {
     const isAugmentWave = (survivalLevel % 4 === 0);
 
     // Main Window Frame Image (Endless_Window.png)
-    const boxWidth = 1180;
-    const boxHeight = isAugmentWave ? 640 : 440;
+    const boxWidth = 1160;
+    const boxHeight = 648;
     let mainBox;
     if (this.textures.exists('endless_window_bg')) {
       mainBox = this.add.image(centerX, centerY, 'endless_window_bg');
@@ -1121,19 +1121,19 @@ export default class GameScene extends Phaser.Scene {
       mainBox.setStrokeStyle(3, isAugmentWave ? 0xa855f7 : 0x38bdf8);
     }
 
-    const titleY = centerY - (boxHeight / 2) + 55;
-    const titleTxt = this.add.text(centerX, titleY, `🏆 SURVIVAL LEVEL ${survivalLevel} CLEARED! 🏆`, {
-      fontSize: '32px',
+    const titleY = isAugmentWave ? (centerY - 145) : (centerY - 120);
+    const titleTxt = this.add.text(centerX, titleY, `SURVIVAL LEVEL ${survivalLevel} CLEARED!`, {
+      fontSize: isAugmentWave ? '24px' : '26px',
       fill: '#facc15',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 6
+      strokeThickness: 5
     }).setOrigin(0.5);
 
     const goldEarned = 500 + survivalLevel * 100;
     let currentGold = this.registry.get('gold') || 0;
-    const subTxt = this.add.text(centerX, titleY + 42, `Reward: +${goldEarned}G  •  Total Gold: ${currentGold}G  •  Score: ${this.infinityScore || 0}`, {
-      fontSize: '16px',
+    const subTxt = this.add.text(centerX, titleY + (isAugmentWave ? 32 : 38), `Reward: +${goldEarned}G  •  Total Gold: ${currentGold}G  •  Score: ${this.infinityScore || 0}`, {
+      fontSize: isAugmentWave ? '14px' : '15px',
       fill: '#38bdf8',
       fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -1144,8 +1144,8 @@ export default class GameScene extends Phaser.Scene {
 
     if (isAugmentWave) {
       // Augment Perk Selection Section (Every 4 Waves)
-      const perksTitle = this.add.text(centerX, titleY + 85, "🎁 CHOOSE 1 FREE AUGMENT PERK", {
-        fontSize: '22px',
+      const perksTitle = this.add.text(centerX, titleY + 68, "CHOOSE 1 FREE AUGMENT PERK", {
+        fontSize: '18px',
         fill: '#a855f7',
         fontStyle: 'bold',
         stroke: '#000000',
@@ -1157,10 +1157,10 @@ export default class GameScene extends Phaser.Scene {
       const ownedAugments = this.registry.get('augments') || [];
       const randomAugments = getRandomAugments(3, ownedAugments, heroId);
 
-      const cardWidth = 330;
-      const cardHeight = 350;
-      const cardY = titleY + 280;
-      const cardGap = 360;
+      const cardWidth = 270;
+      const cardHeight = 210;
+      const cardY = titleY + 200;
+      const cardGap = 285;
       const startCardX = centerX - cardGap;
 
       const cardItems = [];
@@ -1183,8 +1183,8 @@ export default class GameScene extends Phaser.Scene {
 
         // Augment Tier Badge (Silver / Gold / Diamond)
         const tierBadgeStr = getAugmentTierBadgeText(aug);
-        const tierTxt = this.add.text(0, -cardHeight / 2 + 30, tierBadgeStr, {
-          fontSize: '13px',
+        const tierTxt = this.add.text(0, -cardHeight / 2 + 20, tierBadgeStr, {
+          fontSize: '11px',
           fill: '#fde047',
           fontStyle: 'bold',
           stroke: '#000000',
@@ -1192,13 +1192,13 @@ export default class GameScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Augment Icon Display
-        const iconBg = this.add.circle(0, -70, 36, aug.color || 0x38bdf8, 0.25);
+        const iconBg = this.add.circle(0, -42, 22, aug.color || 0x38bdf8, 0.25);
         iconBg.setStrokeStyle(2, aug.color || 0x38bdf8, 0.9);
-        const iconTxt = this.add.text(0, -70, aug.icon || '⚡', { fontSize: '36px' }).setOrigin(0.5);
+        const iconTxt = this.add.text(0, -42, aug.icon || '⚡', { fontSize: '24px' }).setOrigin(0.5);
 
         // Augment Name
-        const nameTxt = this.add.text(0, -12, aug.name, {
-          fontSize: '20px',
+        const nameTxt = this.add.text(0, -4, aug.name, {
+          fontSize: '15px',
           fill: '#ffffff',
           fontStyle: 'bold',
           stroke: '#000000',
@@ -1206,14 +1206,14 @@ export default class GameScene extends Phaser.Scene {
         }).setOrigin(0.5);
 
         // Divider Line
-        const divLine = this.add.rectangle(0, 16, 220, 1.5, 0x38bdf8, 0.5);
+        const divLine = this.add.rectangle(0, 16, 180, 1.5, 0x38bdf8, 0.5);
 
         // Augment Description Text
-        const descTxt = this.add.text(0, 32, aug.desc, {
-          fontSize: '13px',
+        const descTxt = this.add.text(0, 26, aug.desc, {
+          fontSize: '11px',
           fill: '#cbd5e1',
           align: 'center',
-          wordWrap: { width: 250 }
+          wordWrap: { width: 220 }
         }).setOrigin(0.5, 0);
 
         const elements = [cardBg];
@@ -1264,43 +1264,35 @@ export default class GameScene extends Phaser.Scene {
     } else {
       // Non-Augment Wave Intermission (Waves 1, 2, 3, 5, 6, 7...)
       const nextAugmentWaveCount = 4 - (survivalLevel % 4);
-      const noticeTxt = this.add.text(centerX, centerY - 15, `🛡️ WAVE ${survivalLevel} CLEARED!`, {
-        fontSize: '24px',
-        fill: '#38bdf8',
-        fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: 4
-      }).setOrigin(0.5);
-
-      const infoTxt = this.add.text(centerX, centerY + 30, `🎁 Lõi Nâng Cấp tiếp theo sẽ xuất hiện sau ${nextAugmentWaveCount} wave nữa!`, {
+      const infoTxt = this.add.text(centerX, centerY + 5, `Next Augment Perk choice available in ${nextAugmentWaveCount} wave(s)`, {
         fontSize: '16px',
-        fill: '#94a3b8',
+        fill: '#cbd5e1',
         fontStyle: 'bold'
       }).setOrigin(0.5);
 
-      this.intermissionModal.add([noticeTxt, infoTxt]);
+      this.intermissionModal.add(infoTxt);
     }
 
     // Return to Preparation Image Button (Endless_Return_to_preparation.png)
-    const btnY = centerY + (boxHeight / 2) - 52;
+    const btnY = isAugmentWave ? (centerY + 160) : (centerY + 115);
     let returnBtn;
     let returnTxt;
 
     if (this.textures.exists('endless_return_btn')) {
       returnBtn = this.add.image(centerX, btnY, 'endless_return_btn').setInteractive({ useHandCursor: true });
-      returnBtn.setDisplaySize(380, 58);
-      returnTxt = this.add.text(centerX, btnY, `➡️ RETURN TO PREPARATION`, {
-        fontSize: '17px',
+      returnBtn.setDisplaySize(340, 50);
+      returnTxt = this.add.text(centerX, btnY, `RETURN TO PREPARATION`, {
+        fontSize: '15px',
         fill: '#ffffff',
         fontStyle: 'bold',
         stroke: '#000000',
         strokeThickness: 4
       }).setOrigin(0.5);
     } else {
-      returnBtn = this.add.rectangle(centerX, btnY, 360, 52, 0x22c55e).setInteractive({ useHandCursor: true });
+      returnBtn = this.add.rectangle(centerX, btnY, 340, 48, 0x22c55e).setInteractive({ useHandCursor: true });
       returnBtn.setStrokeStyle(2, 0xffffff);
-      returnTxt = this.add.text(centerX, btnY, `➡️ RETURN TO PREPARATION`, {
-        fontSize: '18px',
+      returnTxt = this.add.text(centerX, btnY, `RETURN TO PREPARATION`, {
+        fontSize: '15px',
         fill: '#ffffff',
         fontStyle: 'bold',
         stroke: '#000000',
