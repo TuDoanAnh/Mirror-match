@@ -5,7 +5,10 @@ import GameScene from './GameScene';
 import GameOverScene from './GameOverScene';
 import AugmentSelectScene from './AugmentSelectScene';
 import { GAME_CONFIG } from './gameConfig';
+import { initPlaygamaSDK } from './playgamaSDK';
 import './style.css';
+
+initPlaygamaSDK();
 
 const config = {
   type: Phaser.AUTO,

@@ -557,7 +557,7 @@ export default class Player extends BaseCharacter {
       return true; // Allow instant recast to swap positions with shadow!
     }
     if (this.heroId === 'riven' && skillKey === 'Q' && (this.rivenQCombo || 0) > 0 && (this.rivenQCombo || 0) < 3) {
-      return time >= ((this.lastRivenQStepTime || 0) + 450); // Require 450ms between Q combo steps!
+      return time >= ((this.lastRivenQStepTime || 0) + 1000); // Require 1000ms (1s) delay between Q combo steps!
     }
 
     if (this.heroId === 'zed' && skillKey === 'SPACE') {
@@ -678,7 +678,8 @@ export default class Player extends BaseCharacter {
       this.applyMeleeAreaDamage(this.x, this.y, angle, 120, Math.PI / 3, damage, false);
 
       if (this.skills && this.skills.Q) {
-        this.skills.Q.lastUsed = this.scene.time.now - (this.skills.Q.cooldown - 400);
+        const nowTime = this.scene ? this.scene.time.now : Date.now();
+        this.skills.Q.lastUsed = nowTime - (this.skills.Q.cooldown - 1000);
       }
     } else {
       this.rivenQCombo = 0;

@@ -2,10 +2,12 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from './gameConfig';
 import { preloadCharacterSFX, playPreparationBGM, stopPreparationBGM } from './soundManager';
 import { createTopRightBar } from './topRightBar';
+import { loadGameProgress, hasSavedGame, resetGameProgress } from './playgamaSDK';
 import bgMainUrl from './assets/image/Background.png';
 import logoUrl from './assets/image/Logo.png';
 import campaignBtnUrl from './assets/image/campaign.png';
 import endlessBtnUrl from './assets/image/Endless.png';
+import newGameBtnUrl from './assets/image/New_Game.png';
 
 export default class StartScene extends Phaser.Scene {
   constructor() {
@@ -18,9 +20,11 @@ export default class StartScene extends Phaser.Scene {
     if (!this.textures.exists('logo_main')) this.load.image('logo_main', logoUrl);
     if (!this.textures.exists('btn_campaign')) this.load.image('btn_campaign', campaignBtnUrl);
     if (!this.textures.exists('btn_endless')) this.load.image('btn_endless', endlessBtnUrl);
+    if (!this.textures.exists('btn_new_game')) this.load.image('btn_new_game', newGameBtnUrl);
   }
 
-  create() {
+  async create() {
+    await loadGameProgress(this);
     playPreparationBGM(this);
 
     const width = GAME_CONFIG.CANVAS.WIDTH;
@@ -81,8 +85,11 @@ export default class StartScene extends Phaser.Scene {
       ease: 'Sine.easeInOut'
     });
 
+    // Check if saved game data exists
+    const saveExists = await hasSavedGame();
+
     // Mode Selection Image Buttons (placed clearly below enlarged Logo)
-    const btnY = centerY + 185;
+    const btnY = centerY + 175;
     const campX = centerX - 150;
     const infX = centerX + 150;
 
@@ -139,7 +146,110 @@ export default class StartScene extends Phaser.Scene {
     });
     infBtn.on('pointerdown', () => startMode('infinity'));
 
+    // If save data exists, show NEW GAME button
+    if (saveExists) {
+      // NEW GAME Image Button (placed cleanly below mode buttons)
+      const newGameY = btnY + 130;
+      const newGameBtn = this.add.image(centerX, newGameY, 'btn_new_game').setInteractive({ useHandCursor: true });
+      const targetWidth = 220;
+      if (newGameBtn.width > targetWidth) {
+        newGameBtn.setScale(targetWidth / newGameBtn.width);
+      } else {
+        newGameBtn.setScale(1.0);
+      }
+      const newGameBaseScale = newGameBtn.scaleX;
+
+      newGameBtn.on('pointerover', () => {
+        this.tweens.killTweensOf(newGameBtn);
+        this.tweens.add({ targets: newGameBtn, scale: newGameBaseScale * 1.08, duration: 120, ease: 'Power2' });
+      });
+      newGameBtn.on('pointerout', () => {
+        this.tweens.killTweensOf(newGameBtn);
+        this.tweens.add({ targets: newGameBtn, scale: newGameBaseScale, duration: 120, ease: 'Power2' });
+      });
+
+      newGameBtn.on('pointerdown', () => {
+        this.showNewGameConfirmModal();
+      });
+    }
+
     // Top-Right Action Icon Buttons (? and Music Speaker) with persistent mute state
     createTopRightBar(this);
+  }
+
+  showNewGameConfirmModal() {
+    const width = GAME_CONFIG.CANVAS.WIDTH;
+    const height = GAME_CONFIG.CANVAS.HEIGHT;
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    const modal = this.add.container(0, 0).setDepth(9999);
+
+    // Dark background mask
+    const bgMask = this.add.rectangle(0, 0, width, height, 0x000000, 0.85).setOrigin(0).setInteractive();
+
+    // Box panel
+    const box = this.add.rectangle(centerX, centerY, 520, 260, 0x0f172a).setStrokeStyle(3, 0xef4444);
+
+    const title = this.add.text(centerX, centerY - 80, "⚠️ RESET PROGRESS & NEW GAME?", {
+      fontSize: '20px',
+      fill: '#f87171',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    const desc = this.add.text(centerX, centerY - 30, "This will delete your saved levels, gold, equipment, and augments.\nAre you sure you want to start a completely fresh game?", {
+      fontSize: '14px',
+      fill: '#94a3b8',
+      align: 'center',
+      wordWrap: { width: 460 }
+    }).setOrigin(0.5);
+
+    // Confirm Button
+    const yesBg = this.add.rectangle(centerX - 110, centerY + 55, 200, 44, 0xd97706).setInteractive({ useHandCursor: true });
+    yesBg.setStrokeStyle(2, 0xfbbf24);
+    const yesTxt = this.add.text(centerX - 110, centerY + 55, "🎮 YES, START NEW", {
+      fontSize: '13px',
+      fill: '#ffffff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    yesBg.on('pointerover', () => this.tweens.add({ targets: [yesBg, yesTxt], scale: 1.05, duration: 100 }));
+    yesBg.on('pointerout', () => this.tweens.add({ targets: [yesBg, yesTxt], scale: 1.0, duration: 100 }));
+    yesBg.on('pointerdown', async () => {
+      modal.destroy();
+      await resetGameProgress(this);
+      this.registry.set('gameMode', 'campaign');
+      this.cameras.main.fadeOut(400, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('PreparationScene');
+      });
+    });
+
+    // Cancel Button
+    const noBg = this.add.rectangle(centerX + 110, centerY + 55, 160, 44, 0x334155).setInteractive({ useHandCursor: true });
+    noBg.setStrokeStyle(2, 0x64748b);
+    const noTxt = this.add.text(centerX + 110, centerY + 55, "❌ CANCEL", {
+      fontSize: '13px',
+      fill: '#e2e8f0',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    noBg.on('pointerover', () => this.tweens.add({ targets: [noBg, noTxt], scale: 1.05, duration: 100 }));
+    noBg.on('pointerout', () => this.tweens.add({ targets: [noBg, noTxt], scale: 1.0, duration: 100 }));
+    noBg.on('pointerdown', () => {
+      modal.destroy();
+    });
+
+    modal.add([bgMask, box, title, desc, yesBg, yesTxt, noBg, noTxt]);
+
+    modal.setScale(0.8);
+    modal.alpha = 0;
+    this.tweens.add({
+      targets: modal,
+      scale: 1,
+      alpha: 1,
+      duration: 200,
+      ease: 'Back.easeOut'
+    });
   }
 }

@@ -12,6 +12,8 @@ import { ALL_AUGMENTS } from './AugmentManager';
 import { preloadShopItemAssets } from './shopItemLoader';
 import { preloadSkillIconAssets, createSkillIconTextures } from './skillIconLoader';
 import { preloadAugmentFrameAssets, getAugmentFrameKey, getAugmentTierBadgeText } from './augmentFrameLoader';
+import { showRewardedAd, saveGameProgress, loadGameProgress } from './playgamaSDK';
+import { showDamageText } from './FloatingDamage';
 
 import buyBtnUrl from './assets/image/Buy.png';
 import sellBtnUrl from './assets/image/Sell.png';
@@ -19,6 +21,7 @@ import readyBtnUrl from './assets/image/Ready.png';
 import backBtnUrl from './assets/image/Back.png';
 import equipBtnUrl from './assets/image/Equip.png';
 import elixirBtnUrl from './assets/image/Elixir.png';
+import watchAdBtnUrl from './assets/image/Watch_ad.png';
 import bg1Url from './assets/image/BG_1.png';
 import bg2Url from './assets/image/BG_2.png';
 import bgMainUrl from './assets/image/Background.png';
@@ -54,6 +57,7 @@ export default class PreparationScene extends Phaser.Scene {
     this.load.image('btn_back', backBtnUrl);
     this.load.image('btn_equip', equipBtnUrl);
     this.load.image('btn_elixir', elixirBtnUrl);
+    this.load.image('btn_watch_ad', watchAdBtnUrl);
     this.load.image('bg_panel_1', bg1Url);
     this.load.image('bg_panel_2', bg2Url);
     this.load.image('bg_main', bgMainUrl);
@@ -77,6 +81,8 @@ export default class PreparationScene extends Phaser.Scene {
     createSkillIconTextures(this);
     playPreparationBGM(this);
     createTopRightBar(this);
+
+    loadGameProgress(this);
 
     // Registry initialization
     if (!this.registry.has('unlockedLevel')) {
@@ -354,6 +360,7 @@ export default class PreparationScene extends Phaser.Scene {
       const targetId = heroes[(idx + heroes.length) % heroes.length];
       if (targetId !== currentHero) {
         this.registry.set('selectedHero', targetId);
+        saveGameProgress(this);
         this.scene.restart();
       }
     };
@@ -821,8 +828,30 @@ export default class PreparationScene extends Phaser.Scene {
     this.sellBtn.on('pointerout', () => this.tweens.add({ targets: this.sellBtn, scaleX: this.sellBtn.baseScaleX, scaleY: this.sellBtn.baseScaleY, duration: 150, ease: 'Power2' }));
     this.sellBtn.on('pointerdown', () => this.sellItem());
 
+    // WATCH AD FOR GOLD Button
+    currentY += 68;
+    const adBtn = this.add.image(centerX, currentY, 'btn_watch_ad').setInteractive({ useHandCursor: true });
+    adBtn.setDisplaySize(220, 52);
+    const adBaseScaleX = adBtn.scaleX;
+    const adBaseScaleY = adBtn.scaleY;
+
+    adBtn.on('pointerover', () => this.tweens.add({ targets: adBtn, scaleX: adBaseScaleX * 1.08, scaleY: adBaseScaleY * 1.08, duration: 120, ease: 'Power2' }));
+    adBtn.on('pointerout', () => this.tweens.add({ targets: adBtn, scaleX: adBaseScaleX, scaleY: adBaseScaleY, duration: 120, ease: 'Power2' }));
+    adBtn.on('pointerdown', () => {
+      showRewardedAd(this, 'get_gold').then(rewarded => {
+        if (rewarded) {
+          let currentGold = this.registry.get('gold') || 0;
+          currentGold += 1000;
+          this.registry.set('gold', currentGold);
+          saveGameProgress(this);
+          showDamageText(this, centerX, currentY - 20, '+1000 GOLD!', 'heal');
+          this.updateInventoryView();
+        }
+      });
+    });
+
     // READY Button
-    currentY += 78;
+    currentY += 76;
     this.readyBtn = this.add.image(centerX, currentY, 'btn_ready').setInteractive({ useHandCursor: true });
     this.readyBtn.setDisplaySize(220, 58);
     this.readyBtn.baseScaleX = this.readyBtn.scaleX;
@@ -996,6 +1025,7 @@ export default class PreparationScene extends Phaser.Scene {
         this.updateElixirPriceTexts();
 
         this.selectedItem.cost = this.getElixirCost();
+        saveGameProgress(this);
 
         if (this.buyBtn) this.buyBtn.setTint(0x00ff88);
         this.time.delayedCall(120, () => this.updateRightPanel());
@@ -1027,6 +1057,7 @@ export default class PreparationScene extends Phaser.Scene {
       this.goldText.setText(`GOLD: ${gold}`);
       this.updateInventoryView();
       this.updatePlayerStatsUI();
+      saveGameProgress(this);
 
       // Flash effect
       if (this.buyBtn) this.buyBtn.setTint(0x00ff88);
@@ -1072,6 +1103,7 @@ export default class PreparationScene extends Phaser.Scene {
     this.goldText.setText(`GOLD: ${gold}`);
     this.updateInventoryView();
     this.updatePlayerStatsUI();
+    saveGameProgress(this);
 
     // Flash effect
     if (this.sellBtn) this.sellBtn.setTint(0xffaa00);

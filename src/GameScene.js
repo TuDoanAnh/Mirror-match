@@ -19,13 +19,13 @@ import { preloadShopItemAssets } from './shopItemLoader';
 import { preloadSkillIconAssets, createSkillIconTextures } from './skillIconLoader';
 import { showDamageText } from './FloatingDamage';
 import { preloadAugmentFrameAssets, getAugmentFrameKey, getAugmentTierBadgeText } from './augmentFrameLoader';
+import { saveGameProgress } from './playgamaSDK';
 import endlessWindowUrl from './assets/image/Endless_Window.png';
 import endlessReturnBtnUrl from './assets/image/Endless_Return_to_preparation.png';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
     super('GameScene');
-    this.isDebugMode = false;
   }
 
   preload() {
@@ -217,14 +217,12 @@ export default class GameScene extends Phaser.Scene {
 
     // UI Setup
     this.createUI();
-    this.createDebugToggleButton();
 
-    // Input listeners for skills & debug toggle (Press 'B' to toggle debug colliders)
+    // Input listeners for skills
     this.input.keyboard.removeAllListeners();
     this.input.keyboard.on('keydown-Q', () => this.tryUsePlayerSkill('Q', this.time.now));
     this.input.keyboard.on('keydown-E', () => this.tryUsePlayerSkill('E', this.time.now));
     this.input.keyboard.on('keydown-SPACE', () => this.tryUsePlayerSkill('SPACE', this.time.now));
-    this.input.keyboard.on('keydown-B', () => this.toggleDebugMode());
 
     // Reset camera effects & Fade In
     this.cameras.main.resetFX();
@@ -391,352 +389,6 @@ export default class GameScene extends Phaser.Scene {
       this.obstacleRects.push(rect);
     });
 
-    // Handle map click for drawing new polygon points in drawing mode
-    this.input.on('pointerdown', (pointer) => {
-      if (this.isDebugMode && this.isDrawingPolygonMode && this.activeDrawingPolygon) {
-        if (pointer.y < 65) return; // Skip clicking on UI toolbar buttons at top
-        const wx = Math.round(pointer.worldX);
-        const wy = Math.round(pointer.worldY);
-        this.activeDrawingPolygon.points.push({ x: wx, y: wy });
-        this.renderDebugOverlay();
-      }
-    });
-  }
-
-  createDebugToggleButton() {
-    // Top Debug Bar Container
-    const toolbar = this.add.container(0, 0);
-    toolbar.setScrollFactor(0);
-    toolbar.setDepth(2000);
-
-    // 1. Toggle Debug Mode Button (x=130, y=28)
-    const bg = this.add.rectangle(130, 28, 230, 36, 0x0f172a, 0.95).setInteractive({ useHandCursor: true });
-    bg.setStrokeStyle(2, 0x38bdf8);
-
-    const txt = this.add.text(130, 28, '🛠️ DEBUG COLLIDER (Key B)', {
-      fontSize: '11px',
-      fill: '#38bdf8',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    bg.on('pointerdown', () => this.toggleDebugMode());
-    bg.on('pointerover', () => bg.setFillStyle(0x1e293b, 1));
-    bg.on('pointerout', () => bg.setFillStyle(0x0f172a, 0.95));
-
-    // 2. Draw New Polygon Button (x=330, y=28)
-    const drawBtnBg = this.add.rectangle(330, 28, 155, 36, 0x1e1b4b, 0.95).setInteractive({ useHandCursor: true });
-    drawBtnBg.setStrokeStyle(2, 0x818cf8);
-
-    const drawBtnTxt = this.add.text(330, 28, '➕ DRAW NEW POLYGON', {
-      fontSize: '11px',
-      fill: '#a5b4fc',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    drawBtnBg.on('pointerdown', () => this.togglePolygonDrawingMode());
-    drawBtnBg.on('pointerover', () => drawBtnBg.setFillStyle(0x312e81, 1));
-    drawBtnBg.on('pointerout', () => drawBtnBg.setFillStyle(this.isDrawingPolygonMode ? 0x065f46 : 0x1e1b4b, 0.95));
-
-    // 3. Copy Polygon Coordinates Button (x=505, y=28)
-    const copyPolyBg = this.add.rectangle(505, 28, 175, 36, 0x064e3b, 0.95).setInteractive({ useHandCursor: true });
-    copyPolyBg.setStrokeStyle(2, 0x34d399);
-
-    const copyPolyTxt = this.add.text(505, 28, '📋 COPY MAP_POLYGONS', {
-      fontSize: '11px',
-      fill: '#6ee7b7',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    copyPolyBg.on('pointerdown', () => this.exportPolygonCoordinates());
-    copyPolyBg.on('pointerover', () => copyPolyBg.setFillStyle(0x065f46, 1));
-    copyPolyBg.on('pointerout', () => copyPolyBg.setFillStyle(0x064e3b, 0.95));
-
-    // 4. Undo Point Button (x=650, y=28)
-    const undoBg = this.add.rectangle(650, 28, 95, 36, 0x7c2d12, 0.95).setInteractive({ useHandCursor: true });
-    undoBg.setStrokeStyle(2, 0xf97316);
-
-    const undoTxt = this.add.text(650, 28, '↩️ UNDO POINT', {
-      fontSize: '10px',
-      fill: '#ffedd5',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    undoBg.on('pointerdown', () => this.undoLastPolygonPoint());
-
-    toolbar.add([bg, txt, drawBtnBg, drawBtnTxt, copyPolyBg, copyPolyTxt, undoBg, undoTxt]);
-
-    this.debugBtnText = txt;
-    this.drawBtnBg = drawBtnBg;
-    this.drawBtnTxt = drawBtnTxt;
-  }
-
-  togglePolygonDrawingMode() {
-    if (!this.isDebugMode) {
-      this.toggleDebugMode();
-    }
-
-    this.isDrawingPolygonMode = !this.isDrawingPolygonMode;
-
-    if (this.isDrawingPolygonMode) {
-      const newPolyName = `Polygon_${MAP_POLYGONS.length + 1}`;
-      this.activeDrawingPolygon = {
-        name: newPolyName,
-        points: []
-      };
-      MAP_POLYGONS.push(this.activeDrawingPolygon);
-
-      if (this.drawBtnBg) this.drawBtnBg.setFillStyle(0x065f46, 1);
-      if (this.drawBtnTxt) this.drawBtnTxt.setText('✅ FINISH DRAWING');
-    } else {
-      // Remove active polygon if it has fewer than 3 points
-      if (this.activeDrawingPolygon && this.activeDrawingPolygon.points.length < 3) {
-        const idx = MAP_POLYGONS.indexOf(this.activeDrawingPolygon);
-        if (idx !== -1) MAP_POLYGONS.splice(idx, 1);
-      }
-      this.activeDrawingPolygon = null;
-
-      if (this.drawBtnBg) this.drawBtnBg.setFillStyle(0x1e1b4b, 0.95);
-      if (this.drawBtnTxt) this.drawBtnTxt.setText('➕ DRAW NEW POLYGON');
-    }
-
-    this.renderDebugOverlay();
-  }
-
-  undoLastPolygonPoint() {
-    if (this.activeDrawingPolygon && this.activeDrawingPolygon.points.length > 0) {
-      this.activeDrawingPolygon.points.pop();
-      this.renderDebugOverlay();
-    } else if (MAP_POLYGONS.length > 0) {
-      const lastPoly = MAP_POLYGONS[MAP_POLYGONS.length - 1];
-      if (lastPoly.points.length > 0) {
-        lastPoly.points.pop();
-        if (lastPoly.points.length === 0) {
-          MAP_POLYGONS.pop();
-        }
-        this.renderDebugOverlay();
-      }
-    }
-  }
-
-  toggleDebugMode() {
-    this.isDebugMode = !this.isDebugMode;
-
-    if (this.debugBtnText) {
-      this.debugBtnText.setText(this.isDebugMode ? '✅ DEBUG: ON (DRAG/DRAW)' : '🛠️ DEBUG COLLIDER (Key B)');
-      this.debugBtnText.setColor(this.isDebugMode ? '#4ade80' : '#38bdf8');
-    }
-
-    if (this.debugGraphics) {
-      this.debugGraphics.destroy();
-      this.debugGraphics = null;
-    }
-    if (this.debugTextsContainer) {
-      this.debugTextsContainer.destroy();
-      this.debugTextsContainer = null;
-    }
-
-    // Toggle interactive drag on AABB obstacles
-    this.obstacles.getChildren().forEach(rect => {
-      if (this.isDebugMode) {
-        rect.setInteractive({ draggable: true });
-        rect.off('drag');
-        rect.on('drag', (pointer, dragX, dragY) => {
-          if (!rect.obstacleData) return;
-          const obs = rect.obstacleData;
-          obs.x = Math.round(dragX);
-          obs.y = Math.round(dragY);
-
-          rect.setPosition(obs.x, obs.y);
-          rect.body.reset(obs.x - obs.w / 2, obs.y - obs.h / 2);
-
-          this.renderDebugOverlay();
-        });
-      } else {
-        rect.disableInteractive();
-      }
-    });
-
-    if (this.isDebugMode) {
-      this.renderDebugOverlay();
-    }
-  }
-
-  redrawPolygonShapes() {
-    if (!this.debugGraphics) return;
-    this.debugGraphics.clear();
-
-    // 1. Draw 100px Grid Lines
-    this.debugGraphics.lineStyle(1, 0xffff00, 0.18);
-    for (let x = 0; x <= 1536; x += 100) {
-      this.debugGraphics.moveTo(x, 0);
-      this.debugGraphics.lineTo(x, 1024);
-    }
-    for (let y = 0; y <= 1024; y += 100) {
-      this.debugGraphics.moveTo(0, y);
-      this.debugGraphics.lineTo(1536, y);
-    }
-    this.debugGraphics.strokePath();
-
-    // 2. Draw Rectangular Obstacle Bounding Boxes
-    MAP_OBSTACLES.forEach(obs => {
-      this.debugGraphics.fillStyle(0xff0000, 0.2);
-      this.debugGraphics.fillRect(obs.x - obs.w / 2, obs.y - obs.h / 2, obs.w, obs.h);
-      
-      this.debugGraphics.lineStyle(1, 0xff4444, 0.7);
-      this.debugGraphics.strokeRect(obs.x - obs.w / 2, obs.y - obs.h / 2, obs.w, obs.h);
-    });
-
-    // 3. Draw Custom Polygon Colliders Fill & Stroke
-    MAP_POLYGONS.forEach((poly) => {
-      if (!poly.points || poly.points.length === 0) return;
-
-      const isCurrentActive = (poly === this.activeDrawingPolygon);
-      const fillColor = isCurrentActive ? 0xec4899 : 0x0284c7;
-      const strokeColor = isCurrentActive ? 0xf472b6 : 0x38bdf8;
-
-      if (poly.points.length >= 3) {
-        this.debugGraphics.fillStyle(fillColor, 0.35);
-        this.debugGraphics.beginPath();
-        this.debugGraphics.moveTo(poly.points[0].x, poly.points[0].y);
-        for (let i = 1; i < poly.points.length; i++) {
-          this.debugGraphics.lineTo(poly.points[i].x, poly.points[i].y);
-        }
-        this.debugGraphics.closePath();
-        this.debugGraphics.fillPath();
-      }
-
-      this.debugGraphics.lineStyle(3, strokeColor, 1.0);
-      this.debugGraphics.beginPath();
-      this.debugGraphics.moveTo(poly.points[0].x, poly.points[0].y);
-      for (let i = 1; i < poly.points.length; i++) {
-        this.debugGraphics.lineTo(poly.points[i].x, poly.points[i].y);
-      }
-      if (poly.points.length >= 3) {
-        this.debugGraphics.closePath();
-      }
-      this.debugGraphics.strokePath();
-    });
-  }
-
-  renderDebugOverlay() {
-    if (this.debugGraphics) this.debugGraphics.destroy();
-    if (this.debugTextsContainer) this.debugTextsContainer.destroy();
-
-    this.debugGraphics = this.add.graphics();
-    this.debugGraphics.setDepth(1500);
-
-    this.debugTextsContainer = this.add.container(0, 0);
-    this.debugTextsContainer.setDepth(1501);
-
-    // Draw lines and shapes first
-    this.redrawPolygonShapes();
-
-    // Add static grid labels
-    for (let x = 0; x <= 1536; x += 100) {
-      const t = this.add.text(x + 2, 5, `${x}`, { fontSize: '10px', fill: '#ffff00' });
-      this.debugTextsContainer.add(t);
-    }
-    for (let y = 0; y <= 1024; y += 100) {
-      const t = this.add.text(5, y + 2, `${y}`, { fontSize: '10px', fill: '#ffff00' });
-      this.debugTextsContainer.add(t);
-    }
-
-    // Add rectangular obstacle labels
-    MAP_OBSTACLES.forEach(obs => {
-      const label = this.add.text(obs.x, obs.y - obs.h / 2 - 2, `${obs.name}`, {
-        fontSize: '9px',
-        fill: '#fca5a5',
-        backgroundColor: '#000000a0'
-      }).setOrigin(0.5, 1);
-
-      this.debugTextsContainer.add(label);
-    });
-
-    // Draw Custom Polygon Center Labels & Interactive Draggable Handles
-    MAP_POLYGONS.forEach((poly) => {
-      if (!poly.points || poly.points.length === 0) return;
-
-      const isCurrentActive = (poly === this.activeDrawingPolygon);
-      const handleColor = isCurrentActive ? 0xf43f5e : 0x0ea5e9;
-
-      // Polygon Center Name Label
-      let sumX = 0, sumY = 0;
-      poly.points.forEach(p => { sumX += p.x; sumY += p.y; });
-      const centerX = Math.round(sumX / poly.points.length);
-      const centerY = Math.round(sumY / poly.points.length);
-
-      const polyLabel = this.add.text(centerX, centerY, `🔷 ${poly.name}`, {
-        fontSize: '11px',
-        fill: isCurrentActive ? '#fbcfe8' : '#e0f2fe',
-        fontStyle: 'bold',
-        backgroundColor: '#0f172ac0',
-        padding: { x: 4, y: 2 }
-      }).setOrigin(0.5);
-      this.debugTextsContainer.add(polyLabel);
-
-      // Render Draggable Vertex Handles (No coordinate text popups, sleek 4.5px circle)
-      if (this.isDebugMode) {
-        poly.points.forEach((pt) => {
-          const nodeHandle = this.add.circle(pt.x, pt.y, 4.5, handleColor, 1.0);
-          nodeHandle.setStrokeStyle(1.5, 0xffffff);
-          nodeHandle.setInteractive({ draggable: true, useHandCursor: true });
-
-          nodeHandle.on('drag', (pointer, dragX, dragY) => {
-            pt.x = Math.round(dragX);
-            pt.y = Math.round(dragY);
-            nodeHandle.setPosition(pt.x, pt.y);
-            this.redrawPolygonShapes();
-          });
-
-          nodeHandle.on('dragend', () => {
-            this.renderDebugOverlay();
-          });
-
-          this.debugTextsContainer.add(nodeHandle);
-        });
-      }
-    });
-  }
-
-  exportPolygonCoordinates() {
-    const polyCode = MAP_POLYGONS.map(poly => {
-      const pts = poly.points.map(p => `      { x: ${p.x}, y: ${p.y} }`).join(',\n');
-      return `  {\n    name: '${poly.name}',\n    points: [\n${pts}\n    ]\n  }`;
-    }).join(',\n');
-
-    const code = `export const MAP_POLYGONS = [\n${polyCode}\n];`;
-
-    console.log('--- TOẠ ĐỘ MAP_POLYGONS MỚI ---');
-    console.log(code);
-
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(code).catch(() => {});
-    }
-
-    // Toast notification
-    const toast = this.add.container(768, 80);
-    toast.setScrollFactor(0);
-    toast.setDepth(3000);
-
-    const toastBg = this.add.rectangle(0, 0, 500, 42, 0x065f46, 0.95);
-    toastBg.setStrokeStyle(2, 0x34d399);
-
-    const toastTxt = this.add.text(0, 0, '✅ MAP_POLYGONS Copied to Clipboard & Console!', {
-      fontSize: '12px',
-      fill: '#ffffff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
-
-    toast.add([toastBg, toastTxt]);
-
-    this.tweens.add({
-      targets: toast,
-      y: 105,
-      alpha: 0,
-      duration: 2600,
-      ease: 'Power2',
-      onComplete: () => toast.destroy()
-    });
   }
 
   handleProjectileObstacleHit(projectile, obstacle) {
@@ -1384,6 +1036,7 @@ export default class GameScene extends Phaser.Scene {
       this.registry.set('survivalLevel', nextLevel);
       this.registry.set('infinityScore', this.infinityScore || 0);
       this.registry.set('infinityKills', this.infinityKills || 0);
+      saveGameProgress(this);
 
       stopBattleBGM(this);
       this.cameras.main.fadeOut(400, 0, 0, 0);

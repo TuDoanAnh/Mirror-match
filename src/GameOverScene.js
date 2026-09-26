@@ -1,10 +1,20 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from './gameConfig';
 import { createTopRightBar } from './topRightBar';
+import { showRewardedAd, saveGameProgress, showInterstitialAd } from './playgamaSDK';
+import watchAdBtnUrl from './assets/image/Watch_ad.png';
+import mainMenuBtnUrl from './assets/image/main_menu.png';
+import readyBtnUrl from './assets/image/Ready.png';
 
 export default class GameOverScene extends Phaser.Scene {
   constructor() {
     super('GameOverScene');
+  }
+
+  preload() {
+    if (!this.textures.exists('btn_ready')) this.load.image('btn_ready', readyBtnUrl);
+    if (!this.textures.exists('btn_watch_ad')) this.load.image('btn_watch_ad', watchAdBtnUrl);
+    if (!this.textures.exists('btn_main_menu')) this.load.image('btn_main_menu', mainMenuBtnUrl);
   }
 
   init(data) {
@@ -48,6 +58,8 @@ export default class GameOverScene extends Phaser.Scene {
 
   create() {
     createTopRightBar(this);
+    showInterstitialAd('game_over');
+
     const width = GAME_CONFIG.CANVAS.WIDTH;
     const height = GAME_CONFIG.CANVAS.HEIGHT;
     const centerX = width / 2;
@@ -70,6 +82,13 @@ export default class GameOverScene extends Phaser.Scene {
       titleStr = `SURVIVED ${this.finalWave} WAVES!`;
       titleColor = "#a855f7";
       subStr = `Final Score: ${this.finalScore} Points  •  Bot Kills: ${this.finalKills}`;
+
+      const bestScore = this.registry.get('infinityScore') || 0;
+      if (this.finalScore > bestScore) {
+        this.registry.set('infinityScore', this.finalScore);
+        this.registry.set('infinityKills', this.finalKills);
+      }
+      saveGameProgress(this);
     } else if (isWin) {
       const rewardsTable = GAME_CONFIG.ECONOMY.LEVEL_WIN_REWARDS || {};
       const goldEarned = rewardsTable[this.level] || (this.level * 500);
@@ -89,6 +108,7 @@ export default class GameOverScene extends Phaser.Scene {
         subStr += ` • UNLOCKED LEVEL ${unlocked}!`;
       }
       this.registry.set('selectedLevel', nextLevel);
+      saveGameProgress(this);
     }
 
     // Title Header Text
@@ -107,16 +127,19 @@ export default class GameOverScene extends Phaser.Scene {
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    // Rank Badge Display Panel (Left Center)
-    const rankBoxX = centerX - 180;
-    const rankBoxY = centerY + 30;
+    // Panels Layout Alignment (Shared Y & Height)
+    const panelY = centerY + 30;
+    const panelHeight = 230;
 
-    const rankBg = this.add.rectangle(rankBoxX, rankBoxY, 200, 220, 0x0f172a, 0.9);
+    // Rank Badge Display Panel (Left Center)
+    const rankBoxX = centerX - 195;
+
+    const rankBg = this.add.rectangle(rankBoxX, panelY, 230, panelHeight, 0x0f172a, 0.9);
     rankBg.setStrokeStyle(2, Phaser.Display.Color.HexStringToColor(gradeInfo.color).color, 0.8);
 
-    this.add.text(rankBoxX, rankBoxY - 80, "MATCH RANK", { fontSize: '13px', fill: '#94a3b8', fontStyle: 'bold' }).setOrigin(0.5);
+    this.add.text(rankBoxX, panelY - 88, "MATCH RANK", { fontSize: '13px', fill: '#94a3b8', fontStyle: 'bold' }).setOrigin(0.5);
 
-    const gradeText = this.add.text(rankBoxX, rankBoxY - 15, gradeInfo.grade, {
+    const gradeText = this.add.text(rankBoxX, panelY - 15, gradeInfo.grade, {
       fontSize: '72px',
       fill: gradeInfo.color,
       fontStyle: 'bold',
@@ -124,7 +147,7 @@ export default class GameOverScene extends Phaser.Scene {
       strokeThickness: 3
     }).setOrigin(0.5);
 
-    this.add.text(rankBoxX, rankBoxY + 55, gradeInfo.label, {
+    this.add.text(rankBoxX, panelY + 65, gradeInfo.label, {
       fontSize: '16px',
       fill: '#ffffff',
       fontStyle: 'bold'
@@ -143,17 +166,16 @@ export default class GameOverScene extends Phaser.Scene {
     }
 
     // Match Stats Summary Panel (Right Center)
-    const statsBoxX = centerX + 120;
-    const statsBoxY = centerY + 30;
+    const statsBoxX = centerX + 130;
 
-    const statsBg = this.add.rectangle(statsBoxX, statsBoxY, 320, 220, 0x0f172a, 0.9);
+    const statsBg = this.add.rectangle(statsBoxX, panelY, 360, panelHeight, 0x0f172a, 0.9);
     statsBg.setStrokeStyle(2, 0x334155, 0.8);
 
-    this.add.text(statsBoxX, statsBoxY - 85, "COMBAT STATISTICS", { fontSize: '15px', fill: '#38bdf8', fontStyle: 'bold' }).setOrigin(0.5);
+    this.add.text(statsBoxX, panelY - 88, "COMBAT STATISTICS", { fontSize: '15px', fill: '#38bdf8', fontStyle: 'bold' }).setOrigin(0.5);
 
-    const leftColX = statsBoxX - 135;
-    const rightColX = statsBoxX + 135;
-    let statY = statsBoxY - 45;
+    const leftColX = statsBoxX - 150;
+    const rightColX = statsBoxX + 150;
+    let statY = panelY - 48;
 
     const statRows = [
       { label: "Skillshot Accuracy:", val: `${this.stats.accuracy || 100}%`, color: '#38bdf8' },
@@ -166,33 +188,12 @@ export default class GameOverScene extends Phaser.Scene {
     statRows.forEach(row => {
       this.add.text(leftColX, statY, row.label, { fontSize: '12px', fill: '#94a3b8' }).setOrigin(0, 0.5);
       this.add.text(rightColX, statY, row.val, { fontSize: '12px', fill: row.color, fontStyle: 'bold' }).setOrigin(1, 0.5);
-      statY += 28;
+      statY += 27;
     });
 
-    // Action Buttons Area
-    const btnY = centerY + 185;
-
-    // Primary Action Button (Play Again / Choose Augment / Next Level)
+    // Action Buttons Area (Bottom)
+    const btnY = panelY + 185;
     const isAugmentRound = (this.level % 4 === 0);
-    let btnLabel = "RETRY LEVEL (ENTER)";
-    if (this.mode === 'pvp') btnLabel = "PLAY AGAIN (ENTER)";
-    else if (this.mode === 'infinity') btnLabel = "SURVIVE AGAIN (ENTER)";
-    else if (isWin) {
-      btnLabel = isAugmentRound ? "CHOOSE AUGMENT (ENTER)" : "NEXT LEVEL (ENTER)";
-    }
-
-    const btn1Bg = this.add.rectangle(centerX - 120, btnY, 220, 46, 0x1e293b).setInteractive({ useHandCursor: true });
-    btn1Bg.setStrokeStyle(2, 0x38bdf8);
-    const btn1Txt = this.add.text(centerX - 120, btnY, btnLabel, { fontSize: '13px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
-
-    btn1Bg.on('pointerover', () => {
-      this.tweens.add({ targets: [btn1Bg, btn1Txt], scale: 1.05, duration: 150 });
-      btn1Bg.setFillStyle(0x0284c7);
-    });
-    btn1Bg.on('pointerout', () => {
-      this.tweens.add({ targets: [btn1Bg, btn1Txt], scale: 1.0, duration: 150 });
-      btn1Bg.setFillStyle(0x1e293b);
-    });
 
     const onPrimaryAction = () => {
       this.cameras.main.fadeOut(300, 0, 0, 0);
@@ -213,21 +214,50 @@ export default class GameOverScene extends Phaser.Scene {
       });
     };
 
-    btn1Bg.on('pointerdown', onPrimaryAction);
-    this.input.keyboard.once('keydown-ENTER', onPrimaryAction);
+    // --- 1. LEFT BUTTON: BATTLE READY (on Win) OR WATCH AD TO RETRY (on Lose) ---
+    const leftBtnKey = isWin ? 'btn_ready' : 'btn_watch_ad';
+    const leftBtn = this.add.image(centerX - 145, btnY, leftBtnKey).setInteractive({ useHandCursor: true });
+    leftBtn.setDisplaySize(240, 52);
+    const leftBaseScaleX = leftBtn.scaleX;
+    const leftBaseScaleY = leftBtn.scaleY;
 
-    // Main Menu Button
-    const btn2Bg = this.add.rectangle(centerX + 120, btnY, 200, 46, 0x1e293b).setInteractive({ useHandCursor: true });
-    btn2Bg.setStrokeStyle(2, 0xfacc15);
-    const btn2Txt = this.add.text(centerX + 120, btnY, "🏠 MAIN MENU", { fontSize: '13px', fill: '#facc15', fontStyle: 'bold' }).setOrigin(0.5);
-
-    btn2Bg.on('pointerover', () => {
-      this.tweens.add({ targets: [btn2Bg, btn2Txt], scale: 1.05, duration: 150 });
-      btn2Bg.setFillStyle(0xd97706);
+    leftBtn.on('pointerover', () => {
+      this.tweens.killTweensOf(leftBtn);
+      this.tweens.add({ targets: leftBtn, scaleX: leftBaseScaleX * 1.06, scaleY: leftBaseScaleY * 1.06, duration: 120, ease: 'Power2' });
     });
-    btn2Bg.on('pointerout', () => {
-      this.tweens.add({ targets: [btn2Bg, btn2Txt], scale: 1.0, duration: 150 });
-      btn2Bg.setFillStyle(0x1e293b);
+    leftBtn.on('pointerout', () => {
+      this.tweens.killTweensOf(leftBtn);
+      this.tweens.add({ targets: leftBtn, scaleX: leftBaseScaleX, scaleY: leftBaseScaleY, duration: 120, ease: 'Power2' });
+    });
+
+    const onLeftBtnAction = () => {
+      if (isWin) {
+        onPrimaryAction();
+      } else {
+        showRewardedAd(this, 'revive_rebattle').then(rewarded => {
+          if (rewarded) {
+            onPrimaryAction();
+          }
+        });
+      }
+    };
+
+    leftBtn.on('pointerdown', onLeftBtnAction);
+    this.input.keyboard.once('keydown-ENTER', onLeftBtnAction);
+
+    // --- 2. RIGHT BUTTON: MAIN MENU (main_menu.png) ---
+    const mainMenuBtn = this.add.image(centerX + 145, btnY, 'btn_main_menu').setInteractive({ useHandCursor: true });
+    mainMenuBtn.setDisplaySize(240, 52);
+    const menuBaseScaleX = mainMenuBtn.scaleX;
+    const menuBaseScaleY = mainMenuBtn.scaleY;
+
+    mainMenuBtn.on('pointerover', () => {
+      this.tweens.killTweensOf(mainMenuBtn);
+      this.tweens.add({ targets: mainMenuBtn, scaleX: menuBaseScaleX * 1.06, scaleY: menuBaseScaleY * 1.06, duration: 120, ease: 'Power2' });
+    });
+    mainMenuBtn.on('pointerout', () => {
+      this.tweens.killTweensOf(mainMenuBtn);
+      this.tweens.add({ targets: mainMenuBtn, scaleX: menuBaseScaleX, scaleY: menuBaseScaleY, duration: 120, ease: 'Power2' });
     });
 
     const onMainMenu = () => {
@@ -237,9 +267,8 @@ export default class GameOverScene extends Phaser.Scene {
       });
     };
 
-    btn2Bg.on('pointerdown', onMainMenu);
+    mainMenuBtn.on('pointerdown', onMainMenu);
 
     this.cameras.main.fadeIn(400, 0, 0, 0);
   }
 }
-

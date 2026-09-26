@@ -37,7 +37,7 @@ export const MAP_OBSTACLES = [
   { name: 'Tree_CenterLeft', x: 467, y: 510, w: 50, h: 80 },
   { name: 'Log_CenterLeft', x: 523, y: 570, w: 80, h: 50 },
   { name: 'Log_TopRight', x: 1080, y: 355, w: 80, h: 50 },
-  { name: 'Tree_CenterRight_Cluster', x: 1115, y: 535, w: 60, h: 90 },
+  { name: 'Tree_CenterRight_Cluster', x: 1113, y: 535, w: 65, h: 105 },
   { name: 'Tree_BottomRight_Small', x: 1013, y: 695, w: 50, h: 60 },
   { name: 'Log_BottomRight', x: 1039, y: 753, w: 80, h: 50 },
   { name: 'Tree_MidTop_Small', x: 572, y: 366, w: 40, h: 60 },

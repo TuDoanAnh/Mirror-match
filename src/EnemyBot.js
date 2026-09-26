@@ -331,7 +331,7 @@ export default class EnemyBot extends Player {
 
       // Ongoing Q Combo (Q2 or Q3): Recast Q directly aiming at target's current location!
       if (qCombo > 0 && qCombo < 3) {
-        if (time >= lastQTime + 480) { // 480ms pacing between combo steps
+        if (time >= lastQTime + 1000) { // 1000ms pacing between combo steps
           this.useSkill('Q', time, realTargetX, realTargetY);
         }
       }
