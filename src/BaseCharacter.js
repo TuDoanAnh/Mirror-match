@@ -113,7 +113,7 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
       }
       this.clearTint();
 
-      const animPrefix = ['ezreal', 'lux', 'jinx', 'riven', 'zed'].includes(this.heroId) ? this.heroId : 'ezreal';
+      const animPrefix = ['ezreal', 'lux', 'jinx', 'riven', 'zed', 'creep'].includes(this.heroId) ? this.heroId : 'ezreal';
       const idleKey = `${animPrefix}_idle`;
       if (this.scene.anims && this.scene.anims.exists(idleKey)) {
         this.play(idleKey);
@@ -125,7 +125,7 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     if (!this.active || this.hp <= 0) return;
     if (this.isHurtAnimating) return;
 
-    const animPrefix = ['ezreal', 'lux', 'jinx', 'riven', 'zed'].includes(this.heroId) ? this.heroId : 'ezreal';
+    const animPrefix = ['ezreal', 'lux', 'jinx', 'riven', 'zed', 'creep'].includes(this.heroId) ? this.heroId : 'ezreal';
     const vx = this.body ? this.body.velocity.x : 0;
     const vy = this.body ? this.body.velocity.y : 0;
     const currentSpeed = Math.sqrt(vx * vx + vy * vy);
@@ -566,7 +566,7 @@ export default class BaseCharacter extends Phaser.Physics.Arcade.Sprite {
     });
 
     const hurtKey = `${this.heroId}_hurt`;
-    if (['ezreal', 'lux', 'jinx', 'riven', 'zed'].includes(this.heroId) && this.scene.anims && this.scene.anims.exists(hurtKey)) {
+    if (['ezreal', 'lux', 'jinx', 'riven', 'zed', 'creep'].includes(this.heroId) && this.scene.anims && this.scene.anims.exists(hurtKey)) {
       this.isHurtAnimating = true;
       this.play(hurtKey);
       this.once(`animationcomplete-${hurtKey}`, () => {

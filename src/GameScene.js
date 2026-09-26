@@ -849,6 +849,17 @@ export default class GameScene extends Phaser.Scene {
     spawnY = Phaser.Math.Clamp(spawnY, 150, 880);
 
     const creep = new Creep(this, spawnX, spawnY, this.level);
+
+    // Red summon ring visual effect at spawn point
+    const spawnPuff = this.add.circle(spawnX, spawnY, 18, 0xef4444, 0.7);
+    this.tweens.add({
+      targets: spawnPuff,
+      scale: 1.6,
+      alpha: 0,
+      duration: 350,
+      onComplete: () => spawnPuff.destroy()
+    });
+
     this.creeps.add(creep);
   }
 
@@ -1077,18 +1088,39 @@ export default class GameScene extends Phaser.Scene {
     if (activeCreeps >= maxCreeps) return;
 
     const waveMult = 1 + (survivalLevel - 1) * 0.10;
-    const edge = Phaser.Math.Between(0, 3);
-    let cx = 100, cy = 100;
-    if (edge === 0) { cx = Phaser.Math.Between(100, 1400); cy = 80; }
-    else if (edge === 1) { cx = 1450; cy = Phaser.Math.Between(100, 900); }
-    else if (edge === 2) { cx = Phaser.Math.Between(100, 1400); cy = 950; }
-    else { cx = 80; cy = Phaser.Math.Between(100, 900); }
+    
+    // Spawn creep around the enemy bot champion
+    let cx = 1180, cy = 512;
+    if (this.bot && this.bot.active && this.bot.hp > 0) {
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      const dist = Phaser.Math.Between(45, 95);
+      cx = this.bot.x + Math.cos(angle) * dist;
+      cy = this.bot.y + Math.sin(angle) * dist;
+    } else {
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      const dist = Phaser.Math.Between(45, 95);
+      cx = 1180 + Math.cos(angle) * dist;
+      cy = 512 + Math.sin(angle) * dist;
+    }
+
+    cx = Phaser.Math.Clamp(cx, 200, 1220);
+    cy = Phaser.Math.Clamp(cy, 150, 880);
 
     const creep = new Creep(this, cx, cy);
     creep.maxHp = Math.floor(creep.maxHp * waveMult);
     creep.hp = creep.maxHp;
     creep.damage = Math.floor(creep.damage * waveMult);
     if (creep.updateHpBar) creep.updateHpBar();
+
+    // Red summon ring visual effect at spawn point
+    const spawnPuff = this.add.circle(cx, cy, 18, 0xef4444, 0.7);
+    this.tweens.add({
+      targets: spawnPuff,
+      scale: 1.6,
+      alpha: 0,
+      duration: 350,
+      onComplete: () => spawnPuff.destroy()
+    });
 
     this.creeps.add(creep);
   }
@@ -1109,9 +1141,9 @@ export default class GameScene extends Phaser.Scene {
     const survivalLevel = this.registry.get('survivalLevel') || 1;
     const isAugmentWave = (survivalLevel % 4 === 0);
 
-    // Main Window Frame Image (Endless_Window.png)
-    const boxWidth = 1160;
-    const boxHeight = 648;
+    // Main Window Frame Image (Endless_Window.png) - Maximize to 1526x990 for grand full-screen scale
+    const boxWidth = 1526;
+    const boxHeight = 990;
     let mainBox;
     if (this.textures.exists('endless_window_bg')) {
       mainBox = this.add.image(centerX, centerY, 'endless_window_bg');
@@ -1121,19 +1153,20 @@ export default class GameScene extends Phaser.Scene {
       mainBox.setStrokeStyle(3, isAugmentWave ? 0xa855f7 : 0x38bdf8);
     }
 
-    const titleY = isAugmentWave ? (centerY - 145) : (centerY - 120);
+    // Title positioned cleanly at top of inner cavity
+    const titleY = isAugmentWave ? (centerY - 315) : (centerY - 170);
     const titleTxt = this.add.text(centerX, titleY, `SURVIVAL LEVEL ${survivalLevel} CLEARED!`, {
-      fontSize: isAugmentWave ? '24px' : '26px',
+      fontSize: isAugmentWave ? '32px' : '36px',
       fill: '#facc15',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 5
+      strokeThickness: 6
     }).setOrigin(0.5);
 
     const goldEarned = 500 + survivalLevel * 100;
     let currentGold = this.registry.get('gold') || 0;
-    const subTxt = this.add.text(centerX, titleY + (isAugmentWave ? 32 : 38), `Reward: +${goldEarned}G  •  Total Gold: ${currentGold}G  •  Score: ${this.infinityScore || 0}`, {
-      fontSize: isAugmentWave ? '14px' : '15px',
+    const subTxt = this.add.text(centerX, titleY + (isAugmentWave ? 44 : 58), `Reward: +${goldEarned}G  •  Total Gold: ${currentGold}G  •  Score: ${this.infinityScore || 0}`, {
+      fontSize: isAugmentWave ? '18px' : '20px',
       fill: '#38bdf8',
       fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -1144,12 +1177,12 @@ export default class GameScene extends Phaser.Scene {
 
     if (isAugmentWave) {
       // Augment Perk Selection Section (Every 4 Waves)
-      const perksTitle = this.add.text(centerX, titleY + 68, "CHOOSE 1 FREE AUGMENT PERK", {
-        fontSize: '18px',
+      const perksTitle = this.add.text(centerX, titleY + 84, "CHOOSE 1 FREE AUGMENT PERK", {
+        fontSize: '22px',
         fill: '#a855f7',
         fontStyle: 'bold',
         stroke: '#000000',
-        strokeThickness: 3
+        strokeThickness: 4
       }).setOrigin(0.5);
       this.intermissionModal.add(perksTitle);
 
@@ -1157,10 +1190,11 @@ export default class GameScene extends Phaser.Scene {
       const ownedAugments = this.registry.get('augments') || [];
       const randomAugments = getRandomAugments(3, ownedAugments, heroId);
 
-      const cardWidth = 270;
-      const cardHeight = 210;
-      const cardY = titleY + 200;
-      const cardGap = 285;
+      // Enlarged Card proportions (375 wide x 440 tall) to fill out the inner cavity generously
+      const cardWidth = 375;
+      const cardHeight = 440;
+      const cardY = centerY + 18;
+      const cardGap = 395;
       const startCardX = centerX - cardGap;
 
       const cardItems = [];
@@ -1183,37 +1217,38 @@ export default class GameScene extends Phaser.Scene {
 
         // Augment Tier Badge (Silver / Gold / Diamond)
         const tierBadgeStr = getAugmentTierBadgeText(aug);
-        const tierTxt = this.add.text(0, -cardHeight / 2 + 20, tierBadgeStr, {
-          fontSize: '11px',
+        const tierTxt = this.add.text(0, -cardHeight / 2 + 36, tierBadgeStr, {
+          fontSize: '15px',
           fill: '#fde047',
           fontStyle: 'bold',
           stroke: '#000000',
-          strokeThickness: 3
+          strokeThickness: 4
         }).setOrigin(0.5);
 
         // Augment Icon Display
-        const iconBg = this.add.circle(0, -42, 22, aug.color || 0x38bdf8, 0.25);
-        iconBg.setStrokeStyle(2, aug.color || 0x38bdf8, 0.9);
-        const iconTxt = this.add.text(0, -42, aug.icon || '⚡', { fontSize: '24px' }).setOrigin(0.5);
+        const iconBg = this.add.circle(0, -100, 38, aug.color || 0x38bdf8, 0.25);
+        iconBg.setStrokeStyle(2.5, aug.color || 0x38bdf8, 0.9);
+        const iconTxt = this.add.text(0, -100, aug.icon || '⚡', { fontSize: '42px' }).setOrigin(0.5);
 
         // Augment Name
-        const nameTxt = this.add.text(0, -4, aug.name, {
-          fontSize: '15px',
+        const nameTxt = this.add.text(0, -22, aug.name, {
+          fontSize: '21px',
           fill: '#ffffff',
           fontStyle: 'bold',
           stroke: '#000000',
-          strokeThickness: 3
+          strokeThickness: 4
         }).setOrigin(0.5);
 
         // Divider Line
-        const divLine = this.add.rectangle(0, 16, 180, 1.5, 0x38bdf8, 0.5);
+        const divLine = this.add.rectangle(0, 16, 260, 2, 0x38bdf8, 0.6);
 
         // Augment Description Text
-        const descTxt = this.add.text(0, 26, aug.desc, {
-          fontSize: '11px',
+        const descTxt = this.add.text(0, 32, aug.desc, {
+          fontSize: '15px',
           fill: '#cbd5e1',
           align: 'center',
-          wordWrap: { width: 220 }
+          wordWrap: { width: 290 },
+          lineSpacing: 4
         }).setOrigin(0.5, 0);
 
         const elements = [cardBg];
@@ -1250,11 +1285,15 @@ export default class GameScene extends Phaser.Scene {
         cardBg.on('pointerover', () => {
           if (selectedAugmentObj !== aug) {
             cardBg.setStrokeStyle(3, 0xffffff, 0.9);
+            this.tweens.killTweensOf(cardContainer);
+            this.tweens.add({ targets: cardContainer, scale: 1.02, duration: 100 });
           }
         });
         cardBg.on('pointerout', () => {
           if (selectedAugmentObj !== aug) {
             cardBg.setStrokeStyle(2, aug.color || 0x38bdf8, 0.6);
+            this.tweens.killTweensOf(cardContainer);
+            this.tweens.add({ targets: cardContainer, scale: 1.0, duration: 100 });
           }
         });
 
@@ -1264,8 +1303,8 @@ export default class GameScene extends Phaser.Scene {
     } else {
       // Non-Augment Wave Intermission (Waves 1, 2, 3, 5, 6, 7...)
       const nextAugmentWaveCount = 4 - (survivalLevel % 4);
-      const infoTxt = this.add.text(centerX, centerY + 5, `Next Augment Perk choice available in ${nextAugmentWaveCount} wave(s)`, {
-        fontSize: '16px',
+      const infoTxt = this.add.text(centerX, centerY + 20, `Next Augment Perk choice available in ${nextAugmentWaveCount} wave(s)`, {
+        fontSize: '24px',
         fill: '#cbd5e1',
         fontStyle: 'bold'
       }).setOrigin(0.5);
@@ -1274,29 +1313,29 @@ export default class GameScene extends Phaser.Scene {
     }
 
     // Return to Preparation Image Button (Endless_Return_to_preparation.png)
-    const btnY = isAugmentWave ? (centerY + 160) : (centerY + 115);
+    const btnY = isAugmentWave ? (centerY + 300) : (centerY + 200);
     let returnBtn;
     let returnTxt;
 
     if (this.textures.exists('endless_return_btn')) {
       returnBtn = this.add.image(centerX, btnY, 'endless_return_btn').setInteractive({ useHandCursor: true });
-      returnBtn.setDisplaySize(340, 50);
+      returnBtn.setDisplaySize(440, 56);
       returnTxt = this.add.text(centerX, btnY, `RETURN TO PREPARATION`, {
-        fontSize: '15px',
+        fontSize: '18px',
+        fill: '#ffffff',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 5
+      }).setOrigin(0.5);
+    } else {
+      returnBtn = this.add.rectangle(centerX, btnY, 440, 54, 0x22c55e).setInteractive({ useHandCursor: true });
+      returnBtn.setStrokeStyle(2, 0xffffff);
+      returnTxt = this.add.text(centerX, btnY, `RETURN TO PREPARATION`, {
+        fontSize: '18px',
         fill: '#ffffff',
         fontStyle: 'bold',
         stroke: '#000000',
         strokeThickness: 4
-      }).setOrigin(0.5);
-    } else {
-      returnBtn = this.add.rectangle(centerX, btnY, 340, 48, 0x22c55e).setInteractive({ useHandCursor: true });
-      returnBtn.setStrokeStyle(2, 0xffffff);
-      returnTxt = this.add.text(centerX, btnY, `RETURN TO PREPARATION`, {
-        fontSize: '15px',
-        fill: '#ffffff',
-        fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: 3
       }).setOrigin(0.5);
     }
 

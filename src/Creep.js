@@ -26,16 +26,16 @@ export default class Creep extends BaseCharacter {
     this.lastChosenSign = 1; // Hysteresis flag for Creep steering
 
     this.setDepth(10);
-    this.shadow = scene.add.ellipse(x, y + 12, 22, 10, 0x000000, 0.45);
+    this.shadow = scene.add.ellipse(x, y + 8, 16, 7, 0x000000, 0.45);
     this.shadow.setDepth(4);
 
     if (scene.textures.exists('creep_spritesheet')) {
       this.setTexture('creep_spritesheet', 0);
     }
-    this.setScale(0.65);
+    this.setScale(0.38);
     this.setOrigin(0.5, 0.5);
-    this.body.setSize(22, 22);
-    this.body.setOffset(13, 17);
+    this.body.setSize(18, 18);
+    this.body.setOffset(15, 19);
     this.setCollideWorldBounds(true);
 
     if (this.anims && scene.anims.exists('creep_idle')) {
@@ -43,6 +43,29 @@ export default class Creep extends BaseCharacter {
     }
 
     this.updateHpBar();
+  }
+
+  updateHpBar() {
+    if (!this.hpBar) return;
+    this.hpBar.clear();
+
+    const barW = 36;
+    const barH = 5;
+    const radius = 3;
+
+    // Dark Rounded Background Container with Border
+    this.hpBar.fillStyle(0x0f172a, 0.85);
+    this.hpBar.fillRoundedRect(0, 0, barW, barH, radius);
+    this.hpBar.lineStyle(1, 0x334155, 0.9);
+    this.hpBar.strokeRoundedRect(0, 0, barW, barH, radius);
+
+    // HP Fill (Light red for creep)
+    const fillPercent = Math.max(0, Math.min(1, this.hp / this.maxHp));
+    if (fillPercent > 0) {
+      const fillW = Math.max(2, (barW - 2) * fillPercent);
+      this.hpBar.fillStyle(0xef4444, 1);
+      this.hpBar.fillRoundedRect(1, 1, fillW, barH - 2, Math.min(2, fillW / 2));
+    }
   }
 
   smoothSetVelocity(targetVx, targetVy, lerpFactor = 0.22) {
@@ -55,16 +78,16 @@ export default class Creep extends BaseCharacter {
     if (this.hp <= 0) return;
 
     if (this.shadow) {
-      this.shadow.setPosition(this.x, this.y + 12);
+      this.shadow.setPosition(this.x, this.y + 8);
     }
 
     // HP Bar follow
     if (this.hpBar) {
-      this.hpBar.x = this.x - 25;
-      this.hpBar.y = this.y - 18;
+      this.hpBar.x = this.x - 18;
+      this.hpBar.y = this.y - 16;
     }
 
-    this.updateAnimation('creep');
+    this.updateAnimation();
 
     if (this.isRooted) {
       this.smoothSetVelocity(0, 0, 0.3);
