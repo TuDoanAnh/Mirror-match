@@ -13,32 +13,158 @@ export async function initPlaygamaSDK() {
   if (initPromise) return initPromise;
 
   initPromise = (async () => {
-    if (typeof window !== 'undefined' && window.bridge) {
-      try {
-        await window.bridge.initialize();
-        isBridgeInitialized = true;
-        console.log('Playgama Bridge SDK initialized successfully!');
-        notifyGameReady();
-        return true;
-      } catch (err) {
-        console.warn('Playgama Bridge SDK running in local/standalone mode. Using local fallback storage & ad simulation.');
-        isBridgeInitialized = false;
+    if (typeof window !== 'undefined') {
+      const bridgeObj = window.bridge || window.playgamaBridge;
+      if (bridgeObj) {
+        // Ensure both window.bridge and window.playgamaBridge reference the object for DevTools console checks
+        window.bridge = bridgeObj;
+        window.playgamaBridge = bridgeObj;
+
+        try {
+          await window.bridge.initialize();
+          isBridgeInitialized = true;
+          console.log('Playgama Bridge SDK initialized successfully!');
+
+          // Register global ad listeners for auto-muting and auto-pausing audio
+          setupAdEventListeners();
+
+          notifyGameReady();
+          return true;
+        } catch (err) {
+          console.warn('Playgama Bridge SDK running in local/standalone mode. Using local fallback storage & ad simulation.', err);
+          isBridgeInitialized = false;
+          return false;
+        }
+      } else {
+        console.log('Playgama Bridge SDK not detected in window. Fallback simulation mode enabled.');
         return false;
       }
-    } else {
-      console.log('Playgama Bridge SDK not detected in window. Fallback simulation mode enabled.');
-      return false;
     }
+    return false;
   })();
 
   return initPromise;
 }
 
 /**
+ * Setup global listeners on bridge.advertisement to automatically handle
+ * Sound/Pause Handler during Interstitial & Rewarded Ads.
+ */
+
+let wasAudioMutedBeforeAd = false;
+
+function setupAdEventListeners() {
+  if (typeof window === 'undefined' || !window.bridge || !window.bridge.advertisement) return;
+  if (typeof window.bridge.advertisement.on !== 'function') return;
+
+  const onAdStarted = () => {
+    console.log('[Playgama SDK] Ad started: Muting audio');
+    if (window.Phaser && window.Phaser.GAMES) {
+      window.Phaser.GAMES.forEach(game => {
+        if (game && game.sound) {
+          wasAudioMutedBeforeAd = game.sound.mute;
+          game.sound.mute = true;
+          if (game.sound.context && typeof game.sound.context.suspend === 'function') {
+            try { game.sound.context.suspend(); } catch (e) {}
+          }
+        }
+      });
+    }
+  };
+
+  const onAdEnded = () => {
+    console.log('[Playgama SDK] Ad ended/closed: Restoring audio state');
+    if (window.Phaser && window.Phaser.GAMES) {
+      window.Phaser.GAMES.forEach(game => {
+        if (game && game.sound) {
+          const userMuteSetting = game.registry ? game.registry.get('isMuted') : false;
+          game.sound.mute = userMuteSetting || false;
+          if (game.sound.context && typeof game.sound.context.resume === 'function') {
+            try { game.sound.context.resume(); } catch (e) {}
+          }
+        }
+      });
+    }
+  };
+
+  try {
+    window.bridge.advertisement.on('interstitial_state_changed', (state) => {
+      console.log('Playgama Bridge interstitial_state_changed:', state);
+      if (state === 'opened' || state === 'loading') {
+        onAdStarted();
+      } else if (state === 'closed' || state === 'failed') {
+        onAdEnded();
+      }
+    });
+
+    window.bridge.advertisement.on('rewarded_state_changed', (state) => {
+      console.log('Playgama Bridge rewarded_state_changed:', state);
+      if (state === 'opened' || state === 'loading') {
+        onAdStarted();
+      } else if (state === 'closed' || state === 'failed') {
+        onAdEnded();
+      }
+    });
+  } catch (e) {
+    console.warn('Failed to bind advertisement event listeners:', e);
+  }
+}
+
+/**
+ * Game State Lifecycle Notifications
+ */
+export function notifyStartLoading() {
+  if (typeof window !== 'undefined' && window.bridge) {
+    try {
+      if (window.bridge.game && typeof window.bridge.game.startLoading === 'function') {
+        window.bridge.game.startLoading();
+      }
+    } catch (e) {}
+  }
+}
+
+export function notifyStopLoading() {
+  if (typeof window !== 'undefined' && window.bridge) {
+    try {
+      if (window.bridge.game && typeof window.bridge.game.stopLoading === 'function') {
+        window.bridge.game.stopLoading();
+      }
+    } catch (e) {}
+  }
+}
+
+export function notifyGameplayStart() {
+  if (typeof window !== 'undefined' && window.bridge) {
+    try {
+      if (window.bridge.game && typeof window.bridge.game.gameplayStart === 'function') {
+        window.bridge.game.gameplayStart();
+      }
+      if (window.bridge.platform && typeof window.bridge.platform.sendMessage === 'function') {
+        window.bridge.platform.sendMessage('gameplay_started');
+      }
+    } catch (e) {}
+  }
+}
+
+export function notifyGameplayStop() {
+  if (typeof window !== 'undefined' && window.bridge) {
+    try {
+      if (window.bridge.game && typeof window.bridge.game.gameplayStop === 'function') {
+        window.bridge.game.gameplayStop();
+      }
+      if (window.bridge.platform && typeof window.bridge.platform.sendMessage === 'function') {
+        window.bridge.platform.sendMessage('gameplay_stopped');
+      }
+    } catch (e) {}
+  }
+}
+
+/**
  * Notify Playgama platform that game loading is complete and game is ready to play.
- * Uses exact Playgama Bridge v2 message string 'game_ready'.
+ * Uses exact Playgama Bridge v2 standard API methods.
  */
 export function notifyGameReady() {
+  notifyStopLoading();
   if (typeof window !== 'undefined' && window.bridge) {
     try {
       if (window.bridge.platform && typeof window.bridge.platform.sendMessage === 'function') {
@@ -66,6 +192,7 @@ export function notifyGameReady() {
 }
 
 export function notifyLevelStarted(level = 1) {
+  notifyGameplayStart();
   if (typeof window !== 'undefined' && window.bridge && window.bridge.platform && typeof window.bridge.platform.sendMessage === 'function') {
     try {
       window.bridge.platform.sendMessage('level_started');
@@ -74,6 +201,7 @@ export function notifyLevelStarted(level = 1) {
 }
 
 export function notifyLevelCompleted(level = 1) {
+  notifyGameplayStop();
   if (typeof window !== 'undefined' && window.bridge && window.bridge.platform && typeof window.bridge.platform.sendMessage === 'function') {
     try {
       window.bridge.platform.sendMessage('level_completed');
@@ -82,6 +210,7 @@ export function notifyLevelCompleted(level = 1) {
 }
 
 export function notifyLevelFailed(level = 1) {
+  notifyGameplayStop();
   if (typeof window !== 'undefined' && window.bridge && window.bridge.platform && typeof window.bridge.platform.sendMessage === 'function') {
     try {
       window.bridge.platform.sendMessage('level_failed');

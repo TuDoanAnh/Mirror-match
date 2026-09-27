@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from './gameConfig';
 import { preloadCharacterSFX, playPreparationBGM, stopPreparationBGM } from './soundManager';
 import { createTopRightBar } from './topRightBar';
-import { loadGameProgress, hasSavedGame, resetGameProgress, notifyGameReady } from './playgamaSDK';
+import { loadGameProgress, hasSavedGame, resetGameProgress, notifyGameReady, notifyStartLoading } from './playgamaSDK';
 import bgMainUrl from './assets/image/Background.png';
 import logoUrl from './assets/image/Logo.png';
 import campaignBtnUrl from './assets/image/campaign.png';
@@ -15,6 +15,7 @@ export default class StartScene extends Phaser.Scene {
   }
 
   preload() {
+    notifyStartLoading();
     preloadCharacterSFX(this);
     if (!this.textures.exists('bg_start_main')) this.load.image('bg_start_main', bgMainUrl);
     if (!this.textures.exists('logo_main')) this.load.image('logo_main', logoUrl);
