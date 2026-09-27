@@ -62,6 +62,7 @@ export const GAME_CONFIG = {
   },
   ECONOMY: {
     STARTING_GOLD: 1000,
+    AD_REWARD_GOLD: 500,
     SELL_REFUND_RATIO: 0.7,
     MAX_LEVEL: 25,
     LEVEL_WIN_REWARDS: {
@@ -139,23 +140,23 @@ export const GAME_CONFIG = {
     { id: 'elixir_agility', name: 'Elixir of Haste', desc: '+15 Speed, +5% CDR', cost: 500, color: 0x38bdf8, icon: '⚡', statsDict: { bonusSpeed: 15, cdr: 0.05 } }
   ],
   BOT_SCALING: {
-    1:  { speedMult: 1.0,  hpMult: 1.0,  armor: 0,   armorPen: 0,  critChance: 0,  lifesteal: 0,  dmgMult: 1.0,  cdrMult: 1.0,  projSpeedMult: 1.0 },
-    2:  { speedMult: 1.05, hpMult: 1.12, armor: 10,  armorPen: 0,  critChance: 0,  lifesteal: 0,  dmgMult: 1.08, cdrMult: 0.95, projSpeedMult: 1.02 },
-    3:  { speedMult: 1.1,  hpMult: 1.25, armor: 20,  armorPen: 0,  critChance: 0,  lifesteal: 0,  dmgMult: 1.16, cdrMult: 0.90, projSpeedMult: 1.05 },
-    4:  { speedMult: 1.15, hpMult: 1.40, armor: 30,  armorPen: 5,  critChance: 5,  lifesteal: 5,  dmgMult: 1.26, cdrMult: 0.85, projSpeedMult: 1.08 },
-    5:  { speedMult: 1.2,  hpMult: 1.60, armor: 42,  armorPen: 8,  critChance: 8,  lifesteal: 6,  dmgMult: 1.38, cdrMult: 0.80, projSpeedMult: 1.10 },
-    6:  { speedMult: 1.22, hpMult: 1.85, armor: 55,  armorPen: 12, critChance: 10, lifesteal: 8,  dmgMult: 1.52, cdrMult: 0.78, projSpeedMult: 1.12 },
-    7:  { speedMult: 1.25, hpMult: 2.15, armor: 68,  armorPen: 15, critChance: 12, lifesteal: 10, dmgMult: 1.68, cdrMult: 0.75, projSpeedMult: 1.15 },
-    8:  { speedMult: 1.28, hpMult: 2.45, armor: 80,  armorPen: 18, critChance: 15, lifesteal: 12, dmgMult: 1.85, cdrMult: 0.72, projSpeedMult: 1.18 },
-    9:  { speedMult: 1.3,  hpMult: 2.80, armor: 92,  armorPen: 20, critChance: 18, lifesteal: 14, dmgMult: 2.05, cdrMult: 0.70, projSpeedMult: 1.20 },
+    1: { speedMult: 1.0, hpMult: 1.0, armor: 0, armorPen: 0, critChance: 0, lifesteal: 0, dmgMult: 1.0, cdrMult: 1.0, projSpeedMult: 1.0 },
+    2: { speedMult: 1.05, hpMult: 1.12, armor: 10, armorPen: 0, critChance: 0, lifesteal: 0, dmgMult: 1.08, cdrMult: 0.95, projSpeedMult: 1.02 },
+    3: { speedMult: 1.1, hpMult: 1.25, armor: 20, armorPen: 0, critChance: 0, lifesteal: 0, dmgMult: 1.16, cdrMult: 0.90, projSpeedMult: 1.05 },
+    4: { speedMult: 1.15, hpMult: 1.40, armor: 30, armorPen: 5, critChance: 5, lifesteal: 5, dmgMult: 1.26, cdrMult: 0.85, projSpeedMult: 1.08 },
+    5: { speedMult: 1.2, hpMult: 1.60, armor: 42, armorPen: 8, critChance: 8, lifesteal: 6, dmgMult: 1.38, cdrMult: 0.80, projSpeedMult: 1.10 },
+    6: { speedMult: 1.22, hpMult: 1.85, armor: 55, armorPen: 12, critChance: 10, lifesteal: 8, dmgMult: 1.52, cdrMult: 0.78, projSpeedMult: 1.12 },
+    7: { speedMult: 1.25, hpMult: 2.15, armor: 68, armorPen: 15, critChance: 12, lifesteal: 10, dmgMult: 1.68, cdrMult: 0.75, projSpeedMult: 1.15 },
+    8: { speedMult: 1.28, hpMult: 2.45, armor: 80, armorPen: 18, critChance: 15, lifesteal: 12, dmgMult: 1.85, cdrMult: 0.72, projSpeedMult: 1.18 },
+    9: { speedMult: 1.3, hpMult: 2.80, armor: 92, armorPen: 20, critChance: 18, lifesteal: 14, dmgMult: 2.05, cdrMult: 0.70, projSpeedMult: 1.20 },
     10: { speedMult: 1.32, hpMult: 3.15, armor: 105, armorPen: 22, critChance: 20, lifesteal: 15, dmgMult: 2.25, cdrMult: 0.68, projSpeedMult: 1.22 },
     11: { speedMult: 1.35, hpMult: 3.55, armor: 118, armorPen: 25, critChance: 25, lifesteal: 16, dmgMult: 2.50, cdrMult: 0.65, projSpeedMult: 1.25 },
     12: { speedMult: 1.38, hpMult: 4.00, armor: 130, armorPen: 28, critChance: 30, lifesteal: 18, dmgMult: 2.75, cdrMult: 0.62, projSpeedMult: 1.28 },
-    13: { speedMult: 1.4,  hpMult: 4.45, armor: 142, armorPen: 30, critChance: 35, lifesteal: 20, dmgMult: 3.05, cdrMult: 0.60, projSpeedMult: 1.30 },
+    13: { speedMult: 1.4, hpMult: 4.45, armor: 142, armorPen: 30, critChance: 35, lifesteal: 20, dmgMult: 3.05, cdrMult: 0.60, projSpeedMult: 1.30 },
     14: { speedMult: 1.42, hpMult: 4.95, armor: 155, armorPen: 32, critChance: 40, lifesteal: 22, dmgMult: 3.35, cdrMult: 0.58, projSpeedMult: 1.32 },
     15: { speedMult: 1.45, hpMult: 5.45, armor: 168, armorPen: 35, critChance: 45, lifesteal: 24, dmgMult: 3.70, cdrMult: 0.55, projSpeedMult: 1.35 },
     16: { speedMult: 1.48, hpMult: 6.00, armor: 180, armorPen: 38, critChance: 50, lifesteal: 26, dmgMult: 4.05, cdrMult: 0.52, projSpeedMult: 1.38 },
-    17: { speedMult: 1.5,  hpMult: 6.55, armor: 192, armorPen: 40, critChance: 55, lifesteal: 28, dmgMult: 4.45, cdrMult: 0.50, projSpeedMult: 1.40 },
+    17: { speedMult: 1.5, hpMult: 6.55, armor: 192, armorPen: 40, critChance: 55, lifesteal: 28, dmgMult: 4.45, cdrMult: 0.50, projSpeedMult: 1.40 },
     18: { speedMult: 1.52, hpMult: 7.15, armor: 205, armorPen: 42, critChance: 60, lifesteal: 30, dmgMult: 4.85, cdrMult: 0.48, projSpeedMult: 1.43 },
     19: { speedMult: 1.55, hpMult: 7.75, armor: 218, armorPen: 45, critChance: 65, lifesteal: 32, dmgMult: 5.30, cdrMult: 0.45, projSpeedMult: 1.46 },
     20: { speedMult: 1.58, hpMult: 8.40, armor: 230, armorPen: 48, critChance: 70, lifesteal: 34, dmgMult: 5.75, cdrMult: 0.43, projSpeedMult: 1.48 },
@@ -188,9 +189,9 @@ export const GAME_CONFIG = {
       description: 'High mobility explorer with precision skillshots & global ultimate.',
       baseStats: { hp: 1000, speed: 200, armor: 0, lifesteal: 0, critChance: 0, armorPen: 0 },
       skills: {
-        Q: { type: 'PROJECTILE', name: 'Mystic Pulse', cooldown: 2000, config: { damage: 100, speed: 600, isPiercing: false } },
+        Q: { type: 'PROJECTILE', name: 'Mystic Pulse', cooldown: 2000, config: { damage: 100, speed: 700, isPiercing: false } },
         E: { type: 'DASH', name: 'Flash Step', cooldown: 8000, config: { dashDistance: 150 } },
-        SPACE: { type: 'PROJECTILE', name: 'Starshot Barrage', cooldown: 16000, config: { damage: 400, speed: 600, isPiercing: true, channelTime: 500 } }
+        SPACE: { type: 'PROJECTILE', name: 'Starshot Barrage', cooldown: 16000, config: { damage: 550, speed: 700, isPiercing: true, channelTime: 500 } }
       }
     },
     lux: {

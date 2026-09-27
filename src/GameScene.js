@@ -1133,7 +1133,7 @@ export default class GameScene extends Phaser.Scene {
     const skills = [
       { key: 'Q', label: 'Q', x: -85 },
       { key: 'E', label: 'E', x: 0 },
-      { key: 'SPACE', label: 'R', x: 85 }
+      { key: 'SPACE', label: 'SPACE', x: 85 }
     ];
 
     skills.forEach(skill => {
@@ -1157,13 +1157,17 @@ export default class GameScene extends Phaser.Scene {
       const sweepGraphics = this.add.graphics();
 
       // Hotkey badge (Bottom-left corner of the skill square box)
-      const badgeBg = this.add.rectangle(skill.x - 19, 21, 16, 14, 0x0f172a, 0.95).setOrigin(0.5);
+      const isLongLabel = skill.label.length > 2;
+      const badgeWidth = isLongLabel ? 38 : 16;
+      const badgeCenterX = skill.x - 27 + (badgeWidth / 2);
+
+      const badgeBg = this.add.rectangle(badgeCenterX, 21, badgeWidth, 14, 0x0f172a, 0.95).setOrigin(0.5);
       const badgeBorder = this.add.graphics();
       badgeBorder.lineStyle(1, 0xd4af37, 0.8);
-      badgeBorder.strokeRect(skill.x - 27, 14, 16, 14);
+      badgeBorder.strokeRect(skill.x - 27, 14, badgeWidth, 14);
 
-      const badgeText = this.add.text(skill.x - 19, 21, skill.label, {
-        fontSize: '11px',
+      const badgeText = this.add.text(badgeCenterX, 21, skill.label, {
+        fontSize: isLongLabel ? '9px' : '11px',
         fill: '#fde047',
         fontStyle: 'bold'
       }).setOrigin(0.5);

@@ -18,6 +18,7 @@ export async function initPlaygamaSDK() {
         await window.bridge.initialize();
         isBridgeInitialized = true;
         console.log('Playgama Bridge SDK initialized successfully!');
+        notifyGameReady();
         return true;
       } catch (err) {
         console.warn('Playgama Bridge SDK running in local/standalone mode. Using local fallback storage & ad simulation.');
@@ -31,6 +32,61 @@ export async function initPlaygamaSDK() {
   })();
 
   return initPromise;
+}
+
+/**
+ * Notify Playgama platform that game loading is complete and game is ready to play.
+ * Uses exact Playgama Bridge v2 message string 'game_ready'.
+ */
+export function notifyGameReady() {
+  if (typeof window !== 'undefined' && window.bridge) {
+    try {
+      if (window.bridge.platform && typeof window.bridge.platform.sendMessage === 'function') {
+        window.bridge.platform.sendMessage('game_ready');
+        window.bridge.platform.sendMessage('gameplay_started');
+        window.bridge.platform.sendMessage('in_game_loading_stopped');
+        
+        if (window.bridge.platform.SendMessageName) {
+          if (window.bridge.platform.SendMessageName.GAME_READY) {
+            window.bridge.platform.sendMessage(window.bridge.platform.SendMessageName.GAME_READY);
+          }
+          if (window.bridge.platform.SendMessageName.GAMEPLAY_STARTED) {
+            window.bridge.platform.sendMessage(window.bridge.platform.SendMessageName.GAMEPLAY_STARTED);
+          }
+        }
+      }
+      if (window.bridge.game && typeof window.bridge.game.ready === 'function') {
+        window.bridge.game.ready();
+      }
+      console.log('Notified Playgama Bridge: game_ready!');
+    } catch (e) {
+      console.warn('notifyGameReady error:', e);
+    }
+  }
+}
+
+export function notifyLevelStarted(level = 1) {
+  if (typeof window !== 'undefined' && window.bridge && window.bridge.platform && typeof window.bridge.platform.sendMessage === 'function') {
+    try {
+      window.bridge.platform.sendMessage('level_started');
+    } catch (e) {}
+  }
+}
+
+export function notifyLevelCompleted(level = 1) {
+  if (typeof window !== 'undefined' && window.bridge && window.bridge.platform && typeof window.bridge.platform.sendMessage === 'function') {
+    try {
+      window.bridge.platform.sendMessage('level_completed');
+    } catch (e) {}
+  }
+}
+
+export function notifyLevelFailed(level = 1) {
+  if (typeof window !== 'undefined' && window.bridge && window.bridge.platform && typeof window.bridge.platform.sendMessage === 'function') {
+    try {
+      window.bridge.platform.sendMessage('level_failed');
+    } catch (e) {}
+  }
 }
 
 /**
@@ -201,20 +257,27 @@ export async function resetGameProgress(scene) {
  * @param {string} placementName - Placement identifier (e.g. 'get_gold', 'revive_rebattle')
  * @returns {Promise<boolean>} - Resolves to true if user completed watching ad and earned reward
  */
-export function showRewardedAd(scene, placementName = 'rewarded_ad') {
+export function showRewardedAd(scene, placementName) {
   return new Promise((resolve) => {
     // If real Playgama Bridge SDK is active and initialized in browser environment
     if (isBridgeInitialized && typeof window !== 'undefined' && window.bridge && window.bridge.advertisement) {
       let isRewarded = false;
 
       const stateHandler = (state) => {
+        console.log('Playgama Bridge rewarded_state_changed:', state);
         if (state === 'rewarded') {
           isRewarded = true;
-        } else if (state === 'closed' || state === 'failed') {
+        } else if (state === 'closed') {
           if (window.bridge.advertisement.off) {
             window.bridge.advertisement.off('rewarded_state_changed', stateHandler);
           }
           resolve(isRewarded);
+        } else if (state === 'failed') {
+          if (window.bridge.advertisement.off) {
+            window.bridge.advertisement.off('rewarded_state_changed', stateHandler);
+          }
+          console.warn('Playgama Rewarded ad failed (HTTP 400 / No ad). Fallback granting reward to unblock gameplay.');
+          resolve(true);
         }
       };
 
@@ -222,7 +285,11 @@ export function showRewardedAd(scene, placementName = 'rewarded_ad') {
         if (window.bridge.advertisement.on) {
           window.bridge.advertisement.on('rewarded_state_changed', stateHandler);
         }
-        window.bridge.advertisement.showRewarded(placementName);
+        if (placementName) {
+          window.bridge.advertisement.showRewarded(placementName);
+        } else {
+          window.bridge.advertisement.showRewarded();
+        }
         return;
       } catch (e) {
         console.warn('Playgama Bridge showRewarded error, using fallback simulation:', e);
@@ -230,7 +297,7 @@ export function showRewardedAd(scene, placementName = 'rewarded_ad') {
     }
 
     // --- FALLBACK AD SIMULATION MODAL (For local testing & platforms without active Bridge) ---
-    showSimulatedAdModal(scene, placementName, resolve);
+    showSimulatedAdModal(scene, placementName || 'rewarded_ad', resolve);
   });
 }
 
@@ -238,10 +305,14 @@ export function showRewardedAd(scene, placementName = 'rewarded_ad') {
  * Show Interstitial Ad (Level transitions, game over natural breaks)
  * @param {string} placementName
  */
-export function showInterstitialAd(placementName = 'interstitial') {
+export function showInterstitialAd(placementName) {
   if (isBridgeInitialized && typeof window !== 'undefined' && window.bridge && window.bridge.advertisement) {
     try {
-      window.bridge.advertisement.showInterstitial(placementName);
+      if (placementName) {
+        window.bridge.advertisement.showInterstitial(placementName);
+      } else {
+        window.bridge.advertisement.showInterstitial();
+      }
     } catch (e) {
       console.warn('Playgama showInterstitial error:', e);
     }

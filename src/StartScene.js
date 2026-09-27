@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from './gameConfig';
 import { preloadCharacterSFX, playPreparationBGM, stopPreparationBGM } from './soundManager';
 import { createTopRightBar } from './topRightBar';
-import { loadGameProgress, hasSavedGame, resetGameProgress } from './playgamaSDK';
+import { loadGameProgress, hasSavedGame, resetGameProgress, notifyGameReady } from './playgamaSDK';
 import bgMainUrl from './assets/image/Background.png';
 import logoUrl from './assets/image/Logo.png';
 import campaignBtnUrl from './assets/image/campaign.png';
@@ -25,6 +25,7 @@ export default class StartScene extends Phaser.Scene {
 
   async create() {
     await loadGameProgress(this);
+    notifyGameReady();
     playPreparationBGM(this);
 
     const width = GAME_CONFIG.CANVAS.WIDTH;

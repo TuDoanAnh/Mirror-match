@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from './gameConfig';
 import { createTopRightBar } from './topRightBar';
-import { showRewardedAd, saveGameProgress, showInterstitialAd } from './playgamaSDK';
+import { showRewardedAd, saveGameProgress, showInterstitialAd, notifyLevelCompleted, notifyLevelFailed } from './playgamaSDK';
 import watchAdBtnUrl from './assets/image/Watch_ad.png';
 import mainMenuBtnUrl from './assets/image/main_menu.png';
 import readyBtnUrl from './assets/image/Ready.png';
@@ -68,6 +68,11 @@ export default class GameOverScene extends Phaser.Scene {
     this.add.rectangle(0, 0, width, height, 0x090d16, 0.92).setOrigin(0);
 
     const isWin = this.result === 'win';
+    if (isWin) {
+      notifyLevelCompleted(this.level);
+    } else {
+      notifyLevelFailed(this.level);
+    }
     const gradeInfo = this.calculateGrade();
 
     let titleStr = "DEFEAT";
@@ -215,11 +220,42 @@ export default class GameOverScene extends Phaser.Scene {
     };
 
     // --- 1. LEFT BUTTON: BATTLE READY (on Win) OR WATCH AD TO RETRY (on Lose) ---
-    const leftBtnKey = isWin ? 'btn_ready' : 'btn_watch_ad';
-    const leftBtn = this.add.image(centerX - 145, btnY, leftBtnKey).setInteractive({ useHandCursor: true });
-    leftBtn.setDisplaySize(240, 52);
-    const leftBaseScaleX = leftBtn.scaleX;
-    const leftBaseScaleY = leftBtn.scaleY;
+    let leftBtn;
+    if (isWin) {
+      leftBtn = this.add.image(centerX - 145, btnY, 'btn_ready').setInteractive({ useHandCursor: true });
+      leftBtn.setDisplaySize(240, 52);
+    } else {
+      const container = this.add.container(centerX - 145, btnY);
+      const baseImg = this.add.image(0, 0, 'btn_watch_ad');
+      baseImg.setDisplaySize(240, 52);
+
+      // Overlay patch to cover old text while keeping frame & TV icon
+      const overlayRect = this.add.rectangle(22, 0, 135, 42, 0x1a459b, 0.95);
+
+      const txtWatch = this.add.text(22, -10, 'WATCH AD', {
+        fontSize: '14px',
+        fill: '#ffffff',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 3
+      }).setOrigin(0.5);
+
+      const txtRetry = this.add.text(22, 10, '(RETRY)', {
+        fontSize: '13px',
+        fill: '#facc15',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 3
+      }).setOrigin(0.5);
+
+      container.add([baseImg, overlayRect, txtWatch, txtRetry]);
+      container.setSize(240, 52);
+      container.setInteractive({ useHandCursor: true });
+      leftBtn = container;
+    }
+
+    const leftBaseScaleX = leftBtn.scaleX || 1;
+    const leftBaseScaleY = leftBtn.scaleY || 1;
 
     leftBtn.on('pointerover', () => {
       this.tweens.killTweensOf(leftBtn);

@@ -840,11 +840,12 @@ export default class PreparationScene extends Phaser.Scene {
     adBtn.on('pointerdown', () => {
       showRewardedAd(this, 'get_gold').then(rewarded => {
         if (rewarded) {
+          const rewardAmount = GAME_CONFIG.ECONOMY.AD_REWARD_GOLD || 500;
           let currentGold = this.registry.get('gold') || 0;
-          currentGold += 1000;
+          currentGold += rewardAmount;
           this.registry.set('gold', currentGold);
           saveGameProgress(this);
-          showDamageText(this, centerX, currentY - 20, '+1000 GOLD!', 'heal');
+          showDamageText(this, centerX, currentY - 20, `+${rewardAmount} GOLD!`, 'heal');
           this.updateInventoryView();
         }
       });
