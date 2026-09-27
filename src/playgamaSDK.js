@@ -391,22 +391,28 @@ export function showRewardedAd(scene, placementName) {
     // If real Playgama Bridge SDK is active and initialized in browser environment
     if (isBridgeInitialized && typeof window !== 'undefined' && window.bridge && window.bridge.advertisement) {
       let isRewarded = false;
+      let handled = false;
+
+      const finish = (result) => {
+        if (handled) return;
+        handled = true;
+        if (window.bridge && window.bridge.advertisement && window.bridge.advertisement.off) {
+          try {
+            window.bridge.advertisement.off('rewarded_state_changed', stateHandler);
+          } catch (e) {}
+        }
+        resolve(result);
+      };
 
       const stateHandler = (state) => {
         console.log('Playgama Bridge rewarded_state_changed:', state);
         if (state === 'rewarded') {
           isRewarded = true;
         } else if (state === 'closed') {
-          if (window.bridge.advertisement.off) {
-            window.bridge.advertisement.off('rewarded_state_changed', stateHandler);
-          }
-          resolve(isRewarded);
+          finish(isRewarded);
         } else if (state === 'failed') {
-          if (window.bridge.advertisement.off) {
-            window.bridge.advertisement.off('rewarded_state_changed', stateHandler);
-          }
-          console.warn('Playgama Rewarded ad failed (HTTP 400 / No ad). Fallback granting reward to unblock gameplay.');
-          resolve(true);
+          console.warn('Playgama Rewarded ad failed (No ad available / capping limit). No reward granted.');
+          finish(false);
         }
       };
 
@@ -414,14 +420,31 @@ export function showRewardedAd(scene, placementName) {
         if (window.bridge.advertisement.on) {
           window.bridge.advertisement.on('rewarded_state_changed', stateHandler);
         }
-        if (placementName) {
-          window.bridge.advertisement.showRewarded(placementName);
-        } else {
-          window.bridge.advertisement.showRewarded();
+
+        const adPromise = placementName
+          ? window.bridge.advertisement.showRewarded(placementName)
+          : window.bridge.advertisement.showRewarded();
+
+        if (adPromise && typeof adPromise.catch === 'function') {
+          adPromise.catch((err) => {
+            console.warn('Playgama showRewarded promise rejected (No ad available):', err);
+            finish(false);
+          });
         }
+
+        // Safety timeout: If SDK hangs or does not emit closed/failed within 8s
+        setTimeout(() => {
+          if (!handled) {
+            console.warn('Playgama Rewarded ad response timeout.');
+            finish(false);
+          }
+        }, 8000);
+
         return;
       } catch (e) {
-        console.warn('Playgama Bridge showRewarded error, using fallback simulation:', e);
+        console.warn('Playgama Bridge showRewarded error:', e);
+        finish(false);
+        return;
       }
     }
 

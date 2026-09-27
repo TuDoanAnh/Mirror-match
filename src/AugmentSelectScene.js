@@ -3,8 +3,7 @@ import { GAME_CONFIG } from './gameConfig';
 import { getRandomAugments } from './AugmentManager';
 import { createTopRightBar } from './topRightBar';
 import { preloadAugmentFrameAssets, getAugmentFrameKey, getAugmentTierBadgeText } from './augmentFrameLoader';
-import { showRewardedAd, saveGameProgress } from './playgamaSDK';
-import watchAdBtnUrl from './assets/image/Watch_ad.png';
+import { saveGameProgress } from './playgamaSDK';
 
 export default class AugmentSelectScene extends Phaser.Scene {
   constructor() {
@@ -13,7 +12,6 @@ export default class AugmentSelectScene extends Phaser.Scene {
 
   preload() {
     preloadAugmentFrameAssets(this);
-    if (!this.textures.exists('btn_watch_ad')) this.load.image('btn_watch_ad', watchAdBtnUrl);
   }
 
   init(data) {
@@ -201,12 +199,12 @@ export default class AugmentSelectScene extends Phaser.Scene {
   createRerollButton() {
     const rerollY = GAME_CONFIG.CANVAS.HEIGHT - 75;
 
-    // Normal Reroll Button (Left)
-    this.rerollBtnBg = this.add.rectangle(this.centerX - 140, rerollY, 250, 48, 0x1e1b4b).setInteractive({ useHandCursor: true });
+    // Normal Reroll Button (Centered)
+    this.rerollBtnBg = this.add.rectangle(this.centerX, rerollY, 280, 48, 0x1e1b4b).setInteractive({ useHandCursor: true });
     this.rerollBtnBg.setStrokeStyle(2, 0x818cf8);
 
-    this.rerollBtnTxt = this.add.text(this.centerX - 140, rerollY, "", {
-      fontSize: '14px',
+    this.rerollBtnTxt = this.add.text(this.centerX, rerollY, "", {
+      fontSize: '15px',
       fill: '#a5b4fc',
       fontStyle: 'bold'
     }).setOrigin(0.5);
@@ -220,32 +218,6 @@ export default class AugmentSelectScene extends Phaser.Scene {
       this.tweens.add({ targets: [this.rerollBtnBg, this.rerollBtnTxt], scale: 1.0, duration: 120 });
     });
     this.rerollBtnBg.on('pointerdown', () => this.handleReroll());
-
-    // Watch Ad For Free Reroll Button (Right)
-    const adRerollBtn = this.add.image(this.centerX + 140, rerollY, 'btn_watch_ad').setInteractive({ useHandCursor: true });
-    const targetAdWidth = 240;
-    if (adRerollBtn.width > targetAdWidth) {
-      adRerollBtn.setScale(targetAdWidth / adRerollBtn.width);
-    }
-    const adBaseScale = adRerollBtn.scaleX;
-
-    adRerollBtn.on('pointerover', () => {
-      this.tweens.killTweensOf(adRerollBtn);
-      this.tweens.add({ targets: adRerollBtn, scale: adBaseScale * 1.08, duration: 120, ease: 'Power2' });
-    });
-    adRerollBtn.on('pointerout', () => {
-      this.tweens.killTweensOf(adRerollBtn);
-      this.tweens.add({ targets: adRerollBtn, scale: adBaseScale, duration: 120, ease: 'Power2' });
-    });
-    adRerollBtn.on('pointerdown', () => {
-      showRewardedAd(this, 'reroll_augment').then(rewarded => {
-        if (rewarded) {
-          this.freeRerolls++;
-          this.rollNewAugments();
-          this.updateRerollButtonUI();
-        }
-      });
-    });
 
     // Keyboard shortcut (R key)
     this.input.keyboard.on('keydown-R', () => this.handleReroll());

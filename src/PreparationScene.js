@@ -713,31 +713,31 @@ export default class PreparationScene extends Phaser.Scene {
     this.add.rectangle(startX, topY, 300, 668, 0x000000, 0.1).setOrigin(0, 0);
 
     // Gold
-    currentY += 35;
-    this.goldText = this.add.text(startX + 280, currentY, `GOLD: ${this.registry.get('gold')}`, { fontSize: '22px', fill: '#ffff00', fontStyle: 'bold' }).setOrigin(1, 0.5);
+    currentY += 30;
+    this.goldText = this.add.text(startX + 280, currentY, `GOLD: ${this.registry.get('gold')}`, { fontSize: '20px', fill: '#ffff00', fontStyle: 'bold' }).setOrigin(1, 0.5);
 
     // Inventory Title
-    currentY += 45;
-    this.add.text(centerX, currentY, "INVENTORY", { fontSize: '18px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
+    currentY += 36;
+    this.add.text(centerX, currentY, "INVENTORY", { fontSize: '16px', fill: '#ffffff', fontStyle: 'bold' }).setOrigin(0.5);
 
     // Inventory Slots (2 rows of 3 slots)
-    currentY += 42;
+    currentY += 36;
     this.inventorySlots = [];
     this.inventorySlotIcons = [];
 
     for (let i = 0; i < 6; i++) {
       const col = i % 3;
       const row = Math.floor(i / 3);
-      const x = (centerX - 66) + (col * 66);
-      const y = currentY + (row * 64);
+      const x = (centerX - 62) + (col * 62);
+      const y = currentY + (row * 56);
 
       const slotContainer = this.add.container(x, y);
 
-      const slotBg = this.add.rectangle(0, 0, 54, 54, 0x1e293b).setInteractive({ useHandCursor: true });
+      const slotBg = this.add.rectangle(0, 0, 50, 50, 0x1e293b).setInteractive({ useHandCursor: true });
       slotBg.setStrokeStyle(1.5, 0x334155);
 
       const slotIcon = this.add.image(0, 0, 'item_doransBlade').setVisible(false);
-      slotIcon.setDisplaySize(46, 46);
+      slotIcon.setDisplaySize(42, 42);
 
       slotContainer.add([slotBg, slotIcon]);
 
@@ -767,25 +767,25 @@ export default class PreparationScene extends Phaser.Scene {
     }
 
     // Advance past inventory slots
-    currentY += 130;
+    currentY += 108;
 
     // Active Augments Section
     currentY = this.drawAugmentsSection(centerX, currentY);
 
-    // Item Description Box (Expanded size & left-aligned text next to icon)
-    currentY += 35;
-    const descBoxY = currentY + 54;
+    // Item Description Box
+    currentY += 12;
+    const descBoxY = currentY + 44;
     this.descBoxCenterX = centerX;
     this.descBoxCenterY = descBoxY;
 
-    this.descBox = this.add.rectangle(centerX, descBoxY, 274, 112, 0x0f172a);
+    this.descBox = this.add.rectangle(centerX, descBoxY, 274, 88, 0x0f172a);
     this.descBox.setStrokeStyle(1.5, 0x334155);
 
     this.descIcon = this.add.image(centerX - 98, descBoxY, 'item_doransBlade').setVisible(false);
-    this.descIcon.setDisplaySize(58, 58);
+    this.descIcon.setDisplaySize(48, 48);
 
     this.descName = this.add.text(centerX, descBoxY, "SELECT AN ITEM", {
-      fontSize: '14px',
+      fontSize: '13px',
       fill: '#ffffff',
       fontStyle: 'bold',
       wordWrap: { width: 185 }
@@ -798,19 +798,19 @@ export default class PreparationScene extends Phaser.Scene {
       wordWrap: { width: 185 }
     }).setOrigin(0, 0);
 
-    this.descCost = this.add.text(centerX - 58, descBoxY + 44, "", {
-      fontSize: '13px',
+    this.descCost = this.add.text(centerX - 58, descBoxY + 36, "", {
+      fontSize: '12px',
       fill: '#facc15',
       fontStyle: 'bold'
     }).setOrigin(0, 1);
 
     // BUY & SELL Buttons
-    currentY += 145;
+    currentY += 96;
     const btnY = currentY;
 
     // BUY Button (Left)
-    this.buyBtn = this.add.image(centerX - 68, btnY, 'btn_buy').setInteractive({ useHandCursor: true });
-    this.buyBtn.setDisplaySize(120, 44);
+    this.buyBtn = this.add.image(centerX - 66, btnY, 'btn_buy').setInteractive({ useHandCursor: true });
+    this.buyBtn.setDisplaySize(118, 40);
     this.buyBtn.baseScaleX = this.buyBtn.scaleX;
     this.buyBtn.baseScaleY = this.buyBtn.scaleY;
 
@@ -819,8 +819,8 @@ export default class PreparationScene extends Phaser.Scene {
     this.buyBtn.on('pointerdown', () => this.buyItem());
 
     // SELL Button (Right)
-    this.sellBtn = this.add.image(centerX + 68, btnY, 'btn_sell').setInteractive({ useHandCursor: true });
-    this.sellBtn.setDisplaySize(120, 44);
+    this.sellBtn = this.add.image(centerX + 66, btnY, 'btn_sell').setInteractive({ useHandCursor: true });
+    this.sellBtn.setDisplaySize(118, 40);
     this.sellBtn.baseScaleX = this.sellBtn.scaleX;
     this.sellBtn.baseScaleY = this.sellBtn.scaleY;
 
@@ -829,9 +829,9 @@ export default class PreparationScene extends Phaser.Scene {
     this.sellBtn.on('pointerdown', () => this.sellItem());
 
     // WATCH AD FOR GOLD Button
-    currentY += 68;
+    currentY += 50;
     const adBtn = this.add.image(centerX, currentY, 'btn_watch_ad').setInteractive({ useHandCursor: true });
-    adBtn.setDisplaySize(220, 52);
+    adBtn.setDisplaySize(210, 46);
     const adBaseScaleX = adBtn.scaleX;
     const adBaseScaleY = adBtn.scaleY;
 
@@ -850,14 +850,16 @@ export default class PreparationScene extends Phaser.Scene {
           saveGameProgress(this);
           showDamageText(this, centerX, currentY - 20, `+${rewardAmount} GOLD!`, 'heal');
           this.updateInventoryView();
+        } else {
+          showDamageText(this, centerX, currentY - 20, 'NO AD AVAILABLE', 'physical');
         }
       });
     });
 
     // READY Button
-    currentY += 76;
+    currentY += 56;
     this.readyBtn = this.add.image(centerX, currentY, 'btn_ready').setInteractive({ useHandCursor: true });
-    this.readyBtn.setDisplaySize(220, 58);
+    this.readyBtn.setDisplaySize(210, 50);
     this.readyBtn.baseScaleX = this.readyBtn.scaleX;
     this.readyBtn.baseScaleY = this.readyBtn.scaleY;
 
@@ -1146,18 +1148,18 @@ export default class PreparationScene extends Phaser.Scene {
     const ownedAugs = this.registry.get('augments') || [];
     if (ownedAugs.length === 0) return startY;
 
-    let currentY = startY;
+    let currentY = startY + 4;
     this.add.text(centerX, currentY, `⚡ ACTIVE AUGMENTS (${ownedAugs.length})`, {
-      fontSize: '13px',
+      fontSize: '12px',
       fill: '#fde047',
       fontStyle: 'bold'
     }).setOrigin(0.5);
 
-    currentY += 24;
+    currentY += 16;
 
     const maxPerRow = 6;
-    const itemGapX = 40;
-    const itemGapY = 40;
+    const itemGapX = 36;
+    const itemGapY = 32;
     const totalRows = Math.ceil(ownedAugs.length / maxPerRow);
 
     ownedAugs.forEach((aug, i) => {
@@ -1172,10 +1174,10 @@ export default class PreparationScene extends Phaser.Scene {
       const x = rowStartX + (colIndex * itemGapX);
       const y = currentY + (rowIndex * itemGapY);
 
-      const box = this.add.rectangle(x, y, 32, 32, 0x0f172a, 0.9).setInteractive({ useHandCursor: true });
+      const box = this.add.rectangle(x, y, 28, 28, 0x0f172a, 0.9).setInteractive({ useHandCursor: true });
       box.setStrokeStyle(1.5, augData.color || 0x38bdf8);
 
-      const icon = this.add.text(x, y, augData.icon || '⚡', { fontSize: '18px' }).setOrigin(0.5);
+      const icon = this.add.text(x, y, augData.icon || '⚡', { fontSize: '15px' }).setOrigin(0.5);
 
       box.on('pointerover', (ptr) => {
         this.showAugmentTooltip(augData, ptr.worldX, ptr.worldY);
@@ -1186,7 +1188,7 @@ export default class PreparationScene extends Phaser.Scene {
     });
 
     const totalHeight = (totalRows * itemGapY);
-    return currentY + totalHeight + 10;
+    return currentY + totalHeight + 2;
   }
 
   showAugmentTooltip(augData, x, y) {
