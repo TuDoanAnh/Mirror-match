@@ -219,36 +219,29 @@ export default class GameOverScene extends Phaser.Scene {
       });
     };
 
-    // --- 1. LEFT BUTTON: BATTLE READY (on Win) OR WATCH AD TO RETRY (on Lose) ---
+    // --- 1. LEFT BUTTON: BATTLE READY (on Win) OR RETRY (on Lose) ---
     let leftBtn;
     if (isWin) {
       leftBtn = this.add.image(centerX - 145, btnY, 'btn_ready').setInteractive({ useHandCursor: true });
       leftBtn.setDisplaySize(240, 52);
     } else {
       const container = this.add.container(centerX - 145, btnY);
-      const baseImg = this.add.image(0, 0, 'btn_watch_ad');
-      baseImg.setDisplaySize(240, 52);
 
-      // Overlay patch to cover old text while keeping frame & TV icon
-      const overlayRect = this.add.rectangle(22, 0, 135, 42, 0x1a459b, 0.95);
+      // Clean pixel-style button matching 240x52 Main Menu button scale & layout
+      const outerBg = this.add.rectangle(0, 0, 240, 52, 0x1e3a8a, 0.95);
+      outerBg.setStrokeStyle(3, 0xfacc15);
 
-      const txtWatch = this.add.text(22, -10, 'WATCH AD', {
-        fontSize: '14px',
+      const innerBg = this.add.rectangle(0, -1, 232, 44, 0x2563eb, 0.85);
+
+      const txtRetry = this.add.text(0, 0, '🔄 RETRY', {
+        fontSize: '20px',
         fill: '#ffffff',
         fontStyle: 'bold',
         stroke: '#000000',
-        strokeThickness: 3
+        strokeThickness: 4
       }).setOrigin(0.5);
 
-      const txtRetry = this.add.text(22, 10, '(RETRY)', {
-        fontSize: '13px',
-        fill: '#facc15',
-        fontStyle: 'bold',
-        stroke: '#000000',
-        strokeThickness: 3
-      }).setOrigin(0.5);
-
-      container.add([baseImg, overlayRect, txtWatch, txtRetry]);
+      container.add([outerBg, innerBg, txtRetry]);
       container.setSize(240, 52);
       container.setInteractive({ useHandCursor: true });
       leftBtn = container;
@@ -267,15 +260,7 @@ export default class GameOverScene extends Phaser.Scene {
     });
 
     const onLeftBtnAction = () => {
-      if (isWin) {
-        onPrimaryAction();
-      } else {
-        showRewardedAd(this, 'revive_rebattle').then(rewarded => {
-          if (rewarded) {
-            onPrimaryAction();
-          }
-        });
-      }
+      onPrimaryAction();
     };
 
     leftBtn.on('pointerdown', onLeftBtnAction);

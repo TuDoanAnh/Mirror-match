@@ -844,6 +844,9 @@ export default class PreparationScene extends Phaser.Scene {
           let currentGold = this.registry.get('gold') || 0;
           currentGold += rewardAmount;
           this.registry.set('gold', currentGold);
+          if (this.goldText) {
+            this.goldText.setText(`GOLD: ${currentGold}`);
+          }
           saveGameProgress(this);
           showDamageText(this, centerX, currentY - 20, `+${rewardAmount} GOLD!`, 'heal');
           this.updateInventoryView();
