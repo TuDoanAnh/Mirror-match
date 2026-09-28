@@ -29,6 +29,8 @@ export default class GameScene extends Phaser.Scene {
   }
 
   preload() {
+    this.createLoadingUI();
+
     preloadLuxAssets(this);
     preloadEzrealSkillAssets(this);
     preloadJinxAssets(this);
@@ -48,6 +50,64 @@ export default class GameScene extends Phaser.Scene {
     if (!this.textures.exists('endless_return_btn')) {
       this.load.image('endless_return_btn', endlessReturnBtnUrl);
     }
+  }
+
+  createLoadingUI() {
+    const width = GAME_CONFIG.CANVAS.WIDTH;
+    const height = GAME_CONFIG.CANVAS.HEIGHT;
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    const bg = this.add.rectangle(0, 0, width, height, 0x090d16).setOrigin(0).setDepth(9999);
+
+    const titleTxt = this.add.text(centerX, centerY - 55, "LOADING BATTLE ARENA...", {
+      fontSize: '24px',
+      fill: '#ffcc00',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(0.5).setDepth(10000);
+
+    const barWidth = 480;
+    const barHeight = 22;
+    const barBox = this.add.rectangle(centerX, centerY, barWidth, barHeight, 0x0f172a).setDepth(10000);
+    barBox.setStrokeStyle(2, 0xeab308);
+
+    const barFill = this.add.rectangle(centerX - barWidth / 2 + 3, centerY, 0, barHeight - 6, 0xeab308).setOrigin(0, 0.5).setDepth(10001);
+
+    const pctTxt = this.add.text(centerX, centerY + 45, "0%", {
+      fontSize: '16px',
+      fill: '#34d399',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(10000);
+
+    const assetText = this.add.text(centerX, centerY + 80, "Loading battle resources...", {
+      fontSize: '13px',
+      fill: '#94a3b8'
+    }).setOrigin(0.5).setDepth(10000);
+
+    this.load.on('progress', (value) => {
+      const pct = Math.round(value * 100);
+      pctTxt.setText(`${pct}%`);
+      barFill.width = (barWidth - 6) * value;
+    });
+
+    this.load.on('fileprogress', (file) => {
+      if (file && file.key) {
+        assetText.setText(`Loading: ${file.key}`);
+      }
+    });
+
+    this.load.once('complete', () => {
+      bg.destroy();
+      titleTxt.destroy();
+      barBox.destroy();
+      barFill.destroy();
+      pctTxt.destroy();
+      assetText.destroy();
+    });
   }
 
   init(data) {

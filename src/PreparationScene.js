@@ -41,6 +41,8 @@ export default class PreparationScene extends Phaser.Scene {
   }
 
   preload() {
+    this.createLoadingUI();
+
     preloadLuxAssets(this);
     preloadEzrealSkillAssets(this);
     preloadJinxAssets(this);
@@ -70,6 +72,64 @@ export default class PreparationScene extends Phaser.Scene {
     this.load.image('stat_cdr', iconCdrUrl);
     this.load.image('stat_lifesteal', iconLifestealUrl);
     this.load.image('stat_armPen', iconArmPenUrl);
+  }
+
+  createLoadingUI() {
+    const width = GAME_CONFIG.CANVAS.WIDTH;
+    const height = GAME_CONFIG.CANVAS.HEIGHT;
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    const bg = this.add.rectangle(0, 0, width, height, 0x090d16).setOrigin(0).setDepth(9999);
+
+    const titleTxt = this.add.text(centerX, centerY - 55, "PREPARING ARENA...", {
+      fontSize: '24px',
+      fill: '#00ffff',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(0.5).setDepth(10000);
+
+    const barWidth = 480;
+    const barHeight = 22;
+    const barBox = this.add.rectangle(centerX, centerY, barWidth, barHeight, 0x0f172a).setDepth(10000);
+    barBox.setStrokeStyle(2, 0x38bdf8);
+
+    const barFill = this.add.rectangle(centerX - barWidth / 2 + 3, centerY, 0, barHeight - 6, 0x38bdf8).setOrigin(0, 0.5).setDepth(10001);
+
+    const pctTxt = this.add.text(centerX, centerY + 45, "0%", {
+      fontSize: '16px',
+      fill: '#facc15',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(10000);
+
+    const assetText = this.add.text(centerX, centerY + 80, "Loading game assets...", {
+      fontSize: '13px',
+      fill: '#94a3b8'
+    }).setOrigin(0.5).setDepth(10000);
+
+    this.load.on('progress', (value) => {
+      const pct = Math.round(value * 100);
+      pctTxt.setText(`${pct}%`);
+      barFill.width = (barWidth - 6) * value;
+    });
+
+    this.load.on('fileprogress', (file) => {
+      if (file && file.key) {
+        assetText.setText(`Loading: ${file.key}`);
+      }
+    });
+
+    this.load.once('complete', () => {
+      bg.destroy();
+      titleTxt.destroy();
+      barBox.destroy();
+      barFill.destroy();
+      pctTxt.destroy();
+      assetText.destroy();
+    });
   }
 
   create() {
