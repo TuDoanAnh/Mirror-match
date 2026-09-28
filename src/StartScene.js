@@ -27,6 +27,14 @@ export default class StartScene extends Phaser.Scene {
   async create() {
     await loadGameProgress(this);
     notifyGameReady();
+
+    // Auto-resume AudioContext on first user interaction to fix browser Autoplay policy block
+    this.input.once('pointerdown', () => {
+      if (this.sound && this.sound.context && this.sound.context.state === 'suspended') {
+        this.sound.context.resume();
+      }
+    });
+
     playPreparationBGM(this);
 
     const width = GAME_CONFIG.CANVAS.WIDTH;
