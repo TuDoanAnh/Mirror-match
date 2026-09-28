@@ -1,13 +1,42 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from './gameConfig';
-import { preloadMenuAudio, playPreparationBGM, stopPreparationBGM } from './soundManager';
+import { preloadCharacterSFX, playPreparationBGM, stopPreparationBGM } from './soundManager';
 import { createTopRightBar } from './topRightBar';
 import { loadGameProgress, hasSavedGame, resetGameProgress, notifyGameReady, notifyStartLoading } from './playgamaSDK';
+
+import { preloadLuxAssets } from './luxAnimations';
+import { preloadEzrealSkillAssets } from './ezrealSkillAnimations';
+import { preloadJinxAssets } from './jinxAnimations';
+import { preloadZedSkillAssets } from './zedAnimations';
+import { preloadRivenSkillAssets } from './rivenAnimations';
+import { preloadShopItemAssets } from './shopItemLoader';
+import { preloadSkillIconAssets } from './skillIconLoader';
+import { preloadAugmentFrameAssets } from './augmentFrameLoader';
+
 import bgMainUrl from './assets/image/Background.png';
 import logoUrl from './assets/image/Logo.png';
 import campaignBtnUrl from './assets/image/campaign.png';
 import endlessBtnUrl from './assets/image/Endless.png';
 import newGameBtnUrl from './assets/image/New_Game.png';
+
+import buyBtnUrl from './assets/image/Buy.png';
+import sellBtnUrl from './assets/image/Sell.png';
+import readyBtnUrl from './assets/image/Ready.png';
+import backBtnUrl from './assets/image/Back.png';
+import equipBtnUrl from './assets/image/Equip.png';
+import elixirBtnUrl from './assets/image/Elixir.png';
+import watchAdBtnUrl from './assets/image/Watch_ad.png';
+import bg1Url from './assets/image/BG_1.png';
+import bg2Url from './assets/image/BG_2.png';
+
+import iconHpUrl from './assets/image/hp.png';
+import iconAtkUrl from './assets/image/Atk.png';
+import iconArmorUrl from './assets/image/Armor.png';
+import iconSpeedUrl from './assets/image/speed.png';
+import iconCritUrl from './assets/image/Crit.png';
+import iconCdrUrl from './assets/image/cooldown.png';
+import iconLifestealUrl from './assets/image/healthsteal.png';
+import iconArmPenUrl from './assets/image/pen armor.png';
 
 export default class StartScene extends Phaser.Scene {
   constructor() {
@@ -18,12 +47,41 @@ export default class StartScene extends Phaser.Scene {
     notifyStartLoading();
     this.createLoadingUI();
 
-    preloadMenuAudio(this);
+    preloadCharacterSFX(this);
+    preloadLuxAssets(this);
+    preloadEzrealSkillAssets(this);
+    preloadJinxAssets(this);
+    preloadZedSkillAssets(this);
+    preloadRivenSkillAssets(this);
+    preloadShopItemAssets(this);
+    preloadSkillIconAssets(this);
+    preloadAugmentFrameAssets(this);
+
     if (!this.textures.exists('bg_start_main')) this.load.image('bg_start_main', bgMainUrl);
     if (!this.textures.exists('logo_main')) this.load.image('logo_main', logoUrl);
     if (!this.textures.exists('btn_campaign')) this.load.image('btn_campaign', campaignBtnUrl);
     if (!this.textures.exists('btn_endless')) this.load.image('btn_endless', endlessBtnUrl);
     if (!this.textures.exists('btn_new_game')) this.load.image('btn_new_game', newGameBtnUrl);
+
+    if (!this.textures.exists('btn_buy')) this.load.image('btn_buy', buyBtnUrl);
+    if (!this.textures.exists('btn_sell')) this.load.image('btn_sell', sellBtnUrl);
+    if (!this.textures.exists('btn_ready')) this.load.image('btn_ready', readyBtnUrl);
+    if (!this.textures.exists('btn_back')) this.load.image('btn_back', backBtnUrl);
+    if (!this.textures.exists('btn_equip')) this.load.image('btn_equip', equipBtnUrl);
+    if (!this.textures.exists('btn_elixir')) this.load.image('btn_elixir', elixirBtnUrl);
+    if (!this.textures.exists('btn_watch_ad')) this.load.image('btn_watch_ad', watchAdBtnUrl);
+    if (!this.textures.exists('bg_panel_1')) this.load.image('bg_panel_1', bg1Url);
+    if (!this.textures.exists('bg_panel_2')) this.load.image('bg_panel_2', bg2Url);
+    if (!this.textures.exists('bg_main')) this.load.image('bg_main', bgMainUrl);
+
+    if (!this.textures.exists('stat_hp')) this.load.image('stat_hp', iconHpUrl);
+    if (!this.textures.exists('stat_atk')) this.load.image('stat_atk', iconAtkUrl);
+    if (!this.textures.exists('stat_armor')) this.load.image('stat_armor', iconArmorUrl);
+    if (!this.textures.exists('stat_speed')) this.load.image('stat_speed', iconSpeedUrl);
+    if (!this.textures.exists('stat_crit')) this.load.image('stat_crit', iconCritUrl);
+    if (!this.textures.exists('stat_cdr')) this.load.image('stat_cdr', iconCdrUrl);
+    if (!this.textures.exists('stat_lifesteal')) this.load.image('stat_lifesteal', iconLifestealUrl);
+    if (!this.textures.exists('stat_armPen')) this.load.image('stat_armPen', iconArmPenUrl);
   }
 
   createLoadingUI() {

@@ -759,9 +759,10 @@ export default class GameScene extends Phaser.Scene {
 
     if (skillType === 'Q') {
       const qDamage = (this.player2.skills && this.player2.skills.Q && this.player2.skills.Q.config.damage) || 100;
-      const proj = new Projectile(this, this.player2.x, this.player2.y, angle, 800, qDamage, false, 0xef4444, this.player2);
+      const proj = new Projectile(this, this.player2.x, this.player2.y, 'Q', { damage: qDamage, speed: 800, maxRange: 800 }, this.player2, this.player2.heroId || 'ezreal');
       proj.setDisplaySize(20, 20);
       this.enemyProjectiles.add(proj);
+      proj.fire(angle);
     } else if (skillType === 'E') {
       const dashDist = 180;
       const tx = Phaser.Math.Clamp(this.player2.x + Math.cos(angle) * dashDist, 50, 1486);
@@ -770,9 +771,10 @@ export default class GameScene extends Phaser.Scene {
       if (this.player2.body) this.player2.body.reset(tx, ty);
     } else if (skillType === 'SPACE') {
       const ultDamage = 250;
-      const proj = new Projectile(this, this.player2.x, this.player2.y, angle, 950, ultDamage, true, 0xef4444, this.player2);
+      const proj = new Projectile(this, this.player2.x, this.player2.y, 'SPACE', { damage: ultDamage, speed: 950, isPiercing: true, maxRange: 1000 }, this.player2, this.player2.heroId || 'ezreal');
       proj.setDisplaySize(36, 36);
       this.enemyProjectiles.add(proj);
+      proj.fire(angle);
     }
   }
 

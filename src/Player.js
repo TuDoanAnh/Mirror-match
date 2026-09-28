@@ -221,7 +221,8 @@ export default class Player extends BaseCharacter {
           for (let g = 0; g < 3; g++) {
             this.scene.time.delayedCall(g * 40, () => {
               if (!this.active || this.hp <= 0) return;
-              const ghost = this.scene.add.sprite(this.x, this.y, this.texture.key, this.frame.name);
+              const frameKey = (this.anims && this.anims.currentFrame) ? this.anims.currentFrame.textureFrame : (this.frame ? this.frame.name : 0);
+              const ghost = this.scene.add.sprite(this.x, this.y, this.texture.key, frameKey);
               ghost.setOrigin(this.originX, this.originY);
               ghost.setScale(this.scaleX, this.scaleY);
               ghost.setFlipX(this.flipX);
@@ -245,19 +246,25 @@ export default class Player extends BaseCharacter {
         // Fire 5 Hextech rocket spread projectiles
         for (let i = -2; i <= 2; i++) {
           const rocketAngle = angle + (i * 0.15);
+          const projConfig = {
+            damage: 110,
+            speed: 750,
+            isPiercing: false,
+            maxRange: 500
+          };
           const proj = new Projectile(
             this.scene,
             this.x,
             this.y,
-            rocketAngle,
-            750,
-            110,
-            false,
-            0xec4899,
-            this
+            'Q',
+            projConfig,
+            this,
+            this.heroId
           );
+          proj.particleColor = 0xec4899;
           proj.setDisplaySize(16, 16);
           this.scene.playerProjectiles.add(proj);
+          proj.fire(rocketAngle);
         }
 
         if (this.scene) {
