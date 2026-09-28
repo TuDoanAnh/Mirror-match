@@ -461,7 +461,7 @@ export default class PreparationScene extends Phaser.Scene {
         heroSprite.setScale(currentHero === 'ezreal' ? 0.33 : 1.0);
 
         // Geometry Mask to contain sprite strictly inside circle frame
-        const heroMaskGfx = this.make.graphics();
+        const heroMaskGfx = this.make.graphics({ add: false });
         heroMaskGfx.fillStyle(0xffffff, 1.0);
         heroMaskGfx.fillCircle(centerX, slideY, 30);
         heroSprite.setMask(heroMaskGfx.createGeometryMask());

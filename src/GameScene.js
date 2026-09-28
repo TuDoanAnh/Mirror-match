@@ -8,7 +8,7 @@ import { preloadEzrealSkillAssets, createEzrealSkillAnimations } from './ezrealS
 import { preloadJinxAssets, createJinxAnimations } from './jinxAnimations';
 import { preloadZedSkillAssets, createZedSkillAnimations } from './zedAnimations';
 import { preloadRivenSkillAssets, createRivenSkillAnimations } from './rivenAnimations';
-import { preloadCharacterSFX, playHitSFX, playCustomSFX, playBattleBGM, stopBattleBGM } from './soundManager';
+import { preloadCharacterSFX, preloadBattleAudio, playHitSFX, playCustomSFX, playBattleBGM, stopBattleBGM } from './soundManager';
 import { createTopRightBar } from './topRightBar';
 import mapImageUrl from './assets/image/Map.png';
 import { MAP_OBSTACLES } from './mapObstacles';
@@ -36,6 +36,7 @@ export default class GameScene extends Phaser.Scene {
     preloadRivenSkillAssets(this);
     preloadShopItemAssets(this);
     preloadCharacterSFX(this);
+    preloadBattleAudio(this);
     preloadSkillIconAssets(this);
     preloadAugmentFrameAssets(this);
     if (!this.textures.exists('battle_map')) {

@@ -35,6 +35,8 @@ export function createCharacterAnimations(scene) {
     const keyPrefix = heroId;
     const sheetKey = `${heroId}_spritesheet`;
 
+    if (scene.anims.exists(`${keyPrefix}_idle`)) return;
+
     const isEzreal = (heroId === 'ezreal');
 
     scene.anims.create({

@@ -71,12 +71,9 @@ export const SFX_KEYS = {
 export function preloadCharacterSFX(scene) {
   if (!scene || !scene.load) return;
 
-  // Background Music
+  // Background Music for Menu & Prep
   if (!scene.cache.audio.exists('bg_prep_music')) {
     scene.load.audio('bg_prep_music', bgMusicAudio);
-  }
-  if (!scene.cache.audio.exists('bg_battle_music')) {
-    scene.load.audio('bg_battle_music', battleMusicAudio);
   }
 
   // Ezreal
@@ -111,6 +108,13 @@ export function preloadCharacterSFX(scene) {
   if (!scene.cache.audio.exists('jinx_sfx_E')) scene.load.audio('jinx_sfx_E', jinxEAudio);
   if (!scene.cache.audio.exists('jinx_sfx_SPACE')) scene.load.audio('jinx_sfx_SPACE', jinxRAudio);
   if (!scene.cache.audio.exists('jinx_sfx_RHit')) scene.load.audio('jinx_sfx_RHit', jinxRHitAudio);
+}
+
+export function preloadBattleAudio(scene) {
+  if (!scene || !scene.load) return;
+  if (!scene.cache.audio.exists('bg_battle_music')) {
+    scene.load.audio('bg_battle_music', battleMusicAudio);
+  }
 }
 
 export const HERO_VOLUME_MULTIPLIERS = {

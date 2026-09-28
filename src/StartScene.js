@@ -25,8 +25,13 @@ export default class StartScene extends Phaser.Scene {
   }
 
   async create() {
-    await loadGameProgress(this);
-    notifyGameReady();
+    try {
+      await loadGameProgress(this);
+    } catch (e) {
+      console.warn('Error loading progress:', e);
+    } finally {
+      notifyGameReady();
+    }
 
     // Auto-resume AudioContext on first user interaction to fix browser Autoplay policy block
     this.input.once('pointerdown', () => {

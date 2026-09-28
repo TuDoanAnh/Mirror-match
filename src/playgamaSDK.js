@@ -14,14 +14,28 @@ export async function initPlaygamaSDK() {
 
   initPromise = (async () => {
     if (typeof window !== 'undefined') {
-      const bridgeObj = window.bridge || window.playgamaBridge;
+      let bridgeObj = window.bridge || window.playgamaBridge;
+
+      // Poll up to 2 seconds for window.bridge if script is loading async
+      if (!bridgeObj) {
+        for (let i = 0; i < 20; i++) {
+          await new Promise(r => setTimeout(r, 100));
+          bridgeObj = window.bridge || window.playgamaBridge;
+          if (bridgeObj) break;
+        }
+      }
+
       if (bridgeObj) {
-        // Ensure both window.bridge and window.playgamaBridge reference the object for DevTools console checks
         window.bridge = bridgeObj;
         window.playgamaBridge = bridgeObj;
 
         try {
-          await window.bridge.initialize();
+          if (typeof window.bridge.initialize === 'function') {
+            await Promise.resolve(window.bridge.initialize()).catch(err => {
+              console.warn('window.bridge.initialize rejected safely:', err);
+              return null;
+            });
+          }
           isBridgeInitialized = true;
           console.log('Playgama Bridge SDK initialized successfully!');
 
@@ -266,6 +280,12 @@ export async function saveGameProgress(scene) {
  */
 export async function loadGameProgress(scene) {
   if (!scene || !scene.registry) return null;
+
+  try {
+    await initPlaygamaSDK();
+  } catch (e) {
+    console.warn('initPlaygamaSDK error in loadGameProgress:', e);
+  }
 
   let loadedData = null;
 
