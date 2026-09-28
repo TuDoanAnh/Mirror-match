@@ -356,9 +356,30 @@ export default class PreparationScene extends Phaser.Scene {
     const currentHero = this.registry.get('selectedHero') || 'ezreal';
     const currentIndex = heroes.indexOf(currentHero) !== -1 ? heroes.indexOf(currentHero) : 0;
 
+    const gameMode = this.registry.get('gameMode') || 'campaign';
+    const unlockedLevel = this.registry.get('unlockedLevel') || 1;
+    const selectedLevel = this.registry.get('selectedLevel') || unlockedLevel;
+
+    // In Campaign mode, hero selection is ONLY allowed when starting Stage 1 of Level 1
+    const canChangeHero = gameMode !== 'campaign' || (unlockedLevel === 1 && selectedLevel === 1);
+
+    if (!canChangeHero) {
+      this.add.text(centerX, currentY + 16, "🔒 (LOCKED: START NEW GAME TO SWITCH HERO)", {
+        fontSize: '9px',
+        fill: '#f87171',
+        fontStyle: 'bold',
+        stroke: '#000000',
+        strokeThickness: 2
+      }).setOrigin(0.5);
+    }
+
     const selectHeroByIndex = (idx) => {
       const targetId = heroes[(idx + heroes.length) % heroes.length];
       if (targetId !== currentHero) {
+        if (!canChangeHero) {
+          this.showLockHeroToast(centerX, slideY);
+          return;
+        }
         this.registry.set('selectedHero', targetId);
         saveGameProgress(this);
         this.scene.restart();
@@ -403,8 +424,10 @@ export default class PreparationScene extends Phaser.Scene {
     // PREVIOUS Button (◄)
     const prevX = centerX - 105;
     const prevBg = this.add.circle(prevX, slideY, 18, 0x1e293b).setInteractive({ useHandCursor: true });
-    prevBg.setStrokeStyle(1.2, 0x38bdf8, 0.7);
-    const prevTxt = this.add.text(prevX, slideY - 1, '◄', { fontSize: '16px', fill: '#00ffff', fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    prevBg.setStrokeStyle(1.2, 0x38bdf8, canChangeHero ? 0.7 : 0.2);
+    if (!canChangeHero) prevBg.setAlpha(0.35);
+
+    const prevTxt = this.add.text(prevX, slideY - 1, '◄', { fontSize: '16px', fill: canChangeHero ? '#00ffff' : '#64748b', fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     prevBg.on('pointerdown', selectPrevHero);
     prevTxt.on('pointerdown', selectPrevHero);
@@ -414,8 +437,10 @@ export default class PreparationScene extends Phaser.Scene {
     // NEXT Button (►)
     const nextX = centerX + 105;
     const nextBg = this.add.circle(nextX, slideY, 18, 0x1e293b).setInteractive({ useHandCursor: true });
-    nextBg.setStrokeStyle(1.2, 0x38bdf8, 0.7);
-    const nextTxt = this.add.text(nextX, slideY - 1, '►', { fontSize: '16px', fill: '#00ffff', fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+    nextBg.setStrokeStyle(1.2, 0x38bdf8, canChangeHero ? 0.7 : 0.2);
+    if (!canChangeHero) nextBg.setAlpha(0.35);
+
+    const nextTxt = this.add.text(nextX, slideY - 1, '►', { fontSize: '16px', fill: canChangeHero ? '#00ffff' : '#64748b', fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
 
     nextBg.on('pointerdown', selectNextHero);
     nextTxt.on('pointerdown', selectNextHero);
@@ -496,6 +521,34 @@ export default class PreparationScene extends Phaser.Scene {
       lifesteal: this.add.text(pCol2TextX, currentY + pRowGap * 2, `Lifesteal: ${selectedData.baseStats.lifesteal + stats.lifesteal}%`, txtStyle),
       armPen: this.add.text(pCol2TextX, currentY + pRowGap * 3, `Arm Pen: ${stats.armorPen}%`, txtStyle)
     };
+  }
+
+  showLockHeroToast(x, y) {
+    if (this.lockToastActive) return;
+    this.lockToastActive = true;
+
+    const toastBg = this.add.rectangle(x, y, 360, 48, 0x0f172a, 0.95).setDepth(9999);
+    toastBg.setStrokeStyle(2, 0xef4444);
+
+    const toastTxt = this.add.text(x, y, "🔒 Hero is locked in Campaign mode!\nTo pick a new Hero, start a NEW GAME from Main Menu.", {
+      fontSize: '11px',
+      fill: '#f87171',
+      fontStyle: 'bold',
+      align: 'center'
+    }).setOrigin(0.5).setDepth(10000);
+
+    this.tweens.add({
+      targets: [toastBg, toastTxt],
+      y: y - 25,
+      alpha: { start: 1, to: 0 },
+      duration: 2600,
+      ease: 'Power2',
+      onComplete: () => {
+        toastBg.destroy();
+        toastTxt.destroy();
+        this.lockToastActive = false;
+      }
+    });
   }
 
   drawCenterPanel() {
@@ -805,7 +858,7 @@ export default class PreparationScene extends Phaser.Scene {
     }).setOrigin(0, 1);
 
     // BUY & SELL Buttons
-    currentY += 96;
+    currentY += 116;
     const btnY = currentY;
 
     // BUY Button (Left)
@@ -829,7 +882,7 @@ export default class PreparationScene extends Phaser.Scene {
     this.sellBtn.on('pointerdown', () => this.sellItem());
 
     // WATCH AD FOR GOLD Button
-    currentY += 50;
+    currentY += 48;
     const adBtn = this.add.image(centerX, currentY, 'btn_watch_ad').setInteractive({ useHandCursor: true });
     adBtn.setDisplaySize(210, 46);
     const adBaseScaleX = adBtn.scaleX;
@@ -857,7 +910,7 @@ export default class PreparationScene extends Phaser.Scene {
     });
 
     // READY Button
-    currentY += 56;
+    currentY += 52;
     this.readyBtn = this.add.image(centerX, currentY, 'btn_ready').setInteractive({ useHandCursor: true });
     this.readyBtn.setDisplaySize(210, 50);
     this.readyBtn.baseScaleX = this.readyBtn.scaleX;

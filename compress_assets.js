@@ -20,11 +20,12 @@ async function processImage(filePath) {
 
     let transform = sharp(filePath);
 
-    // If icon/UI asset is larger than 1024px, resize down to reasonable max dimensions
+    // Spritesheets must NEVER be resized in width/height because Phaser frame dimensions rely on exact pixel grids
+    const isSpritesheet = fileName.toLowerCase().includes('spritesheet') || fileName.toLowerCase().includes('sheet');
     const isBackground = fileName.toLowerCase().includes('bg') || fileName.toLowerCase().includes('background') || fileName.toLowerCase().includes('map');
     const maxDim = isBackground ? 1920 : 512;
 
-    if ((metadata.width && metadata.width > maxDim) || (metadata.height && metadata.height > maxDim)) {
+    if (!isSpritesheet && ((metadata.width && metadata.width > maxDim) || (metadata.height && metadata.height > maxDim))) {
       transform = transform.resize({
         width: metadata.width > maxDim ? maxDim : null,
         height: metadata.height > maxDim ? maxDim : null,
