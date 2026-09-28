@@ -9,11 +9,6 @@ async function processImage(filePath) {
   const stat = fs.statSync(filePath);
   const sizeMB = (stat.size / (1024 * 1024)).toFixed(2);
 
-  if (stat.size < 100 * 1024) {
-    // Skip small images < 100KB
-    return;
-  }
-
   try {
     const image = sharp(filePath);
     const metadata = await image.metadata();
@@ -22,22 +17,22 @@ async function processImage(filePath) {
 
     // Spritesheets must NEVER be resized in width/height because Phaser frame dimensions rely on exact pixel grids
     const isSpritesheet = fileName.toLowerCase().includes('spritesheet') || fileName.toLowerCase().includes('sheet');
-    const isBackground = fileName.toLowerCase().includes('bg') || fileName.toLowerCase().includes('background') || fileName.toLowerCase().includes('map');
-    const maxDim = isBackground ? 1920 : 512;
+    const isPanel = fileName.toLowerCase().includes('bg_1') || fileName.toLowerCase().includes('bg_2') || fileName.toLowerCase().includes('bg1') || fileName.toLowerCase().includes('bg2');
+    const isBackground = fileName.toLowerCase().includes('background') || fileName.toLowerCase().includes('map');
 
-    if (!isSpritesheet && ((metadata.width && metadata.width > maxDim) || (metadata.height && metadata.height > maxDim))) {
-      transform = transform.resize({
-        width: metadata.width > maxDim ? maxDim : null,
-        height: metadata.height > maxDim ? maxDim : null,
-        fit: 'inside',
-        withoutEnlargement: true
-      });
+    if (!isSpritesheet) {
+      if (isPanel && metadata.width > 512) {
+        // UI Panel backgrounds are displayed at 300px width in game, 512px max is plenty for high-DPI
+        transform = transform.resize({ width: 512, fit: 'inside', withoutEnlargement: true });
+      } else if (isBackground && metadata.width > 1600) {
+        transform = transform.resize({ width: 1600, fit: 'inside', withoutEnlargement: true });
+      }
     }
 
-    // Compress PNG
+    // Compress PNG with palette and quality
     const tempPath = filePath + '.tmp';
     await transform
-      .png({ quality: 80, compressionLevel: 9, palette: true })
+      .png({ quality: 75, compressionLevel: 9, palette: true })
       .toFile(tempPath);
 
     const newStat = fs.statSync(tempPath);
