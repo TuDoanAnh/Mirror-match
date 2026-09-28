@@ -82,7 +82,7 @@ export default class PreparationScene extends Phaser.Scene {
 
     const bg = this.add.rectangle(0, 0, width, height, 0x090d16).setOrigin(0).setDepth(9999);
 
-    const titleTxt = this.add.text(centerX, centerY - 55, "PREPARING ARENA...", {
+    const titleTxt = this.add.text(centerX, centerY - 45, "PREPARING ARENA...", {
       fontSize: '24px',
       fill: '#00ffff',
       fontStyle: 'bold',
@@ -105,21 +105,10 @@ export default class PreparationScene extends Phaser.Scene {
       strokeThickness: 3
     }).setOrigin(0.5).setDepth(10000);
 
-    const assetText = this.add.text(centerX, centerY + 80, "Loading game assets...", {
-      fontSize: '13px',
-      fill: '#94a3b8'
-    }).setOrigin(0.5).setDepth(10000);
-
     this.load.on('progress', (value) => {
       const pct = Math.round(value * 100);
       pctTxt.setText(`${pct}%`);
       barFill.width = (barWidth - 6) * value;
-    });
-
-    this.load.on('fileprogress', (file) => {
-      if (file && file.key) {
-        assetText.setText(`Loading: ${file.key}`);
-      }
     });
 
     this.load.once('complete', () => {
@@ -128,7 +117,6 @@ export default class PreparationScene extends Phaser.Scene {
       barBox.destroy();
       barFill.destroy();
       pctTxt.destroy();
-      assetText.destroy();
     });
   }
 

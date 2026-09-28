@@ -68,13 +68,18 @@ export const SFX_KEYS = {
   }
 };
 
+export function preloadMenuAudio(scene) {
+  if (!scene || !scene.load) return;
+  if (!scene.cache.audio.exists('bg_prep_music')) {
+    scene.load.audio('bg_prep_music', bgMusicAudio);
+  }
+}
+
 export function preloadCharacterSFX(scene) {
   if (!scene || !scene.load) return;
 
   // Background Music for Menu & Prep
-  if (!scene.cache.audio.exists('bg_prep_music')) {
-    scene.load.audio('bg_prep_music', bgMusicAudio);
-  }
+  preloadMenuAudio(scene);
 
   // Ezreal
   if (!scene.cache.audio.exists('ezreal_sfx_Q')) scene.load.audio('ezreal_sfx_Q', ezrealQAudio);

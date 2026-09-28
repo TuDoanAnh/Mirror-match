@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from './gameConfig';
-import { preloadCharacterSFX, playPreparationBGM, stopPreparationBGM } from './soundManager';
+import { preloadMenuAudio, playPreparationBGM, stopPreparationBGM } from './soundManager';
 import { createTopRightBar } from './topRightBar';
 import { loadGameProgress, hasSavedGame, resetGameProgress, notifyGameReady, notifyStartLoading } from './playgamaSDK';
 import bgMainUrl from './assets/image/Background.png';
@@ -16,12 +16,60 @@ export default class StartScene extends Phaser.Scene {
 
   preload() {
     notifyStartLoading();
-    preloadCharacterSFX(this);
+    this.createLoadingUI();
+
+    preloadMenuAudio(this);
     if (!this.textures.exists('bg_start_main')) this.load.image('bg_start_main', bgMainUrl);
     if (!this.textures.exists('logo_main')) this.load.image('logo_main', logoUrl);
     if (!this.textures.exists('btn_campaign')) this.load.image('btn_campaign', campaignBtnUrl);
     if (!this.textures.exists('btn_endless')) this.load.image('btn_endless', endlessBtnUrl);
     if (!this.textures.exists('btn_new_game')) this.load.image('btn_new_game', newGameBtnUrl);
+  }
+
+  createLoadingUI() {
+    const width = GAME_CONFIG.CANVAS.WIDTH;
+    const height = GAME_CONFIG.CANVAS.HEIGHT;
+    const centerX = width / 2;
+    const centerY = height / 2;
+
+    const bg = this.add.rectangle(0, 0, width, height, 0x090d16).setOrigin(0).setDepth(9999);
+
+    const titleTxt = this.add.text(centerX, centerY - 45, "LOADING GAME...", {
+      fontSize: '24px',
+      fill: '#00ffff',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(0.5).setDepth(10000);
+
+    const barWidth = 480;
+    const barHeight = 22;
+    const barBox = this.add.rectangle(centerX, centerY, barWidth, barHeight, 0x0f172a).setDepth(10000);
+    barBox.setStrokeStyle(2, 0x38bdf8);
+
+    const barFill = this.add.rectangle(centerX - barWidth / 2 + 3, centerY, 0, barHeight - 6, 0x38bdf8).setOrigin(0, 0.5).setDepth(10001);
+
+    const pctTxt = this.add.text(centerX, centerY + 45, "0%", {
+      fontSize: '16px',
+      fill: '#facc15',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3
+    }).setOrigin(0.5).setDepth(10000);
+
+    this.load.on('progress', (value) => {
+      const pct = Math.round(value * 100);
+      pctTxt.setText(`${pct}%`);
+      barFill.width = (barWidth - 6) * value;
+    });
+
+    this.load.once('complete', () => {
+      bg.destroy();
+      titleTxt.destroy();
+      barBox.destroy();
+      barFill.destroy();
+      pctTxt.destroy();
+    });
   }
 
   async create() {
