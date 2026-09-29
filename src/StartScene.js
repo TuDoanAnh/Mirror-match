@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from './gameConfig';
 import { preloadCharacterSFX, playPreparationBGM, stopPreparationBGM } from './soundManager';
-import { createTopRightBar } from './topRightBar';
+import { createTopRightBar, showTutorialSlideshowModal } from './topRightBar';
 import { loadGameProgress, hasSavedGame, resetGameProgress, notifyGameReady, notifyStartLoading } from './playgamaSDK';
 
 import { preloadLuxAssets } from './luxAnimations';
@@ -28,6 +28,7 @@ import elixirBtnUrl from './assets/image/Elixir.png';
 import watchAdBtnUrl from './assets/image/Watch_ad.png';
 import bg1Url from './assets/image/BG_1.png';
 import bg2Url from './assets/image/BG_2.png';
+import endlessWindowUrl from './assets/image/Endless_Window.png';
 
 import iconHpUrl from './assets/image/hp.png';
 import iconAtkUrl from './assets/image/Atk.png';
@@ -73,6 +74,7 @@ export default class StartScene extends Phaser.Scene {
     if (!this.textures.exists('bg_panel_1')) this.load.image('bg_panel_1', bg1Url);
     if (!this.textures.exists('bg_panel_2')) this.load.image('bg_panel_2', bg2Url);
     if (!this.textures.exists('bg_main')) this.load.image('bg_main', bgMainUrl);
+    if (!this.textures.exists('endless_window_bg')) this.load.image('endless_window_bg', endlessWindowUrl);
 
     if (!this.textures.exists('stat_hp')) this.load.image('stat_hp', iconHpUrl);
     if (!this.textures.exists('stat_atk')) this.load.image('stat_atk', iconAtkUrl);
@@ -209,6 +211,15 @@ export default class StartScene extends Phaser.Scene {
     // Check if saved game data exists
     const saveExists = await hasSavedGame();
 
+    // If no save data exists, clean up stale tutorial flags so fresh players get the tutorial prompt
+    if (!saveExists) {
+      try {
+        if (typeof sessionStorage !== 'undefined' && !sessionStorage.getItem('seen_in_this_session')) {
+          localStorage.removeItem('has_seen_tutorial');
+        }
+      } catch (e) {}
+    }
+
     // Mode Selection Image Buttons (placed clearly below enlarged Logo)
     const btnY = centerY + 175;
     const campX = centerX - 150;
@@ -226,6 +237,28 @@ export default class StartScene extends Phaser.Scene {
       this.cameras.main.once('camerafadeoutcomplete', () => {
         this.scene.start('PreparationScene');
       });
+    };
+
+    const handleModeClick = (modeId) => {
+      let hasSeen = false;
+      try {
+        hasSeen = !!localStorage.getItem('has_seen_tutorial');
+      } catch (e) {}
+
+      // Only show tutorial if NO save game exists and tutorial hasn't been seen yet (strictly once)
+      if (!saveExists && !hasSeen) {
+        try {
+          localStorage.setItem('has_seen_tutorial', 'true');
+          if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.setItem('seen_in_this_session', 'true');
+          }
+        } catch (e) {}
+        showTutorialSlideshowModal(this, 0, () => {
+          startMode(modeId);
+        });
+      } else {
+        startMode(modeId);
+      }
     };
 
     // Button 1: Campaign Mode Image Button
@@ -246,7 +279,7 @@ export default class StartScene extends Phaser.Scene {
       this.tweens.killTweensOf(campBtn);
       this.tweens.add({ targets: campBtn, scale: campBaseScale, duration: 120, ease: 'Power2' });
     });
-    campBtn.on('pointerdown', () => startMode('campaign'));
+    campBtn.on('pointerdown', () => handleModeClick('campaign'));
 
     // Button 2: Endless / Infinity Mode Image Button
     const infBtn = this.add.image(infX, btnY, 'btn_endless').setInteractive({ useHandCursor: true });
@@ -265,34 +298,36 @@ export default class StartScene extends Phaser.Scene {
       this.tweens.killTweensOf(infBtn);
       this.tweens.add({ targets: infBtn, scale: infBaseScale, duration: 120, ease: 'Power2' });
     });
-    infBtn.on('pointerdown', () => startMode('infinity'));
+    infBtn.on('pointerdown', () => handleModeClick('infinity'));
 
-    // If save data exists, show NEW GAME button
-    if (saveExists) {
-      // NEW GAME Image Button (placed cleanly below mode buttons)
-      const newGameY = btnY + 130;
-      const newGameBtn = this.add.image(centerX, newGameY, 'btn_new_game').setInteractive({ useHandCursor: true });
-      const targetWidth = 220;
-      if (newGameBtn.width > targetWidth) {
-        newGameBtn.setScale(targetWidth / newGameBtn.width);
-      } else {
-        newGameBtn.setScale(1.0);
-      }
-      const newGameBaseScale = newGameBtn.scaleX;
-
-      newGameBtn.on('pointerover', () => {
-        this.tweens.killTweensOf(newGameBtn);
-        this.tweens.add({ targets: newGameBtn, scale: newGameBaseScale * 1.08, duration: 120, ease: 'Power2' });
-      });
-      newGameBtn.on('pointerout', () => {
-        this.tweens.killTweensOf(newGameBtn);
-        this.tweens.add({ targets: newGameBtn, scale: newGameBaseScale, duration: 120, ease: 'Power2' });
-      });
-
-      newGameBtn.on('pointerdown', () => {
-        this.showNewGameConfirmModal();
-      });
+    // NEW GAME Image Button (placed cleanly below mode buttons)
+    const newGameY = btnY + 120;
+    const newGameBtn = this.add.image(centerX, newGameY, 'btn_new_game').setInteractive({ useHandCursor: true });
+    const targetWidth = 220;
+    if (newGameBtn.width > targetWidth) {
+      newGameBtn.setScale(targetWidth / newGameBtn.width);
+    } else {
+      newGameBtn.setScale(1.0);
     }
+    const newGameBaseScale = newGameBtn.scaleX;
+
+    newGameBtn.on('pointerover', () => {
+      this.tweens.killTweensOf(newGameBtn);
+      this.tweens.add({ targets: newGameBtn, scale: newGameBaseScale * 1.08, duration: 120, ease: 'Power2' });
+    });
+    newGameBtn.on('pointerout', () => {
+      this.tweens.killTweensOf(newGameBtn);
+      this.tweens.add({ targets: newGameBtn, scale: newGameBaseScale, duration: 120, ease: 'Power2' });
+    });
+
+    newGameBtn.on('pointerdown', async () => {
+      if (saveExists) {
+        this.showNewGameConfirmModal();
+      } else {
+        await resetGameProgress(this);
+        handleModeClick('campaign');
+      }
+    });
 
     // Top-Right Action Icon Buttons (? and Music Speaker) with persistent mute state
     createTopRightBar(this);

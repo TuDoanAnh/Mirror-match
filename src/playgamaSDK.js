@@ -377,7 +377,11 @@ export async function resetGameProgress(scene) {
 
   try {
     localStorage.removeItem('mirror_match_save');
-    console.log('Game save removed from localStorage');
+    localStorage.removeItem('has_seen_tutorial');
+    if (typeof sessionStorage !== 'undefined') {
+      sessionStorage.removeItem('seen_in_this_session');
+    }
+    console.log('Game save and tutorial flags removed');
   } catch (e) {
     console.warn('localStorage removal warning:', e);
   }
