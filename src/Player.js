@@ -7,6 +7,7 @@ import { MAP_OBSTACLES } from './mapObstacles';
 import { MAP_POLYGONS } from './mapPolygons';
 import { isPointInAnyPolygon } from './polygonCollision';
 import { showDamageText } from './FloatingDamage';
+import { isTouchDevice } from './mobileControls';
 
 export default class Player extends BaseCharacter {
   constructor(scene, x, y, isBot = false, color = 0x0088ff, customHeroId = null) {
@@ -357,7 +358,7 @@ export default class Player extends BaseCharacter {
           const aimY = this.y + this.mobileMoveVector.y * 200;
           this.handleAim(aimX, aimY);
         }
-      } else if (!this.isSkillAiming && this.scene && this.scene.input && this.scene.input.activePointer) {
+      } else if (!this.isSkillAiming && this.scene && this.scene.input && this.scene.input.activePointer && !isTouchDevice(this.scene)) {
         this.handleAim(this.scene.input.activePointer.worldX, this.scene.input.activePointer.worldY);
       }
     }

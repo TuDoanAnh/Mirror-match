@@ -233,11 +233,18 @@ export class MobileControls {
         scene.tweens.add({ targets: btnContainer, scale: 0.88, duration: 60 });
       });
 
+      let lastDragAngle = null;
+      let lastDragDist = null;
+
       scene.input.on('pointermove', (pointer) => {
         if (!isDragging || !activePointer || activePointer.id !== pointer.id) return;
 
         dragDist = Phaser.Math.Distance.Between(cfg.x, cfg.y, pointer.x, pointer.y);
         dragAngle = Phaser.Math.Angle.Between(cfg.x, cfg.y, pointer.x, pointer.y);
+
+        if (lastDragAngle !== null && Math.abs(dragAngle - lastDragAngle) < 0.03 && Math.abs(dragDist - lastDragDist) < 5) return;
+        lastDragAngle = dragAngle;
+        lastDragDist = dragDist;
 
         if (dragDist > 15 && scene.player && scene.player.hp > 0) {
           this.drawAimIndicator(scene.player, dragAngle, cfg.range || 500, cfg.color);
