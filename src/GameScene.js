@@ -22,6 +22,7 @@ import { preloadAugmentFrameAssets, getAugmentFrameKey, getAugmentTierBadgeText 
 import { saveGameProgress } from './playgamaSDK';
 import endlessWindowUrl from './assets/image/Endless_Window.png';
 import endlessReturnBtnUrl from './assets/image/Endless_Return_to_preparation.png';
+import { MobileControls, isTouchDevice } from './mobileControls';
 
 export default class GameScene extends Phaser.Scene {
   constructor() {
@@ -267,6 +268,23 @@ export default class GameScene extends Phaser.Scene {
     // UI Setup
     this.createUI();
 
+    // Enable multi-touch for mobile devices (up to 3 simultaneous touch pointers)
+    if (this.input && this.input.addPointer) {
+      this.input.addPointer(3);
+    }
+
+    // Initialize Mobile Controls if touch device or mobile browser
+    if (isTouchDevice(this)) {
+      this.mobileControls = new MobileControls(this);
+    }
+
+    this.events.once('shutdown', () => {
+      if (this.mobileControls) {
+        this.mobileControls.destroy();
+        this.mobileControls = null;
+      }
+    });
+
     // Input listeners for skills
     this.input.keyboard.removeAllListeners();
     this.input.keyboard.on('keydown-Q', () => this.tryUsePlayerSkill('Q', this.time.now));
@@ -279,6 +297,10 @@ export default class GameScene extends Phaser.Scene {
   }
 
   update(time, delta) {
+    if (this.mobileControls) {
+      this.mobileControls.update();
+    }
+
     if (this.player && this.player.hp > 0) {
       this.player.update(time, delta);
       handleCharacterPolygonCollision(this.player, MAP_POLYGONS);
@@ -714,13 +736,14 @@ export default class GameScene extends Phaser.Scene {
     });
   }
 
-  tryUsePlayerSkill(skillKey, time) {
+  tryUsePlayerSkill(skillKey, time, customTargetX = null, customTargetY = null) {
     if (this.player.hp <= 0) return;
     if (this.player.canUseSkill(skillKey, time)) {
       this.skillsFired++;
     }
-    const ptr = this.input.activePointer;
-    this.player.useSkill(skillKey, time, ptr.worldX, ptr.worldY);
+    const targetX = customTargetX !== null ? customTargetX : this.input.activePointer.worldX;
+    const targetY = customTargetY !== null ? customTargetY : this.input.activePointer.worldY;
+    this.player.useSkill(skillKey, time, targetX, targetY);
   }
 
   handleP2Input() {
@@ -842,7 +865,7 @@ export default class GameScene extends Phaser.Scene {
     const overlay = this.add.rectangle(0, 0, width, height, 0x090d16, 0.92).setOrigin(0).setInteractive();
 
     const survivalLevel = this.registry.get('survivalLevel') || 1;
-    const isAugmentWave = (survivalLevel % 4 === 0);
+    const isAugmentWave = ((survivalLevel - 1) % 4 === 0);
 
     // Main Window Frame Image (Endless_Window.png) - Maximize to 1526x990 for grand full-screen scale
     const boxWidth = 1526;
@@ -1004,8 +1027,8 @@ export default class GameScene extends Phaser.Scene {
       });
 
     } else {
-      // Non-Augment Wave Intermission (Waves 1, 2, 3, 5, 6, 7...)
-      const nextAugmentWaveCount = 4 - (survivalLevel % 4);
+      // Non-Augment Wave Intermission
+      const nextAugmentWaveCount = 4 - ((survivalLevel - 1) % 4);
       const infoTxt = this.add.text(centerX, centerY + 20, `Next Augment Perk choice available in ${nextAugmentWaveCount} wave(s)`, {
         fontSize: '24px',
         fill: '#cbd5e1',

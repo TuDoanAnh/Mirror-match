@@ -4,11 +4,18 @@
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Arcane Clash</title>
 </head>
 
 <body>
+  <div id="rotate-screen-overlay">
+    <div class="rotate-content">
+      <div class="phone-icon">📱</div>
+      <div class="rotate-title">VUI LÒNG XOAY NGANG THIẾT BỊ ĐỂ CHƠI</div>
+      <div class="rotate-subtitle">PLEASE ROTATE YOUR DEVICE TO LANDSCAPE MODE</div>
+    </div>
+  </div>
   <div id="app"></div>
   <script src="https://bridge.playgama.com/v2/stable/playgama-bridge.js"></script>
   <script type="module" src="./src/main.js"></script>

@@ -198,7 +198,7 @@ export default class GameOverScene extends Phaser.Scene {
 
     // Action Buttons Area (Bottom)
     const btnY = panelY + 185;
-    const isAugmentRound = (this.level % 4 === 0);
+    const isAugmentRound = ((this.level - 1) % 4 === 0);
 
     const onPrimaryAction = () => {
       this.cameras.main.fadeOut(300, 0, 0, 0);

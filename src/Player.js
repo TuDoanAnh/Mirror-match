@@ -25,6 +25,7 @@ export default class Player extends BaseCharacter {
 
     this.heroId = heroId;
     this.heroData = heroData;
+    this.mobileMoveVector = null;
     this.setupHeroTexture(isBot ? (heroData.color || 0xff0000) : heroData.color);
 
     // Load Base Stats from Hero Config
@@ -350,7 +351,15 @@ export default class Player extends BaseCharacter {
 
     if (!this.isBot) {
       this.handleInput();
-      this.handleAim(this.scene.input.activePointer.worldX, this.scene.input.activePointer.worldY);
+      if (this.mobileMoveVector && (this.mobileMoveVector.x !== 0 || this.mobileMoveVector.y !== 0)) {
+        if (!this.isChanneling && !this.isSkillAiming) {
+          const aimX = this.x + this.mobileMoveVector.x * 200;
+          const aimY = this.y + this.mobileMoveVector.y * 200;
+          this.handleAim(aimX, aimY);
+        }
+      } else if (!this.isSkillAiming && this.scene && this.scene.input && this.scene.input.activePointer) {
+        this.handleAim(this.scene.input.activePointer.worldX, this.scene.input.activePointer.worldY);
+      }
     }
 
     super.update(time, delta);
@@ -365,14 +374,27 @@ export default class Player extends BaseCharacter {
     let vx = 0;
     let vy = 0;
 
-    if (this.keys.A.isDown) vx = -1;
-    if (this.keys.D.isDown) vx = 1;
-    if (this.keys.W.isDown) vy = -1;
-    if (this.keys.S.isDown) vy = 1;
+    if (this.mobileMoveVector && (this.mobileMoveVector.x !== 0 || this.mobileMoveVector.y !== 0)) {
+      vx = this.mobileMoveVector.x;
+      vy = this.mobileMoveVector.y;
 
-    if (vx !== 0 || vy !== 0) {
+      const mag = Math.sqrt(vx * vx + vy * vy);
+      const intensity = Math.min(1.0, mag);
       const angle = Math.atan2(vy, vx);
-      this.setVelocity(Math.cos(angle) * this.speed, Math.sin(angle) * this.speed);
+
+      this.setVelocity(Math.cos(angle) * this.speed * intensity, Math.sin(angle) * this.speed * intensity);
+    } else if (this.keys) {
+      if (this.keys.A.isDown) vx = -1;
+      if (this.keys.D.isDown) vx = 1;
+      if (this.keys.W.isDown) vy = -1;
+      if (this.keys.S.isDown) vy = 1;
+
+      if (vx !== 0 || vy !== 0) {
+        const angle = Math.atan2(vy, vx);
+        this.setVelocity(Math.cos(angle) * this.speed, Math.sin(angle) * this.speed);
+      } else {
+        this.setVelocity(0, 0);
+      }
     } else {
       this.setVelocity(0, 0);
     }
@@ -435,7 +457,7 @@ export default class Player extends BaseCharacter {
             const label = (this.heroId === 'riven' && skillKey === 'Q') ? 'SLAM WINDUP (0.5s)...' : 'WIND SLASH (0.5s)...';
             m.showDamageText(this.scene, this.x, this.y - 30, label, 'crit');
           }
-        }).catch(() => {});
+        }).catch(() => { });
       }
 
       // Targeting sight line
@@ -577,7 +599,7 @@ export default class Player extends BaseCharacter {
         if (!this.isBot && this.scene) {
           import('./FloatingDamage').then(m => {
             if (m.showDamageText) m.showDamageText(this.scene, this.x, this.y - 15, 'OUT OF RANGE', 'shield');
-          }).catch(() => {});
+          }).catch(() => { });
         }
         return false; // Out of range! Do NOT cast, do NOT consume cooldown!
       }
@@ -1546,7 +1568,7 @@ export default class Player extends BaseCharacter {
                 this.scene.tweens.add({ targets: exp, scale: 2.2, alpha: 0, duration: 300, onComplete: () => exp.destroy() });
                 import('./FloatingDamage').then(m => {
                   if (m.showDamageText) m.showDamageText(this.scene, mine.x, mine.y - 20, '180 MINE BOOM!', 'crit');
-                }).catch(() => {});
+                }).catch(() => { });
               }
               mine.destroy();
             }
@@ -1574,7 +1596,7 @@ export default class Player extends BaseCharacter {
     if (this.scene) {
       import('./FloatingDamage').then(m => {
         if (m.showDamageText) m.showDamageText(this.scene, this.x, this.y - 25, 'BULLET TIME! +40% SPEED', 'crit');
-      }).catch(() => {});
+      }).catch(() => { });
 
       const speedAura = this.scene.add.circle(this.x, this.y, 25, 0xfacc15, 0.4);
       speedAura.setStrokeStyle(3, 0xffffff, 1);
@@ -1623,7 +1645,7 @@ export default class Player extends BaseCharacter {
 
     import('./FloatingDamage').then(m => {
       if (m.showDamageText) m.showDamageText(this.scene, this.x, this.y - 25, 'STATIC SHOCK NOVA!', 'crit');
-    }).catch(() => {});
+    }).catch(() => { });
 
     enemies.forEach(target => {
       if (target && target.active && target.hp > 0) {

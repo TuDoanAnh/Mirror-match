@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import EnemyBot from './EnemyBot';
 import { GAME_CONFIG, getBotEquipmentForLevel, getBotHeroForCampaignLevel } from './gameConfig';
 import { preloadLuxAssets, createLuxAnimations } from './luxAnimations';
+import { isTouchDevice } from './mobileControls';
 import { preloadEzrealSkillAssets, createEzrealSkillAnimations } from './ezrealSkillAnimations';
 import { preloadJinxAssets, createJinxAnimations } from './jinxAnimations';
 import { preloadZedSkillAssets, createZedSkillAnimations } from './zedAnimations';
@@ -221,12 +222,573 @@ export default class PreparationScene extends Phaser.Scene {
       }).setOrigin(0.5);
     }
 
-    this.drawLeftPanel();
-    this.drawCenterPanel();
-    this.drawRightPanel();
+    if (isTouchDevice(this)) {
+      this.drawMobilePreparationUI();
+    } else {
+      this.drawLeftPanel();
+      this.drawCenterPanel();
+      this.drawRightPanel();
+    }
 
     // Fade In
     this.cameras.main.fadeIn(500, 0, 0, 0);
+  }
+
+  drawMobilePreparationUI() {
+    const width = GAME_CONFIG.CANVAS.WIDTH;
+    const height = GAME_CONFIG.CANVAS.HEIGHT;
+    const centerX = width / 2;
+
+    this.gold = this.registry.get('gold') || 1000;
+    this.goldText = this.add.text(width - 160, 42, `GOLD: ${this.gold}`, {
+      fontSize: '24px',
+      fill: '#facc15',
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 4
+    }).setOrigin(1, 0.5);
+
+    this.mobileLeftContainer = this.add.container(0, 0);
+    this.mobileCenterContainer = this.add.container(0, 0).setVisible(false);
+
+    const tabY = 95;
+    const tabsConfig = [
+      { id: 'left', label: '🛡️ HERO & ENEMY', x: centerX - 180, color: 0x38bdf8, container: this.mobileLeftContainer },
+      { id: 'center', label: '🛒 SHOP & INVENTORY', x: centerX + 180, color: 0xfacc15, container: this.mobileCenterContainer }
+    ];
+
+    this.mobileTabBgs = [];
+
+    tabsConfig.forEach((cfg, idx) => {
+      const bg = this.add.rectangle(cfg.x, tabY, 300, 46, 0x0f172a, 0.95).setInteractive({ useHandCursor: true });
+      bg.setStrokeStyle(2, cfg.color, 0.5);
+
+      const txt = this.add.text(cfg.x, tabY, cfg.label, {
+        fontSize: '16px',
+        fill: idx === 0 ? '#ffffff' : '#94a3b8',
+        fontStyle: 'bold'
+      }).setOrigin(0.5);
+
+      bg.on('pointerdown', () => {
+        tabsConfig.forEach(t => t.container.setVisible(false));
+        cfg.container.setVisible(true);
+
+        this.mobileTabBgs.forEach(b => {
+          b.bg.setFillStyle(0x0f172a, 0.85);
+          b.bg.setStrokeStyle(1.5, b.cfg.color, 0.4);
+          b.txt.setStyle({ fill: '#94a3b8' });
+        });
+
+        bg.setFillStyle(0x1e293b, 1.0);
+        bg.setStrokeStyle(3, cfg.color, 1.0);
+        txt.setStyle({ fill: '#ffffff' });
+      });
+
+      this.mobileTabBgs.push({ bg, txt, cfg });
+    });
+
+    if (this.mobileTabBgs[0]) {
+      this.mobileTabBgs[0].bg.setFillStyle(0x1e293b, 1.0);
+      this.mobileTabBgs[0].bg.setStrokeStyle(3, tabsConfig[0].color, 1.0);
+    }
+
+    this.buildMobileLeftPanel(centerX);
+    this.buildMobileCenterPanel(centerX);
+  }
+
+  buildMobileLeftPanel(centerX) {
+    const startY = 135;
+    const panelW = 1200;
+    const panelH = 720;
+
+    const bgFrame = this.add.rectangle(centerX, startY + panelH / 2, panelW, panelH, 0x0b1329, 0.94);
+    bgFrame.setStrokeStyle(3, 0x38bdf8);
+
+    const enemyX = centerX - 300;
+    let enemyY = startY + 36;
+
+    const enemyTitle = this.add.text(enemyX, enemyY, "ENEMY STATUS", {
+      fontSize: '24px', fill: '#ff5555', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4
+    }).setOrigin(0.5);
+
+    enemyY += 32;
+    const isInfinityMode = (this.registry.get('gameMode') === 'infinity');
+    const unlockedLevel = this.registry.get('unlockedLevel') || 1;
+    let selectedLevel = this.registry.get('selectedLevel') || unlockedLevel;
+    if (selectedLevel > unlockedLevel) selectedLevel = unlockedLevel;
+
+    const currentHero = this.registry.get('selectedHero') || 'ezreal';
+    let currentBotHero = isInfinityMode ? getBotHeroForCampaignLevel(currentHero, this.registry.get('survivalLevel') || 1) : getBotHeroForCampaignLevel(currentHero, selectedLevel);
+    this.registry.set('selectedBotHero', currentBotHero);
+
+    const botHeroData = GAME_CONFIG.CHARACTERS[currentBotHero] || GAME_CONFIG.CHARACTERS.ezreal;
+    const stageNum = Math.floor((selectedLevel - 1) / 5) + 1;
+    const levelTxt = this.add.text(enemyX, enemyY, `LEVEL ${selectedLevel}: VS ${botHeroData.name.toUpperCase()} (STAGE ${stageNum}/5)`, {
+      fontSize: '15px', fill: '#facc15', fontStyle: 'bold', stroke: '#000000', strokeThickness: 2
+    }).setOrigin(0.5);
+
+    enemyY += 34;
+    const botEquipHeader = this.add.text(enemyX, enemyY, "BOT INVENTORY GEAR", { fontSize: '14px', fill: '#a855f7', fontStyle: 'bold' }).setOrigin(0.5);
+
+    const botEquip = getBotEquipmentForLevel(selectedLevel);
+    enemyY += 32;
+    const slotGap = 52;
+    const startSlotX = enemyX - ((6 - 1) * slotGap) / 2;
+
+    const botSlotElements = [];
+    for (let s = 0; s < 6; s++) {
+      const sx = startSlotX + (s * slotGap);
+      const slotBox = this.add.rectangle(sx, enemyY, 44, 44, 0x0f172a, 0.95);
+      const item = botEquip[s];
+      slotBox.setStrokeStyle(1.5, item ? (item.color || 0xa855f7) : 0x334155);
+      botSlotElements.push(slotBox);
+
+      if (item) {
+        const iconKey = `item_${item.id}`;
+        if (this.textures.exists(iconKey)) {
+          const img = this.add.image(sx, enemyY, iconKey);
+          img.setDisplaySize(34, 34);
+          botSlotElements.push(img);
+        }
+      } else {
+        const dash = this.add.text(sx, enemyY, "—", { fontSize: '14px', fill: '#475569' }).setOrigin(0.5);
+        botSlotElements.push(dash);
+      }
+    }
+
+    enemyY += 45;
+    const scale = GAME_CONFIG.BOT_SCALING[selectedLevel] || GAME_CONFIG.BOT_SCALING[1];
+    const qDamage = (botHeroData.skills.Q && botHeroData.skills.Q.config && botHeroData.skills.Q.config.damage) || 100;
+    const enemyStats = {
+      maxHp: botHeroData.baseStats.hp * scale.hpMult,
+      atk: qDamage * scale.dmgMult,
+      armor: scale.armor,
+      speed: botHeroData.baseStats.speed * scale.speedMult,
+      critChance: scale.critChance,
+      cdr: Math.round((1 - scale.cdrMult) * 100),
+      lifesteal: scale.lifesteal,
+      armorPen: scale.armorPen
+    };
+
+    botEquip.forEach(item => {
+      if (item.statsDict) {
+        if (item.statsDict.bonusHP) enemyStats.maxHp += item.statsDict.bonusHP;
+        if (item.statsDict.bonusDamage) enemyStats.atk += item.statsDict.bonusDamage;
+        if (item.statsDict.bonusSpeed) enemyStats.speed += item.statsDict.bonusSpeed;
+        if (item.statsDict.armor) enemyStats.armor += item.statsDict.armor;
+        if (item.statsDict.lifesteal) enemyStats.lifesteal += item.statsDict.lifesteal;
+        if (item.statsDict.critChance) enemyStats.critChance += item.statsDict.critChance;
+        if (item.statsDict.armorPen) enemyStats.armorPen += item.statsDict.armorPen;
+      }
+    });
+
+    const eCol1Icon = enemyX - 160;
+    const eCol1Text = enemyX - 130;
+    const eCol2Icon = enemyX + 20;
+    const eCol2Text = enemyX + 50;
+    const rowGap = 32;
+
+    const eStatElements = [
+      this.add.image(eCol1Icon, enemyY + 9, 'stat_hp').setDisplaySize(20, 20).setOrigin(0.5),
+      this.add.text(eCol1Text, enemyY, `HP: ${Math.round(enemyStats.maxHp)}`, { fontSize: '15px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 }),
+      this.add.image(eCol2Icon, enemyY + 9, 'stat_crit').setDisplaySize(20, 20).setOrigin(0.5),
+      this.add.text(eCol2Text, enemyY, `Crit: ${Math.round(enemyStats.critChance)}%`, { fontSize: '15px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 }),
+
+      this.add.image(eCol1Icon, enemyY + rowGap + 9, 'stat_atk').setDisplaySize(20, 20).setOrigin(0.5),
+      this.add.text(eCol1Text, enemyY + rowGap, `ATK: ${Math.round(enemyStats.atk)}`, { fontSize: '15px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 }),
+      this.add.image(eCol2Icon, enemyY + rowGap + 9, 'stat_cdr').setDisplaySize(20, 20).setOrigin(0.5),
+      this.add.text(eCol2Text, enemyY + rowGap, `CDR: ${Math.round(enemyStats.cdr)}%`, { fontSize: '15px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 }),
+
+      this.add.image(eCol1Icon, enemyY + rowGap * 2 + 9, 'stat_armor').setDisplaySize(20, 20).setOrigin(0.5),
+      this.add.text(eCol1Text, enemyY + rowGap * 2, `Armor: ${Math.round(enemyStats.armor)}`, { fontSize: '15px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 }),
+      this.add.image(eCol2Icon, enemyY + rowGap * 2 + 9, 'stat_lifesteal').setDisplaySize(20, 20).setOrigin(0.5),
+      this.add.text(eCol2Text, enemyY + rowGap * 2, `Lifesteal: ${Math.round(enemyStats.lifesteal)}%`, { fontSize: '15px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 }),
+
+      this.add.image(eCol1Icon, enemyY + rowGap * 3 + 9, 'stat_speed').setDisplaySize(20, 20).setOrigin(0.5),
+      this.add.text(eCol1Text, enemyY + rowGap * 3, `Speed: ${Math.round(enemyStats.speed)}`, { fontSize: '15px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 }),
+      this.add.image(eCol2Icon, enemyY + rowGap * 3 + 9, 'stat_armPen').setDisplaySize(20, 20).setOrigin(0.5),
+      this.add.text(eCol2Text, enemyY + rowGap * 3, `Arm Pen: ${Math.round(enemyStats.armorPen)}%`, { fontSize: '15px', fill: '#cbd5e1', stroke: '#000000', strokeThickness: 2 })
+    ];
+
+    const heroX = centerX + 300;
+    let heroY = startY + 36;
+
+    const heroTitle = this.add.text(heroX, heroY, "SELECT YOUR HERO", {
+      fontSize: '24px', fill: '#00ffff', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4
+    }).setOrigin(0.5);
+
+    const heroes = ['ezreal', 'lux', 'jinx', 'zed', 'riven'];
+    const currentIndex = heroes.indexOf(currentHero) !== -1 ? heroes.indexOf(currentHero) : 0;
+    const gameMode = this.registry.get('gameMode') || 'campaign';
+    const canChangeHero = gameMode !== 'campaign' || (unlockedLevel === 1 && selectedLevel === 1);
+
+    heroY += 32;
+    let lockTxt = null;
+    if (!canChangeHero) {
+      lockTxt = this.add.text(heroX, heroY, "🔒 (LOCKED IN CAMPAIGN)", { fontSize: '13px', fill: '#f87171', fontStyle: 'bold' }).setOrigin(0.5);
+    }
+
+    const selectHeroByIndex = (idx) => {
+      const targetId = heroes[(idx + heroes.length) % heroes.length];
+      if (targetId !== currentHero) {
+        if (!canChangeHero) {
+          this.showLockHeroToast(heroX, heroY + 60);
+          return;
+        }
+        this.registry.set('selectedHero', targetId);
+        saveGameProgress(this);
+        this.scene.restart();
+      }
+    };
+
+    heroY += 50;
+    const slideY = heroY;
+
+    const prevBg = this.add.circle(heroX - 140, slideY, 24, 0x1e293b).setInteractive({ useHandCursor: true });
+    prevBg.setStrokeStyle(2, 0x38bdf8);
+    const prevTxt = this.add.text(heroX - 140, slideY - 1, '◄', { fontSize: '20px', fill: '#00ffff', fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    prevBg.on('pointerdown', () => selectHeroByIndex(currentIndex - 1));
+    prevTxt.on('pointerdown', () => selectHeroByIndex(currentIndex - 1));
+
+    const nextBg = this.add.circle(heroX + 140, slideY, 24, 0x1e293b).setInteractive({ useHandCursor: true });
+    nextBg.setStrokeStyle(2, 0x38bdf8);
+    const nextTxt = this.add.text(heroX + 140, slideY - 1, '►', { fontSize: '20px', fill: '#00ffff', fontStyle: 'bold' }).setOrigin(0.5).setInteractive({ useHandCursor: true });
+
+    nextBg.on('pointerdown', () => selectHeroByIndex(currentIndex + 1));
+    nextTxt.on('pointerdown', () => selectHeroByIndex(currentIndex + 1));
+
+    const selectedData = GAME_CONFIG.CHARACTERS[currentHero] || GAME_CONFIG.CHARACTERS.ezreal;
+    const heroCircBg = this.add.circle(heroX, slideY, 44, selectedData.color || 0xffffff, 0.25);
+    const heroInnerCirc = this.add.circle(heroX, slideY, 38, 0x0f172a);
+    heroInnerCirc.setStrokeStyle(1.5, selectedData.color || 0x38bdf8, 0.8);
+
+    let heroSpriteObj = null;
+    const sheetKey = `${currentHero}_spritesheet`;
+    if (this.textures.exists(sheetKey)) {
+      heroSpriteObj = this.add.sprite(heroX, slideY, sheetKey, currentHero === 'ezreal' ? 4 : 0);
+      heroSpriteObj.setScale(currentHero === 'ezreal' ? 0.42 : 1.25);
+      const maskGfx = this.make.graphics({ add: false });
+      maskGfx.fillStyle(0xffffff, 1.0);
+      maskGfx.fillCircle(heroX, slideY, 38);
+      heroSpriteObj.setMask(maskGfx.createGeometryMask());
+      const idleKey = `${currentHero}_idle`;
+      if (this.anims.exists(idleKey)) heroSpriteObj.play(idleKey);
+    }
+
+    heroY += 60;
+    const heroNameTxt = this.add.text(heroX, heroY, `${selectedData.name} - ${selectedData.title}`, { fontSize: '17px', fill: '#facc15', fontStyle: 'bold', stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5);
+
+    heroY += 26;
+    const heroDescTxt = this.add.text(heroX, heroY, selectedData.description, { fontSize: '14px', fill: '#ffffff', align: 'center', wordWrap: { width: 340 } }).setOrigin(0.5, 0);
+
+    heroY += 65;
+    const stats = this.registry.get('playerStats');
+    const pCol1Icon = heroX - 160;
+    const pCol1Text = heroX - 130;
+    const pCol2Icon = heroX + 20;
+    const pCol2Text = heroX + 50;
+
+    const pStatTxtStyle = { fontSize: '15px', fill: '#ffffff', stroke: '#000000', strokeThickness: 2 };
+
+    const pStatElements = [
+      this.add.image(pCol1Icon, heroY + 9, 'stat_hp').setDisplaySize(20, 20).setOrigin(0.5),
+      this.add.image(pCol1Icon, heroY + rowGap + 9, 'stat_atk').setDisplaySize(20, 20).setOrigin(0.5),
+      this.add.image(pCol1Icon, heroY + rowGap * 2 + 9, 'stat_armor').setDisplaySize(20, 20).setOrigin(0.5),
+      this.add.image(pCol1Icon, heroY + rowGap * 3 + 9, 'stat_speed').setDisplaySize(20, 20).setOrigin(0.5),
+
+      this.add.image(pCol2Icon, heroY + 9, 'stat_crit').setDisplaySize(20, 20).setOrigin(0.5),
+      this.add.image(pCol2Icon, heroY + rowGap + 9, 'stat_cdr').setDisplaySize(20, 20).setOrigin(0.5),
+      this.add.image(pCol2Icon, heroY + rowGap * 2 + 9, 'stat_lifesteal').setDisplaySize(20, 20).setOrigin(0.5),
+      this.add.image(pCol2Icon, heroY + rowGap * 3 + 9, 'stat_armPen').setDisplaySize(20, 20).setOrigin(0.5)
+    ];
+
+    this.statTexts = {
+      hp: this.add.text(pCol1Text, heroY, `HP: ${selectedData.baseStats.hp + stats.bonusHP}`, pStatTxtStyle),
+      atk: this.add.text(pCol1Text, heroY + rowGap, `ATK: ${selectedData.skills.Q.config.damage + stats.bonusDamage}`, pStatTxtStyle),
+      armor: this.add.text(pCol1Text, heroY + rowGap * 2, `Armor: ${selectedData.baseStats.armor + stats.armor}`, pStatTxtStyle),
+      speed: this.add.text(pCol1Text, heroY + rowGap * 3, `Speed: ${selectedData.baseStats.speed + stats.bonusSpeed}`, pStatTxtStyle),
+
+      crit: this.add.text(pCol2Text, heroY, `Crit: ${selectedData.baseStats.critChance + stats.critChance}%`, pStatTxtStyle),
+      cdr: this.add.text(pCol2Text, heroY + rowGap, `CDR: ${Math.round(stats.cdr * 100)}%`, pStatTxtStyle),
+      lifesteal: this.add.text(pCol2Text, heroY + rowGap * 2, `Lifesteal: ${selectedData.baseStats.lifesteal + stats.lifesteal}%`, pStatTxtStyle),
+      armPen: this.add.text(pCol2Text, heroY + rowGap * 3, `Arm Pen: ${stats.armorPen}%`, pStatTxtStyle)
+    };
+
+    pStatElements.push(this.statTexts.hp, this.statTexts.atk, this.statTexts.armor, this.statTexts.speed, this.statTexts.crit, this.statTexts.cdr, this.statTexts.lifesteal, this.statTexts.armPen);
+
+    const elements = [
+      bgFrame, enemyTitle, levelTxt, botEquipHeader, ...botSlotElements, ...eStatElements,
+      heroTitle, prevBg, prevTxt, nextBg, nextTxt, heroCircBg, heroInnerCirc,
+      heroNameTxt, heroDescTxt, ...pStatElements
+    ];
+    if (lockTxt) elements.push(lockTxt);
+    if (heroSpriteObj) elements.push(heroSpriteObj);
+
+    this.mobileLeftContainer.add(elements);
+  }
+
+  buildMobileCenterPanel(centerX) {
+    const startY = 135;
+    const panelW = 1200;
+    const panelH = 720;
+
+    const bgFrame = this.add.rectangle(centerX, startY + panelH / 2, panelW, panelH, 0x0b1329, 0.94);
+    bgFrame.setStrokeStyle(3, 0xfacc15);
+    this.mobileCenterContainer.add(bgFrame);
+
+    const leftX = centerX - 300;
+    const rightX = centerX + 300;
+
+    // --- LEFT HALF: SHOP & ELIXIR ITEMS ---
+    const shopTitle = this.add.text(leftX, startY + 36, "ITEM SHOP & STAT ELIXIRS", {
+      fontSize: '22px', fill: '#ffcc00', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4
+    }).setOrigin(0.5);
+
+    this.mobileGearSubContainer = this.add.container(0, 0);
+    this.mobileElixirSubContainer = this.add.container(0, 0).setVisible(false);
+
+    const subTabY = startY + 80;
+    const subTabWidth = 160;
+    const subTabHeight = 40;
+
+    const gearTabBtn = this.add.image(leftX - 90, subTabY, 'btn_equip').setInteractive({ useHandCursor: true });
+    gearTabBtn.setDisplaySize(subTabWidth, subTabHeight);
+
+    const elixirTabBtn = this.add.image(leftX + 90, subTabY, 'btn_elixir').setInteractive({ useHandCursor: true });
+    elixirTabBtn.setDisplaySize(subTabWidth, subTabHeight);
+
+    const switchSubTab = (tab) => {
+      if (tab === 'gear') {
+        gearTabBtn.setAlpha(1.0).clearTint();
+        elixirTabBtn.setAlpha(0.5).setTint(0x777777);
+        this.mobileGearSubContainer.setVisible(true);
+        this.mobileElixirSubContainer.setVisible(false);
+      } else {
+        elixirTabBtn.setAlpha(1.0).clearTint();
+        gearTabBtn.setAlpha(0.5).setTint(0x777777);
+        this.mobileGearSubContainer.setVisible(false);
+        this.mobileElixirSubContainer.setVisible(true);
+      }
+    };
+
+    gearTabBtn.on('pointerdown', () => switchSubTab('gear'));
+    elixirTabBtn.on('pointerdown', () => switchSubTab('elixirs'));
+
+    switchSubTab('gear');
+
+    // Gear Grid on Left Side
+    let gridStartY = subTabY + 55;
+    let row = 0, col = 0;
+    const paddingX = 120;
+    const paddingY = 85;
+
+    this.shopItems = GAME_CONFIG.SHOP_ITEMS;
+
+    this.shopItems.forEach((item) => {
+      const x = (leftX - 180) + (col * paddingX);
+      const y = gridStartY + (row * paddingY);
+
+      const itemContainer = this.add.container(x, y);
+      const shadow = this.add.rectangle(3, 3, 68, 68, 0x000000, 0.6);
+      const box = this.add.rectangle(0, 0, 68, 68, 0x0f172a).setInteractive({ useHandCursor: true });
+      box.setStrokeStyle(2.5, item.color || 0x38bdf8, 1);
+
+      const itemKey = `item_${item.id}`;
+      const icon = this.add.image(0, -6, itemKey);
+      icon.setDisplaySize(52, 52);
+
+      const priceBg = this.add.rectangle(0, 22, 56, 18, 0x090d16, 0.9);
+      priceBg.setStrokeStyle(1, 0x334155, 0.8);
+      const priceText = this.add.text(0, 22, `${item.cost}G`, {
+        fontSize: '12px', fill: '#facc15', fontStyle: 'bold', stroke: '#000000', strokeThickness: 2
+      }).setOrigin(0.5);
+
+      itemContainer.add([shadow, box, icon, priceBg, priceText]);
+      this.mobileGearSubContainer.add(itemContainer);
+
+      box.on('pointerdown', () => {
+        this.selectedItem = item;
+        this.selectedInventoryIndex = null;
+        this.updateRightPanel();
+        this.updateInventoryView();
+      });
+
+      col++;
+      if (col > 3) { col = 0; row++; }
+    });
+
+    // Elixirs Grid on Left Side
+    const elixirItems = GAME_CONFIG.ELIXIR_ITEMS || [];
+    let eRow = 0, eCol = 0;
+    const ePaddingX = 160;
+    const ePaddingY = 140;
+    const eStartY = gridStartY + 20;
+
+    elixirItems.forEach((elixir) => {
+      const x = (leftX - 160) + (eCol * ePaddingX);
+      const y = eStartY + (eRow * ePaddingY);
+
+      const eContainer = this.add.container(x, y);
+      const shadow = this.add.rectangle(4, 4, 125, 115, 0x000000, 0.6);
+      const box = this.add.rectangle(0, 0, 125, 115, 0x0f172a).setInteractive({ useHandCursor: true });
+      box.setStrokeStyle(2.5, elixir.color || 0xfacc15, 0.9);
+
+      const iconKey = `item_${elixir.id}`;
+      let iconObj = this.textures.exists(iconKey) ? this.add.image(0, -26, iconKey) : this.add.text(0, -30, elixir.icon || '🧪', { fontSize: '30px' }).setOrigin(0.5);
+      if (this.textures.exists(iconKey)) iconObj.setDisplaySize(48, 48);
+
+      const nameTxt = this.add.text(0, 8, elixir.name, {
+        fontSize: '12px', fill: '#ffffff', fontStyle: 'bold', align: 'center', wordWrap: { width: 110 }
+      }).setOrigin(0.5);
+
+      const curCost = this.getElixirCost();
+      const priceBg = this.add.rectangle(0, 36, 75, 20, 0x090d16, 0.9);
+      priceBg.setStrokeStyle(1, 0x334155, 0.8);
+      const priceText = this.add.text(0, 36, `${curCost}G`, {
+        fontSize: '12px', fill: '#facc15', fontStyle: 'bold'
+      }).setOrigin(0.5);
+
+      if (!this.elixirPriceTexts) this.elixirPriceTexts = [];
+      this.elixirPriceTexts.push(priceText);
+
+      eContainer.add([shadow, box, iconObj, nameTxt, priceBg, priceText]);
+      this.mobileElixirSubContainer.add(eContainer);
+
+      box.on('pointerdown', () => {
+        const cost = this.getElixirCost();
+        this.selectedItem = { ...elixir, cost, isElixir: true, statStr: `${elixir.desc} (+100G per purchase)` };
+        this.selectedInventoryIndex = null;
+        this.updateRightPanel();
+        this.updateInventoryView();
+      });
+
+      eCol++;
+      if (eCol > 2) { eCol = 0; eRow++; }
+    });
+
+    // --- RIGHT HALF: INVENTORY, AUGMENTS, ITEM DETAILS, BUY/SELL, BATTLE READY ---
+    const invTitle = this.add.text(rightX, startY + 36, "MY INVENTORY", {
+      fontSize: '22px', fill: '#34d399', fontStyle: 'bold', stroke: '#000000', strokeThickness: 4
+    }).setOrigin(0.5);
+
+    let invY = startY + 85;
+    this.inventorySlots = [];
+    this.inventorySlotIcons = [];
+
+    const slotGap = 72;
+    const startSlotX = rightX - ((6 - 1) * slotGap) / 2;
+
+    for (let i = 0; i < 6; i++) {
+      const sx = startSlotX + (i * slotGap);
+      const slotContainer = this.add.container(sx, invY);
+      const slotBg = this.add.rectangle(0, 0, 60, 60, 0x1e293b).setInteractive({ useHandCursor: true });
+      slotBg.setStrokeStyle(2, 0x334155);
+
+      const slotIcon = this.add.image(0, 0, 'item_doransBlade').setVisible(false);
+      slotIcon.setDisplaySize(50, 50);
+
+      const slotNum = this.add.text(-20, -20, `${i + 1}`, { fontSize: '11px', fill: '#94a3b8', fontStyle: 'bold' }).setOrigin(0.5);
+
+      slotContainer.add([slotBg, slotIcon, slotNum]);
+
+      slotBg.on('pointerdown', () => {
+        const inv = this.registry.get('inventory') || [];
+        if (i < inv.length) {
+          this.selectedInventoryIndex = i;
+          this.selectedItem = null;
+          this.updateRightPanel();
+          this.updateInventoryView();
+        }
+      });
+
+      this.inventorySlots.push(slotBg);
+      this.inventorySlotIcons.push(slotIcon);
+      this.mobileCenterContainer.add(slotContainer);
+    }
+
+    invY += 50;
+    const augsEndY = this.drawAugmentsSection(rightX, invY);
+
+    let descY = invY + 65;
+    this.descBoxCenterX = rightX;
+    this.descBoxCenterY = descY + 45;
+
+    this.descBox = this.add.rectangle(rightX, descY + 45, 460, 110, 0x0f172a);
+    this.descBox.setStrokeStyle(2, 0x334155);
+
+    this.descIcon = this.add.image(rightX - 175, descY + 45, 'item_doransBlade').setVisible(false);
+    this.descIcon.setDisplaySize(68, 68);
+
+    this.descName = this.add.text(rightX, descY + 45, "SELECT AN ITEM", {
+      fontSize: '17px', fill: '#ffffff', fontStyle: 'bold', wordWrap: { width: 310 }
+    }).setOrigin(0.5, 0.5);
+
+    this.descStat = this.add.text(rightX - 110, descY + 25, "", {
+      fontSize: '14px', fill: '#34d399', align: 'left', wordWrap: { width: 310 }
+    }).setOrigin(0, 0);
+
+    this.descCost = this.add.text(rightX - 110, descY + 85, "", {
+      fontSize: '15px', fill: '#facc15', fontStyle: 'bold'
+    }).setOrigin(0, 1);
+
+    descY += 130;
+    this.buyBtn = this.add.image(rightX - 115, descY, 'btn_buy').setInteractive({ useHandCursor: true });
+    this.buyBtn.setDisplaySize(170, 48);
+    this.buyBtn.baseScaleX = this.buyBtn.scaleX;
+    this.buyBtn.baseScaleY = this.buyBtn.scaleY;
+    this.buyBtn.on('pointerdown', () => this.buyItem());
+
+    this.sellBtn = this.add.image(rightX + 115, descY, 'btn_sell').setInteractive({ useHandCursor: true });
+    this.sellBtn.setDisplaySize(170, 48);
+    this.sellBtn.baseScaleX = this.sellBtn.scaleX;
+    this.sellBtn.baseScaleY = this.sellBtn.scaleY;
+    this.sellBtn.on('pointerdown', () => this.sellItem());
+
+    descY += 65;
+    const adBtn = this.add.image(rightX, descY, 'btn_watch_ad').setInteractive({ useHandCursor: true });
+    adBtn.setDisplaySize(260, 48);
+    adBtn.on('pointerdown', () => {
+      showRewardedAd(this, 'get_gold').then(rewarded => {
+        if (rewarded) {
+          const rewardAmount = GAME_CONFIG.ECONOMY.AD_REWARD_GOLD || 500;
+          let currentGold = (this.registry.get('gold') || 0) + rewardAmount;
+          this.registry.set('gold', currentGold);
+          if (this.goldText) this.goldText.setText(`GOLD: ${currentGold}`);
+          saveGameProgress(this);
+          showDamageText(this, rightX, descY - 20, `+${rewardAmount} GOLD!`, 'heal');
+          this.updateInventoryView();
+        }
+      });
+    });
+
+    descY += 65;
+    this.readyBtn = this.add.image(rightX, descY, 'btn_ready').setInteractive({ useHandCursor: true });
+    this.readyBtn.setDisplaySize(280, 56);
+    this.readyBtn.baseScaleX = this.readyBtn.scaleX;
+    this.readyBtn.baseScaleY = this.readyBtn.scaleY;
+
+    const onReady = () => {
+      stopPreparationBGM(this);
+      this.cameras.main.fadeOut(500, 0, 0, 0);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('GameScene', {
+          level: this.registry.get('selectedLevel') || this.registry.get('unlockedLevel') || 1,
+          color: 0x0088ff,
+          mode: this.registry.get('gameMode') || 'campaign'
+        });
+      });
+    };
+
+    this.readyBtn.on('pointerdown', onReady);
+
+    this.mobileCenterContainer.add([
+      shopTitle, gearTabBtn, elixirTabBtn, this.mobileGearSubContainer, this.mobileElixirSubContainer,
+      invTitle, this.descBox, this.descIcon, this.descName, this.descStat, this.descCost,
+      this.buyBtn, this.sellBtn, adBtn, this.readyBtn
+    ]);
+
+    this.updateInventoryView();
   }
 
   drawLeftPanel() {
@@ -1000,7 +1562,7 @@ export default class PreparationScene extends Phaser.Scene {
       const totalH = nameH + gap + statH + gap + costH;
       const startY = cY - (totalH / 2);
 
-      const textX = cX - 58;
+      const textX = isTouchDevice(this) ? (cX - 110) : (cX - 58);
       this.descName.setPosition(textX, startY);
       this.descStat.setPosition(textX, startY + nameH + gap);
       this.descCost.setPosition(textX, startY + nameH + gap + statH + gap);
