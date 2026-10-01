@@ -301,8 +301,14 @@ export default class PreparationScene extends Phaser.Scene {
     const panelW = 1200;
     const panelH = 720;
 
-    const bgFrame = this.add.rectangle(centerX, startY + panelH / 2, panelW, panelH, 0x0b1329, 0.94);
-    bgFrame.setStrokeStyle(3, 0x38bdf8);
+    let bgFrame;
+    if (this.textures.exists('bg_mobile')) {
+      bgFrame = this.add.image(centerX, startY + panelH / 2, 'bg_mobile');
+      bgFrame.setDisplaySize(panelW, panelH);
+    } else {
+      bgFrame = this.add.rectangle(centerX, startY + panelH / 2, panelW, panelH, 0x0b1329, 0.94);
+    }
+    const borderFrame = this.add.rectangle(centerX, startY + panelH / 2, panelW, panelH).setStrokeStyle(3, 0x38bdf8);
 
     const enemyX = centerX - 300;
     let enemyY = startY + 36;
@@ -518,7 +524,7 @@ export default class PreparationScene extends Phaser.Scene {
     pStatElements.push(this.statTexts.hp, this.statTexts.atk, this.statTexts.armor, this.statTexts.speed, this.statTexts.crit, this.statTexts.cdr, this.statTexts.lifesteal, this.statTexts.armPen);
 
     const elements = [
-      bgFrame, enemyTitle, levelTxt, botEquipHeader, ...botSlotElements, ...eStatElements,
+      bgFrame, borderFrame, enemyTitle, levelTxt, botEquipHeader, ...botSlotElements, ...eStatElements,
       heroTitle, prevBg, prevTxt, nextBg, nextTxt, heroCircBg, heroInnerCirc,
       heroNameTxt, heroDescTxt, ...pStatElements
     ];
@@ -533,9 +539,16 @@ export default class PreparationScene extends Phaser.Scene {
     const panelW = 1200;
     const panelH = 720;
 
-    const bgFrame = this.add.rectangle(centerX, startY + panelH / 2, panelW, panelH, 0x0b1329, 0.94);
-    bgFrame.setStrokeStyle(3, 0xfacc15);
-    this.mobileCenterContainer.add(bgFrame);
+    let bgFrame;
+    if (this.textures.exists('bg_mobile')) {
+      bgFrame = this.add.image(centerX, startY + panelH / 2, 'bg_mobile');
+      bgFrame.setDisplaySize(panelW, panelH);
+    } else {
+      bgFrame = this.add.rectangle(centerX, startY + panelH / 2, panelW, panelH, 0x0b1329, 0.94);
+    }
+    const borderFrame = this.add.rectangle(centerX, startY + panelH / 2, panelW, panelH).setStrokeStyle(3, 0xfacc15);
+
+    this.mobileCenterContainer.add([bgFrame, borderFrame]);
 
     const leftX = centerX - 300;
     const rightX = centerX + 300;

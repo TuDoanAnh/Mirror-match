@@ -29,6 +29,7 @@ import watchAdBtnUrl from './assets/image/Watch_ad.png';
 import bg1Url from './assets/image/BG_1.png';
 import bg2Url from './assets/image/BG_2.png';
 import endlessWindowUrl from './assets/image/Endless_Window.png';
+import bgMobileUrl from './assets/image/BG_Mobile.png';
 
 import iconHpUrl from './assets/image/hp.png';
 import iconAtkUrl from './assets/image/Atk.png';
@@ -75,6 +76,7 @@ export default class StartScene extends Phaser.Scene {
     if (!this.textures.exists('bg_panel_2')) this.load.image('bg_panel_2', bg2Url);
     if (!this.textures.exists('bg_main')) this.load.image('bg_main', bgMainUrl);
     if (!this.textures.exists('endless_window_bg')) this.load.image('endless_window_bg', endlessWindowUrl);
+    if (!this.textures.exists('bg_mobile')) this.load.image('bg_mobile', bgMobileUrl);
 
     if (!this.textures.exists('stat_hp')) this.load.image('stat_hp', iconHpUrl);
     if (!this.textures.exists('stat_atk')) this.load.image('stat_atk', iconAtkUrl);
