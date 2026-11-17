@@ -638,10 +638,7 @@ export function createTopRightBar(scene) {
   if (!scene.registry.has('isMuted')) {
     scene.registry.set('isMuted', false);
   }
-  const isMutedInitially = !!scene.registry.get('isMuted');
-  if (scene.sound) {
-    scene.sound.mute = isMutedInitially;
-  }
+  const isMutedInitially = !!scene.sound.mute;
 
   // 1. Controls & Info Icon Button (?)
   const helpBg = scene.add.circle(helpIconX, trY, 20, 0x0f172a, 0.88).setInteractive({ useHandCursor: true });
@@ -679,6 +676,8 @@ export function createTopRightBar(scene) {
     musicBg.setStrokeStyle(2, muted ? 0x64748b : 0xfacc15);
   };
   updateMusicStyle(isMutedInitially);
+  scene.game.events.on('effective-mute-changed', updateMusicStyle);
+  scene.events.once('shutdown', () => scene.game.events.off('effective-mute-changed', updateMusicStyle));
 
   const animateMusicOver = () => {
     scene.tweens.add({ targets: [musicBg, musicTxt], scale: 1.15, duration: 100 });
@@ -686,7 +685,7 @@ export function createTopRightBar(scene) {
   };
   const animateMusicOut = () => {
     scene.tweens.add({ targets: [musicBg, musicTxt], scale: 1.0, duration: 100 });
-    const currentMuted = !!scene.registry.get('isMuted');
+    const currentMuted = !!scene.sound.mute;
     musicBg.setStrokeStyle(2, currentMuted ? 0x64748b : 0xfacc15);
   };
 
@@ -698,10 +697,7 @@ export function createTopRightBar(scene) {
   const toggleMute = () => {
     const nextMuted = !scene.registry.get('isMuted');
     scene.registry.set('isMuted', nextMuted);
-    if (scene.sound) {
-      scene.sound.mute = nextMuted;
-    }
-    updateMusicStyle(nextMuted);
+    updateMusicStyle(scene.sound.mute);
   };
 
   musicBg.on('pointerdown', toggleMute);

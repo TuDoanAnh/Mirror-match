@@ -1135,7 +1135,7 @@ export default class GameScene extends Phaser.Scene {
         strokeThickness: 4
       }).setOrigin(0.5).setScrollFactor(0).setDepth(200);
     } else if (this.gameMode === 'pvp') {
-      this.modeBannerTxt = this.add.text(768, 22, "⚔️ 1v1 LOCAL PVP ARENA ⚔️", {
+      this.modeBannerTxt = this.add.text(768, 22, "1v1 LOCAL PVP ARENA", {
         fontSize: '16px',
         fill: '#ef4444',
         fontStyle: 'bold',
@@ -1147,8 +1147,14 @@ export default class GameScene extends Phaser.Scene {
     const heroId = this.registry.get('selectedHero') || 'ezreal';
     const heroData = GAME_CONFIG.CHARACTERS[heroId] || GAME_CONFIG.CHARACTERS.ezreal;
 
-    this.uiContainer = this.add.container(768, 968);
-    this.uiContainer.setDepth(100);
+        const hudLeft = -145;
+    const hudWidth = 545;
+    const hudX = (GAME_CONFIG.CANVAS.WIDTH - hudWidth) / 2 - hudLeft;
+    this.uiContainer = this.add.container(hudX, GAME_CONFIG.CANVAS.HEIGHT - 56);
+    this.uiContainer.setDepth(100).setScrollFactor(0);
+    // MobileControls supplies its own skills and inventory bar. Rendering both
+    // HUDs puts the touch item slots over the desktop skill icons.
+    this.uiContainer.setVisible(!isTouchDevice(this));
 
     // Active Augments HUD Badges (Top-Left Corner)
     const ownedAugs = this.registry.get('augments') || [];
@@ -1190,9 +1196,9 @@ export default class GameScene extends Phaser.Scene {
     // Frame background (Sleek dark HUD panel accommodating skills & 6 item slots)
     const bg = this.add.graphics();
     bg.fillStyle(0x0f172a, 0.9);
-    bg.fillRoundedRect(-145, -36, 545, 72, 8);
+    bg.fillRoundedRect(hudLeft, -36, hudWidth, 72, 8);
     bg.lineStyle(2, 0xd4af37, 0.8);
-    bg.strokeRoundedRect(-145, -36, 545, 72, 8);
+    bg.strokeRoundedRect(hudLeft, -36, hudWidth, 72, 8);
     this.uiContainer.add(bg);
 
     // Hero title badge at top of HUD

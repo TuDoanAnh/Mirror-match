@@ -55,6 +55,7 @@ export class MobileControls {
     this.joystickPointer = null;
     this.moveVector = { x: 0, y: 0 };
 
+    this.cancelGestures = [];
     this.skillButtons = {};
     this.itemButtons = [];
 
@@ -99,8 +100,8 @@ export class MobileControls {
     const updateJoystick = (pointer) => {
       if (!this.joystickPointer || this.joystickPointer.id !== pointer.id) return;
 
-      const dist = Phaser.Math.Distance.Between(this.currentJoyBaseX, this.currentJoyBaseY, pointer.x, pointer.y);
-      const angle = Phaser.Math.Angle.Between(this.currentJoyBaseX, this.currentJoyBaseY, pointer.x, pointer.y);
+      const dist = Phaser.Math.Distance.Between(this.currentJoyBaseX, this.currentJoyBaseY, pointer.worldX, pointer.worldY);
+      const angle = Phaser.Math.Angle.Between(this.currentJoyBaseX, this.currentJoyBaseY, pointer.worldX, pointer.worldY);
 
       const clampedDist = Math.min(dist, maxRadius);
       const thumbX = this.currentJoyBaseX + Math.cos(angle) * clampedDist;
@@ -144,15 +145,15 @@ export class MobileControls {
     // Global touch listener for left-screen zone touch (Dynamic Floating Joystick)
     scene.input.on('pointerdown', (pointer) => {
       // Touch must be on the left 45% of the screen and below top bar (y > 65)
-      if (pointer.x > width * 0.45 || pointer.y < 65) return;
+      if (pointer.worldX < 0 || pointer.worldX > width * 0.45 || pointer.worldY < 65 || pointer.worldY > height) return;
       if (this.joystickPointer) return;
 
       this.joystickPointer = pointer;
-      this.currentJoyBaseX = pointer.x;
-      this.currentJoyBaseY = pointer.y;
+      this.currentJoyBaseX = pointer.worldX;
+      this.currentJoyBaseY = pointer.worldY;
 
-      this.joystickBase.setPosition(pointer.x, pointer.y);
-      this.joystickThumb.setPosition(pointer.x, pointer.y);
+      this.joystickBase.setPosition(pointer.worldX, pointer.worldY);
+      this.joystickThumb.setPosition(pointer.worldX, pointer.worldY);
       this.joystickBase.setAlpha(0.85);
       this.joystickThumb.setAlpha(1.0);
 
@@ -239,8 +240,8 @@ export class MobileControls {
       scene.input.on('pointermove', (pointer) => {
         if (!isDragging || !activePointer || activePointer.id !== pointer.id) return;
 
-        dragDist = Phaser.Math.Distance.Between(cfg.x, cfg.y, pointer.x, pointer.y);
-        dragAngle = Phaser.Math.Angle.Between(cfg.x, cfg.y, pointer.x, pointer.y);
+        dragDist = Phaser.Math.Distance.Between(cfg.x, cfg.y, pointer.worldX, pointer.worldY);
+        dragAngle = Phaser.Math.Angle.Between(cfg.x, cfg.y, pointer.worldX, pointer.worldY);
 
         if (lastDragAngle !== null && Math.abs(dragAngle - lastDragAngle) < 0.03 && Math.abs(dragDist - lastDragDist) < 5) return;
         lastDragAngle = dragAngle;
@@ -270,6 +271,15 @@ export class MobileControls {
 
       scene.input.on('pointerup', handlePointerUp);
       scene.input.on('pointerupoutside', handlePointerUp);
+
+      this.cancelGestures.push(() => {
+        isDragging = false;
+        activePointer = null;
+        lastDragAngle = null;
+        lastDragDist = null;
+        scene.tweens.killTweensOf(btnContainer);
+        btnContainer.setScale(1);
+      });
 
       this.skillButtons[cfg.key] = {
         container: btnContainer,
@@ -468,6 +478,22 @@ export class MobileControls {
           }
         }
       });
+    }
+  }
+
+  reset() {
+    this.joystickPointer = null;
+    this.moveVector.x = 0;
+    this.moveVector.y = 0;
+    this.currentJoyBaseX = 140;
+    this.currentJoyBaseY = this.scene.cameras.main.height - 140;
+    this.joystickBase?.setPosition(this.currentJoyBaseX, this.currentJoyBaseY).setAlpha(0.4);
+    this.joystickThumb?.setPosition(this.currentJoyBaseX, this.currentJoyBaseY).setAlpha(0.6);
+    this.cancelGestures.forEach(cancel => cancel());
+    this.clearAimIndicator();
+    if (this.scene.player) {
+      this.scene.player.mobileMoveVector = null;
+      this.scene.player.isSkillAiming = false;
     }
   }
 

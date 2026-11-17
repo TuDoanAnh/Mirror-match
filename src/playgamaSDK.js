@@ -5,6 +5,25 @@
  * Includes simulated ad & storage fallback for local testing & offline environments.
  */
 
+import { createPlatformLifecycle } from './platformLifecycle';
+import { installPlatformDebug, createMockBridge } from './platformDebug';
+
+let lifecycle = null;
+let boundBridge = null;
+
+export function attachPlaygamaGame(game) {
+  lifecycle = createPlatformLifecycle(game);
+  if (isBridgeInitialized) bindPlatformLifecycle();
+  if (import.meta.env.DEV) installPlatformDebug(game, lifecycle);
+  game.events.once('destroy', () => lifecycle.destroy());
+}
+
+function bindPlatformLifecycle() {
+  if (!lifecycle || boundBridge === window.bridge) return;
+  lifecycle.bindBridge(window.bridge);
+  boundBridge = window.bridge;
+}
+
 let isBridgeInitialized = false;
 let initPromise = null;
 
@@ -15,6 +34,10 @@ export async function initPlaygamaSDK() {
   initPromise = (async () => {
     if (typeof window !== 'undefined') {
       let bridgeObj = window.bridge || window.playgamaBridge;
+
+      if (import.meta.env.DEV && new URLSearchParams(window.location.search).get('platformTest') === '1') {
+        bridgeObj = createMockBridge();
+      }
 
       // Poll up to 2 seconds for window.bridge if script is loading async
       if (!bridgeObj) {
@@ -29,20 +52,14 @@ export async function initPlaygamaSDK() {
         window.bridge = bridgeObj;
         window.playgamaBridge = bridgeObj;
 
-        try {
+                try {
           if (typeof window.bridge.initialize === 'function') {
-            await Promise.resolve(window.bridge.initialize()).catch(err => {
-              console.warn('window.bridge.initialize rejected safely:', err);
-              return null;
-            });
+            await window.bridge.initialize();
           }
           isBridgeInitialized = true;
           console.log('Playgama Bridge SDK initialized successfully!');
 
-          // Register global ad listeners for auto-muting and auto-pausing audio
-          setupAdEventListeners();
-
-          notifyGameReady();
+          bindPlatformLifecycle();
           return true;
         } catch (err) {
           console.warn('Playgama Bridge SDK running in local/standalone mode. Using local fallback storage & ad simulation.', err);
@@ -57,71 +74,7 @@ export async function initPlaygamaSDK() {
     return false;
   })();
 
-  return initPromise;
-}
-
-/**
- * Setup global listeners on bridge.advertisement to automatically handle
- * Sound/Pause Handler during Interstitial & Rewarded Ads.
- */
-
-let wasAudioMutedBeforeAd = false;
-
-function setupAdEventListeners() {
-  if (typeof window === 'undefined' || !window.bridge || !window.bridge.advertisement) return;
-  if (typeof window.bridge.advertisement.on !== 'function') return;
-
-  const onAdStarted = () => {
-    console.log('[Playgama SDK] Ad started: Muting audio');
-    if (window.Phaser && window.Phaser.GAMES) {
-      window.Phaser.GAMES.forEach(game => {
-        if (game && game.sound) {
-          wasAudioMutedBeforeAd = game.sound.mute;
-          game.sound.mute = true;
-          if (game.sound.context && typeof game.sound.context.suspend === 'function') {
-            try { game.sound.context.suspend(); } catch (e) {}
-          }
-        }
-      });
-    }
-  };
-
-  const onAdEnded = () => {
-    console.log('[Playgama SDK] Ad ended/closed: Restoring audio state');
-    if (window.Phaser && window.Phaser.GAMES) {
-      window.Phaser.GAMES.forEach(game => {
-        if (game && game.sound) {
-          const userMuteSetting = game.registry ? game.registry.get('isMuted') : false;
-          game.sound.mute = userMuteSetting || false;
-          if (game.sound.context && typeof game.sound.context.resume === 'function') {
-            try { game.sound.context.resume(); } catch (e) {}
-          }
-        }
-      });
-    }
-  };
-
-  try {
-    window.bridge.advertisement.on('interstitial_state_changed', (state) => {
-      console.log('Playgama Bridge interstitial_state_changed:', state);
-      if (state === 'opened' || state === 'loading') {
-        onAdStarted();
-      } else if (state === 'closed' || state === 'failed') {
-        onAdEnded();
-      }
-    });
-
-    window.bridge.advertisement.on('rewarded_state_changed', (state) => {
-      console.log('Playgama Bridge rewarded_state_changed:', state);
-      if (state === 'opened' || state === 'loading') {
-        onAdStarted();
-      } else if (state === 'closed' || state === 'failed') {
-        onAdEnded();
-      }
-    });
-  } catch (e) {
-    console.warn('Failed to bind advertisement event listeners:', e);
-  }
+    return initPromise;
 }
 
 /**
@@ -452,21 +405,19 @@ export function showRewardedAd(scene, placementName) {
         if (adPromise && typeof adPromise.catch === 'function') {
           adPromise.catch((err) => {
             console.warn('Playgama showRewarded promise rejected (No ad available):', err);
+                        lifecycle?.setPauseReason('rewarded', false);
             finish(false);
           });
         }
 
-        // Safety timeout: If SDK hangs or does not emit closed/failed within 8s
-        setTimeout(() => {
-          if (!handled) {
-            console.warn('Playgama Rewarded ad response timeout.');
-            finish(false);
-          }
-        }, 8000);
+                // Completion comes from SDK closed/failed events. A fixed timeout
+        // can expire while a legitimate video ad is still playing.
+
 
         return;
       } catch (e) {
         console.warn('Playgama Bridge showRewarded error:', e);
+        lifecycle?.setPauseReason('rewarded', false);
         finish(false);
         return;
       }
